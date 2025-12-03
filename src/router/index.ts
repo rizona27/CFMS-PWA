@@ -51,7 +51,7 @@ const router = createRouter({
 })
 
 // 全局前置守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => { // <-- 修改点：将 from 改为 _from
   // 设置页面标题
   const title = to.meta.title as string || 'CFMS基金管理系统'
   document.title = title

@@ -6,6 +6,10 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.vitest.tsbuildinfo",
 
     "lib": [],
-    "types": ["node", "jsdom"]
+    "types": ["node", "jsdom"],
+    // 【重要修改】添加 paths 配置，确保测试文件能解析别名
+    "paths": {
+      "@/*": ["./src/*"] 
+    }
   }
 }

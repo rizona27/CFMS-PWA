@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { FundHolding, ProfitResult } from '../models/FundModels'
+// 【重要修改】移除 FundHolding 的 type 关键字，以便在 new FundHolding() 时可以作为值使用 (解决 TS1361)
+import { FundHolding } from '../models/FundModels' 
+import type { ProfitResult } from '../models/FundModels' // ProfitResult 仅用作类型，保留 type
 
 export const useDataStore = defineStore('data', () => {
   // 状态
@@ -50,6 +52,7 @@ export const useDataStore = defineStore('data', () => {
       const savedHoldings = localStorage.getItem('fundHoldings')
       if (savedHoldings) {
         const data = JSON.parse(savedHoldings)
+        // new FundHolding(item) 现在正确
         holdings.value = data.map((item: any) => new FundHolding(item))
         console.log('持仓数据加载成功，数量:', holdings.value.length)
       }
@@ -102,6 +105,7 @@ export const useDataStore = defineStore('data', () => {
 
   function addHolding(holdingData: Partial<FundHolding>): FundHolding {
     try {
+      // new FundHolding(holdingData) 现在正确
       const newHolding = new FundHolding(holdingData)
       
       if (!newHolding.isValidHolding) {
@@ -129,6 +133,7 @@ export const useDataStore = defineStore('data', () => {
         throw new Error('持仓记录不存在')
       }
       
+      // new FundHolding({...}) 现在正确
       const updatedHolding = new FundHolding({
         ...holdings.value[index],
         ...updates
