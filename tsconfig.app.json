@@ -1,12 +1,28 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["env.d.ts", "src/**/*", "src/**/*.vue"],
-  "exclude": ["src/**/__tests__/*"],
+  "extends": "./tsconfig.json",
   "compilerOptions": {
+    "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "types": ["node"], // 确保添加了 node 类型
+    
+    /* 应用特定的配置 */
+    "types": ["vite/client", "vue", "node"],
+    
+    /* 路径覆盖确保正确 */
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
-  }
+  },
+  "include": [
+    "env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx", 
+    "src/**/*.vue"
+  ],
+  "exclude": [
+    "src/**/__tests__/*",
+    "src/**/*.test.ts",
+    "node_modules",
+    "dist"
+  ]
 }

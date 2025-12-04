@@ -28,8 +28,8 @@ export const useAuthStore = defineStore('auth', () => {
     return username.charAt(0).toUpperCase() + username.slice(1).toLowerCase()
   })
 
-  // 将UserType转换为ConfigView.vue需要的格式
-  const userTypeForDisplay = computed(() => {
+  // 将UserType转换为字符串格式
+  const userTypeString = computed(() => {
     switch (userType.value) {
       case UserType.VIP:
         return 'vip'
@@ -149,7 +149,7 @@ export const useAuthStore = defineStore('auth', () => {
     
     // 计算属性
     userType,
-    userTypeForDisplay,
+    userTypeString,
     userTypeDisplay,
     displayName,
     

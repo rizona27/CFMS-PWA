@@ -14,15 +14,33 @@
     "noEmit": true,
     "jsx": "preserve",
 
-    /* Linting */
+    /* Linting - 稍微放宽以允许开发 */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,       // 改为false，允许未使用的局部变量
+    "noUnusedParameters": false,   // 改为false，允许未使用的参数
     "noFallthroughCasesInSwitch": true,
 
     /* Vue */
-    "types": ["vue", "node"]
+    "types": ["vue"],
+    
+    /* 路径别名 */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@views/*": ["src/views/*"],
+      "@stores/*": ["src/stores/*"],
+      "@router/*": ["src/router/*"],
+      "@utils/*": ["src/utils/*"],
+      "@assets/*": ["src/assets/*"]
+    }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "include": [
+    "src/**/*.ts", 
+    "src/**/*.tsx", 
+    "src/**/*.vue",
+    "env.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

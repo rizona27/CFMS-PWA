@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'
 
 // 路由懒加载
 const SummaryView = () => import('../views/SummaryView.vue')
@@ -118,23 +117,29 @@ const router = createRouter({
 })
 
 // 全局前置守卫 - 添加路由守卫控制
-router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore()
-  
-  // 设置页面标题
-  const title = to.meta.title as string || 'CFMS基金管理系统'
-  document.title = title
-  
-  // 检查是否需要认证
-  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    // 如果用户未登录且尝试访问需要认证的页面，重定向到登录页
-    next('/auth')
-  } else if (to.name === 'auth' && authStore.isLoggedIn) {
-    // 如果用户已登录且尝试访问登录页，重定向到首页
-    next('/')
-  } else {
+router.beforeEach((to, _from, next) => {
+  // 动态导入 authStore，避免循环依赖
+  import('@/stores/authStore').then(({ useAuthStore }) => {
+    const authStore = useAuthStore()
+    
+    // 设置页面标题
+    const title = to.meta.title as string || 'CFMS基金管理系统'
+    document.title = title
+    
+    // 检查是否需要认证
+    if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+      // 如果用户未登录且尝试访问需要认证的页面，重定向到登录页
+      next('/auth')
+    } else if (to.name === 'auth' && authStore.isLoggedIn) {
+      // 如果用户已登录且尝试访问登录页，重定向到首页
+      next('/')
+    } else {
+      next()
+    }
+  }).catch((error) => {
+    console.error('路由守卫错误:', error)
     next()
-  }
+  })
 })
 
 export default router

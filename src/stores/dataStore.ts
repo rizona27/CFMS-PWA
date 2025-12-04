@@ -225,12 +225,12 @@ export const useDataStore = defineStore('data', () => {
       // 添加日志
       addLog(`添加新持仓: ${newHolding.clientName} - ${newHolding.fundCode}`, 'info')
       
-      showToastMessage('持仓添加成功', 'success')
+      showToastMessage('持仓添加成功')
       
       return newHolding
     } catch (error: any) {
       console.error('添加持仓失败:', error)
-      showToastMessage(`添加失败: ${error.message}`, 'error')
+      showToastMessage(`添加失败: ${error.message}`)
       throw error
     }
   }
@@ -258,12 +258,12 @@ export const useDataStore = defineStore('data', () => {
       // 添加日志
       addLog(`更新持仓: ${updatedHolding.clientName} - ${updatedHolding.fundCode}`, 'info')
       
-      showToastMessage('持仓更新成功', 'success')
+      showToastMessage('持仓更新成功')
       
       return updatedHolding
     } catch (error: any) {
       console.error('更新持仓失败:', error)
-      showToastMessage(`更新失败: ${error.message}`, 'error')
+      showToastMessage(`更新失败: ${error.message}`)
       throw error
     }
   }
@@ -283,10 +283,10 @@ export const useDataStore = defineStore('data', () => {
       addLog(`删除持仓: ${holding.clientName} - ${holding.fundCode}`, 'warning')
       
       console.log('删除持仓:', holdingId)
-      showToastMessage('持仓删除成功', 'success')
+      showToastMessage('持仓删除成功')
     } catch (error: any) {
       console.error('删除持仓失败:', error)
-      showToastMessage(`删除失败: ${error.message}`, 'error')
+      showToastMessage(`删除失败: ${error.message}`)
       throw error
     }
   }
@@ -314,7 +314,7 @@ export const useDataStore = defineStore('data', () => {
     if (index !== -1) {
       const holding = holdings.value[index]
       holding.isPinned = !holding.isPinned
-      holding.pinnedTimestamp = holding.isPinned ? new Date() : null
+      holding.pinnedTimestamp = holding.isPinned ? new Date() : undefined // 修复这里
       
       // 重新排序数组，让置顶的显示在前面
       holdings.value.splice(index, 1)
@@ -329,7 +329,7 @@ export const useDataStore = defineStore('data', () => {
       // 添加日志
       addLog(`切换置顶状态: ${holding.fundCode} - ${holding.isPinned ? '置顶' : '取消置顶'}`, 'info')
       
-      showToastMessage(`${holding.fundCode} ${holding.isPinned ? '已置顶' : '已取消置顶'}`, 'success')
+      showToastMessage(`${holding.fundCode} ${holding.isPinned ? '已置顶' : '已取消置顶'}`)
     }
   }
 
@@ -355,10 +355,10 @@ export const useDataStore = defineStore('data', () => {
   function clearLogs() {
     logMessages.value = []
     saveData()
-    showToastMessage('日志已清空', 'success')
+    showToastMessage('日志已清空')
   }
 
-  function showToastMessage(message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') {
+  function showToastMessage(message: string) { // 移除未使用的type参数
     toastMessage.value = message
     showToast.value = true
     
@@ -387,7 +387,7 @@ export const useDataStore = defineStore('data', () => {
     
     // 添加日志
     addLog('持仓数据刷新完成', 'success')
-    showToastMessage('数据刷新完成', 'success')
+    showToastMessage('数据刷新完成')
   }
 
   // 获取客户名称（考虑隐私模式）

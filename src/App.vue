@@ -6,7 +6,7 @@
         <div class="main-content">
           <router-view v-slot="{ Component, route }">
             <transition 
-              :name="route.meta.transition || 'fade'" 
+              :name="getTransitionName(route)" 
               mode="out-in"
               @before-enter="beforeEnter"
               @after-enter="afterEnter"
@@ -45,7 +45,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, type RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from './stores/authStore'
 import { useDataStore } from './stores/dataStore'
 import CustomTabBar from './components/layout/CustomTabBar.vue'
@@ -60,6 +60,11 @@ const toastMessage = ref('')
 const toastType = ref('info')
 const isTabBarHidden = ref(false)
 
+// 获取过渡动画名称
+const getTransitionName = (route: RouteLocationNormalized) => {
+  return (route.meta?.transition as string) || 'fade'
+}
+
 // 主题类名计算
 const themeClass = computed(() => {
   const theme = localStorage.getItem('themeMode') || 'light'
@@ -68,7 +73,7 @@ const themeClass = computed(() => {
 
 // 是否显示底部导航栏
 const showTabBar = computed(() => {
-  return route.meta.showTabBar !== false
+  return route.meta?.showTabBar !== false
 })
 
 // 显示Toast消息
@@ -96,7 +101,7 @@ const afterEnter = () => {
 watch(() => route.path, (newPath) => {
   // 隐藏tabbar的页面
   const hideTabBarRoutes = ['/edit-holding', '/logs', '/holdings', '/about']
-  isTabBarHidden.value = hideTabBarRoutes.some(route => newPath.startsWith(route))
+  isTabBarHidden.value = hideTabBarRoutes.some(hideRoute => newPath.startsWith(hideRoute))
 })
 
 // 应用启动时的初始化

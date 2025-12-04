@@ -25,12 +25,12 @@
                     'color': userCardStyles.ribbonColor 
                   }"
                 >
-                  {{ authStore.userTypeDisplay }}
+                  {{ userTypeDisplay }}
                 </div>
 
                 <div class="user-info-detail-compact">
                   <div class="avatar-box">
-                    <span class="avatar-char">{{ authStore.displayName.charAt(0) }}</span>
+                    <span class="avatar-char">{{ displayName.charAt(0) }}</span>
                   </div>
                   <div class="name-status">
                     <p 
@@ -44,7 +44,7 @@
                         'background-clip': authStore.userType !== 'free' ? 'text' : 'unset',
                       }"
                     >
-                      {{ authStore.displayName }}
+                      {{ displayName }}
                     </p>
                   </div>
                 </div>
@@ -233,8 +233,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore, UserType } from '@/stores/authStore'
-import { useDataStore } from '@/stores/dataStore'
+import { useAuthStore } from '../stores/authStore'
+import { useDataStore } from '../stores/dataStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -256,9 +256,24 @@ const showToast = (message: string, type: 'info' | 'success' | 'error' | 'warnin
   }, 3000)
 }
 
+// 获取显示名称
+const displayName = computed(() => {
+  return authStore.displayName || '用户'
+})
+
+// 根据等级计算绶带文本
+const userTypeDisplay = computed(() => {
+  switch (authStore.userType) {
+    case 'vip': return '尊享用户'
+    case 'subscribed': return '体验用户'
+    case 'free': 
+    default: return '基础用户'
+  }
+})
+
 // 用户卡片和用户名动态样式
 const userCardStyles = computed(() => {
-  switch (authStore.userTypeForDisplay.value) {
+  switch (authStore.userType) {
     case 'vip':
       return {
         cardBg: 'linear-gradient(135deg, rgba(255, 223, 0, 0.1), rgba(255, 165, 0, 0.15))',
@@ -390,13 +405,6 @@ onMounted(() => {
   
   // 初始化数据
   dataStore.loadData()
-  
-  // 监听全局数据变化
-  watch(() => dataStore.toastMessage, (newMessage) => {
-    if (newMessage && dataStore.showToast) {
-      showToast(newMessage, 'info')
-    }
-  })
 })
 </script>
 
