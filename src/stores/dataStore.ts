@@ -1,15 +1,84 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-// 【重要修改】移除 FundHolding 的 type 关键字，以便在 new FundHolding() 时可以作为值使用 (解决 TS1361)
-import { FundHolding } from '../models/FundModels' 
-import type { ProfitResult } from '../models/FundModels' // ProfitResult 仅用作类型，保留 type
+import { ref, computed, reactive } from 'vue'
+
+// 定义类型
+export interface FundHolding {
+  id: string
+  clientName: string
+  clientID: string
+  fundCode: string
+  fundName: string
+  purchaseAmount: number
+  purchaseShares: number
+  purchaseDate: Date
+  remarks: string
+  currentNav: number
+  navDate: Date
+  isValid: boolean
+  isPinned: boolean
+  pinnedTimestamp?: Date
+  navReturn1m?: number
+  navReturn3m?: number
+  navReturn6m?: number
+  navReturn1y?: number
+}
+
+export interface ProfitResult {
+  absolute: number
+  annualized: number
+}
+
+export interface LogEntry {
+  id: string
+  message: string
+  type: 'info' | 'success' | 'error' | 'warning' | 'network' | 'cache'
+  timestamp: Date
+}
+
+export interface TableColumn {
+  id: string
+  title: string
+  keyPath: string
+  isSelected: boolean
+}
+
+// 初始化一个默认的FundHolding实例
+const createFundHolding = (data: Partial<FundHolding> = {}): FundHolding => ({
+  id: data.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+  clientName: data.clientName || '',
+  clientID: data.clientID || '',
+  fundCode: data.fundCode || '',
+  fundName: data.fundName || '未加载',
+  purchaseAmount: data.purchaseAmount || 0,
+  purchaseShares: data.purchaseShares || 0,
+  purchaseDate: data.purchaseDate || new Date(),
+  remarks: data.remarks || '',
+  currentNav: data.currentNav || 0,
+  navDate: data.navDate || new Date(),
+  isValid: data.isValid || false,
+  isPinned: data.isPinned || false,
+  pinnedTimestamp: data.pinnedTimestamp,
+  navReturn1m: data.navReturn1m,
+  navReturn3m: data.navReturn3m,
+  navReturn6m: data.navReturn6m,
+  navReturn1y: data.navReturn1y
+})
+
+// 验证持仓是否有效
+const isValidHolding = (holding: FundHolding): boolean => {
+  return !!(holding.clientName && 
+           holding.fundCode && 
+           holding.purchaseAmount > 0 && 
+           holding.purchaseShares > 0)
+}
 
 export const useDataStore = defineStore('data', () => {
   // 状态
   const holdings = ref<FundHolding[]>([])
+  const logMessages = ref<LogEntry[]>([])
   const isPrivacyMode = ref(true)
   const isRefreshing = ref(false)
-  const refreshProgress = ref({ current: 0, total: 0 })
+  const refreshProgress = reactive({ current: 0, total: 0 })
   const toastMessage = ref('')
   const showToast = ref(false)
 
@@ -45,6 +114,21 @@ export const useDataStore = defineStore('data', () => {
       })
   })
 
+  // 获取按客户分组的持仓
+  const groupedByClient = computed(() => {
+    const groups: Record<string, FundHolding[]> = {}
+    
+    holdings.value.forEach(holding => {
+      const key = `${holding.clientName}|${holding.clientID}`
+      if (!groups[key]) {
+        groups[key] = []
+      }
+      groups[key].push(holding)
+    })
+    
+    return groups
+  })
+
   // 方法
   function loadData() {
     try {
@@ -52,8 +136,13 @@ export const useDataStore = defineStore('data', () => {
       const savedHoldings = localStorage.getItem('fundHoldings')
       if (savedHoldings) {
         const data = JSON.parse(savedHoldings)
-        // new FundHolding(item) 现在正确
-        holdings.value = data.map((item: any) => new FundHolding(item))
+        holdings.value = data.map((item: any) => ({
+          ...createFundHolding(),
+          ...item,
+          purchaseDate: new Date(item.purchaseDate),
+          navDate: new Date(item.navDate),
+          pinnedTimestamp: item.pinnedTimestamp ? new Date(item.pinnedTimestamp) : undefined
+        }))
         console.log('持仓数据加载成功，数量:', holdings.value.length)
       }
       
@@ -63,9 +152,20 @@ export const useDataStore = defineStore('data', () => {
         isPrivacyMode.value = JSON.parse(savedPrivacyMode)
       }
       
+      // 加载日志
+      const savedLogs = localStorage.getItem('fundLogs')
+      if (savedLogs) {
+        const logs = JSON.parse(savedLogs)
+        logMessages.value = logs.map((log: any) => ({
+          ...log,
+          timestamp: new Date(log.timestamp)
+        }))
+      }
+      
       console.log('数据加载完成')
     } catch (error) {
       console.error('数据加载失败:', error)
+      showToastMessage('数据加载失败')
     }
   }
 
@@ -97,31 +197,40 @@ export const useDataStore = defineStore('data', () => {
       // 保存隐私模式设置
       localStorage.setItem('isPrivacyModeEnabled', JSON.stringify(isPrivacyMode.value))
       
+      // 保存日志（最多保留500条）
+      const logsToSave = logMessages.value.slice(-500).map(log => ({
+        ...log,
+        timestamp: log.timestamp.toISOString()
+      }))
+      localStorage.setItem('fundLogs', JSON.stringify(logsToSave))
+      
       console.log('数据保存成功')
     } catch (error) {
       console.error('数据保存失败:', error)
+      showToastMessage('数据保存失败')
     }
   }
 
   function addHolding(holdingData: Partial<FundHolding>): FundHolding {
     try {
-      // new FundHolding(holdingData) 现在正确
-      const newHolding = new FundHolding(holdingData)
+      const newHolding = createFundHolding(holdingData)
       
-      if (!newHolding.isValidHolding) {
+      if (!isValidHolding(newHolding)) {
         throw new Error('持仓数据无效')
       }
       
       holdings.value.push(newHolding)
       saveData()
       
-      console.log('添加新持仓:', newHolding.fundCode, newHolding.clientName)
-      showToastMessage('持仓添加成功')
+      // 添加日志
+      addLog(`添加新持仓: ${newHolding.clientName} - ${newHolding.fundCode}`, 'info')
+      
+      showToastMessage('持仓添加成功', 'success')
       
       return newHolding
     } catch (error: any) {
       console.error('添加持仓失败:', error)
-      showToastMessage(`添加失败: ${error.message}`)
+      showToastMessage(`添加失败: ${error.message}`, 'error')
       throw error
     }
   }
@@ -133,26 +242,28 @@ export const useDataStore = defineStore('data', () => {
         throw new Error('持仓记录不存在')
       }
       
-      // new FundHolding({...}) 现在正确
-      const updatedHolding = new FundHolding({
+      const updatedHolding = {
         ...holdings.value[index],
-        ...updates
-      })
+        ...updates,
+        id: holdingId // 确保ID不变
+      }
       
-      if (!updatedHolding.isValidHolding) {
+      if (!isValidHolding(updatedHolding)) {
         throw new Error('更新后的数据无效')
       }
       
       holdings.value[index] = updatedHolding
       saveData()
       
-      console.log('更新持仓:', updatedHolding.fundCode)
-      showToastMessage('持仓更新成功')
+      // 添加日志
+      addLog(`更新持仓: ${updatedHolding.clientName} - ${updatedHolding.fundCode}`, 'info')
+      
+      showToastMessage('持仓更新成功', 'success')
       
       return updatedHolding
     } catch (error: any) {
       console.error('更新持仓失败:', error)
-      showToastMessage(`更新失败: ${error.message}`)
+      showToastMessage(`更新失败: ${error.message}`, 'error')
       throw error
     }
   }
@@ -164,14 +275,18 @@ export const useDataStore = defineStore('data', () => {
         throw new Error('持仓记录不存在')
       }
       
+      const holding = holdings.value[index]
       holdings.value.splice(index, 1)
       saveData()
       
+      // 添加日志
+      addLog(`删除持仓: ${holding.clientName} - ${holding.fundCode}`, 'warning')
+      
       console.log('删除持仓:', holdingId)
-      showToastMessage('持仓删除成功')
+      showToastMessage('持仓删除成功', 'success')
     } catch (error: any) {
       console.error('删除持仓失败:', error)
-      showToastMessage(`删除失败: ${error.message}`)
+      showToastMessage(`删除失败: ${error.message}`, 'error')
       throw error
     }
   }
@@ -210,27 +325,84 @@ export const useDataStore = defineStore('data', () => {
       }
       
       saveData()
-      console.log('切换置顶状态:', holding.fundCode, holding.isPinned)
+      
+      // 添加日志
+      addLog(`切换置顶状态: ${holding.fundCode} - ${holding.isPinned ? '置顶' : '取消置顶'}`, 'info')
+      
+      showToastMessage(`${holding.fundCode} ${holding.isPinned ? '已置顶' : '已取消置顶'}`, 'success')
     }
   }
 
-  function showToastMessage(message: string, duration: number = 3000) {
+  function addLog(message: string, type: LogEntry['type'] = 'info') {
+    const logEntry: LogEntry = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      message,
+      type,
+      timestamp: new Date()
+    }
+    
+    logMessages.value.push(logEntry)
+    
+    // 限制日志数量
+    if (logMessages.value.length > 500) {
+      logMessages.value = logMessages.value.slice(-500)
+    }
+    
+    // 保存日志
+    saveData()
+  }
+
+  function clearLogs() {
+    logMessages.value = []
+    saveData()
+    showToastMessage('日志已清空', 'success')
+  }
+
+  function showToastMessage(message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') {
     toastMessage.value = message
     showToast.value = true
     
     setTimeout(() => {
       showToast.value = false
-    }, duration)
+    }, 3000)
   }
 
   function startRefresh() {
     isRefreshing.value = true
-    refreshProgress.value = { current: 0, total: holdings.value.length }
+    refreshProgress.current = 0
+    refreshProgress.total = holdings.value.length
+    
+    // 添加日志
+    addLog('开始刷新持仓数据', 'info')
+  }
+
+  function updateRefreshProgress(current: number) {
+    refreshProgress.current = current
   }
 
   function completeRefresh() {
     isRefreshing.value = false
-    refreshProgress.value = { current: 0, total: 0 }
+    refreshProgress.current = 0
+    refreshProgress.total = 0
+    
+    // 添加日志
+    addLog('持仓数据刷新完成', 'success')
+    showToastMessage('数据刷新完成', 'success')
+  }
+
+  // 获取客户名称（考虑隐私模式）
+  function getClientDisplayName(clientName: string): string {
+    if (!isPrivacyMode.value) {
+      return clientName
+    }
+    
+    if (clientName.length <= 1) {
+      return clientName
+    } else if (clientName.length === 2) {
+      return clientName.charAt(0) + '*'
+    } else {
+      return clientName.charAt(0) + '*'.repeat(clientName.length - 2) + clientName.charAt(clientName.length - 1)
+    }
   }
 
   // 初始化
@@ -242,6 +414,7 @@ export const useDataStore = defineStore('data', () => {
   return {
     // 状态
     holdings,
+    logMessages,
     isPrivacyMode,
     isRefreshing,
     refreshProgress,
@@ -254,6 +427,7 @@ export const useDataStore = defineStore('data', () => {
     totalInvestment,
     totalProfit,
     pinnedHoldings,
+    groupedByClient,
     
     // 方法
     loadData,
@@ -263,9 +437,13 @@ export const useDataStore = defineStore('data', () => {
     deleteHolding,
     calculateProfit,
     togglePinStatus,
+    addLog,
+    clearLogs,
     showToastMessage,
     startRefresh,
+    updateRefreshProgress,
     completeRefresh,
+    getClientDisplayName,
     init
   }
 })

@@ -1,7 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-// 注意：不要用 import type，因为枚举是运行时的值
-import { UserType } from '../models/FundModels'
+
+// 定义用户类型枚举
+export enum UserType {
+  FREE = 'free',
+  SUBSCRIBED = 'subscribed',
+  VIP = 'vip'
+}
 
 export const useAuthStore = defineStore('auth', () => {
   // 状态
@@ -23,6 +28,32 @@ export const useAuthStore = defineStore('auth', () => {
     return username.charAt(0).toUpperCase() + username.slice(1).toLowerCase()
   })
 
+  // 将UserType转换为ConfigView.vue需要的格式
+  const userTypeForDisplay = computed(() => {
+    switch (userType.value) {
+      case UserType.VIP:
+        return 'vip'
+      case UserType.SUBSCRIBED:
+        return 'subscribed'
+      case UserType.FREE:
+      default:
+        return 'free'
+    }
+  })
+
+  // 获取用户等级显示文本
+  const userTypeDisplay = computed(() => {
+    switch (userType.value) {
+      case UserType.VIP:
+        return '尊享用户'
+      case UserType.SUBSCRIBED:
+        return '体验用户'
+      case UserType.FREE:
+      default:
+        return '基础用户'
+    }
+  })
+
   // 方法
   function login(username: string, password: string): boolean {
     // 模拟登录逻辑
@@ -32,7 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
       throw new Error('请输入用户名和密码')
     }
 
-    // 模拟用户数据 - 使用正确的类型
+    // 模拟用户数据
     const mockUsers: Record<string, { username: string; userType: UserType; displayName?: string }> = {
       'admin': {
         username: 'admin',
@@ -118,11 +149,13 @@ export const useAuthStore = defineStore('auth', () => {
     
     // 计算属性
     userType,
+    userTypeForDisplay,
+    userTypeDisplay,
     displayName,
     
     // 方法
     login,
-    forceLogin, // 添加这个方法用于测试
+    forceLogin,
     logout,
     autoLogin
   }

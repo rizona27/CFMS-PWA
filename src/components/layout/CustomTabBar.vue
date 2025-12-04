@@ -77,8 +77,11 @@ watch(
   padding: 8px;
   max-width: 400px; 
   margin: 0 auto;
-  /* 保持整体外层药丸的磨玻璃效果 */
-  box-shadow: var(--card-shadow), 
+  background: var(--glass-bg, rgba(255, 255, 255, 0.8));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
+  box-shadow: var(--card-shadow, 0 8px 32px rgba(0, 0, 0, 0.1)), 
               0 12px 60px rgba(79, 172, 254, 0.2);
 }
 
@@ -94,39 +97,33 @@ watch(
   display: flex;
   justify-content: center; 
   align-items: center;
-  
   background: transparent;
   border: none;
   padding: 8px 12px;
   cursor: pointer;
-  /* 统一且平滑的过渡 */
   transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
-  
   border-radius: 999px; 
   min-width: unset; 
-  /* 关键：未选中时，按钮占据较小空间 */
   flex-grow: 1; 
   overflow: hidden;
 }
 
 .tab-button:hover:not(.active) {
-  background: var(--bg-hover);
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
 }
 
 .tab-button.active {
   transform: none; 
-  /* 关键：激活时，按钮占据更多空间，扩展药丸效果 */
   flex-grow: 3; 
 }
 
-/* 1. 过渡和边框极致柔和化 (激活按钮) */
+/* 磨玻璃效果 */
 .button-glass {
-  background: rgba(79, 172, 254, 0.1) !important; /* 进一步降低透明度 */
-  /* 关键修正：边框线极其淡，只有微弱的高光感 */
-  border: 1px solid rgba(79, 172, 254, 0.05); 
+  background: var(--glass-button-bg, rgba(79, 172, 254, 0.1)) !important;
+  border: 1px solid var(--glass-button-border, rgba(79, 172, 254, 0.05)); 
   box-shadow: 
-    0 4px 15px rgba(79, 172, 254, 0.05), /* 降低外部阴影强度 */
-    inset 0 0 4px rgba(255, 255, 255, 0.3); /* 降低内部高光强度 */
+    0 4px 15px var(--glass-button-shadow, rgba(79, 172, 254, 0.05)),
+    inset 0 0 4px var(--glass-button-highlight, rgba(255, 255, 255, 0.3));
 }
 
 .button-inner {
@@ -137,7 +134,6 @@ watch(
   position: relative;
   z-index: 2;
   height: 24px;
-  /* 关键：调整内部元素对齐，使激活时图标和文字对齐 */
   padding-right: 6px; 
 }
 
@@ -152,18 +148,16 @@ watch(
 .tab-icon {
   font-size: 20px;
   transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
-  /* 未选中时：黑白、低透明度、非强调色 */
   filter: grayscale(100%); 
   opacity: 0.7;
-  color: var(--text-primary);
+  color: var(--text-primary, #333333);
 }
 
 .tab-button.active .tab-icon {
   transform: none;
-  /* 选中时：彩色、高透明度、强调色 */
   filter: none;
   opacity: 1;
-  color: var(--accent-color);
+  color: var(--accent-color, #2196f3);
 }
 
 .tab-label {
@@ -172,30 +166,22 @@ watch(
   letter-spacing: 0;
   white-space: nowrap; 
   min-width: 30px; 
-  
-  /* 关键：文字的颜色和透明度过渡 */
   transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-/* 2. 激活状态下的文字显示协调性 (着色) */
 .tab-button:not(.active) .tab-label {
-  /* 未选中时：次要文本颜色，略微不透明 */
-  color: var(--text-secondary);
+  color: var(--text-secondary, #666666);
   opacity: 0.8;
-  /* 关键：确保未激活时文字完全显示 */
   width: auto;
   transform: translateX(0);
 }
 
 .tab-button.active .tab-label {
-  /* 选中时：着重强调色，完全不透明 */
-  color: var(--accent-color);
+  color: var(--accent-color, #2196f3);
   opacity: 1;
-  /* 保持文字完全显示，并通过 flex-grow: 3 实现了扩展效果 */
   width: auto;
   transform: translateX(0);
 }
-
 
 .active-indicator {
   display: none;
@@ -203,29 +189,79 @@ watch(
 
 /* 适配深色模式 */
 .dark-mode .ios-tab-bar {
-    background: var(--glass-bg); 
-    border: 1px solid var(--glass-border); 
-    box-shadow: var(--card-shadow), 0 12px 60px rgba(0, 0, 0, 0.4);
+  background: var(--glass-bg-dark, rgba(30, 30, 30, 0.8));
+  border: 1px solid var(--glass-border-dark, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--card-shadow-dark, 0 8px 32px rgba(0, 0, 0, 0.4));
 }
 
 .dark-mode .tab-button:hover:not(.active) {
-  background: var(--bg-hover);
+  background: var(--bg-hover-dark, rgba(255, 255, 255, 0.05));
 }
 
-/* 深色模式下的磨玻璃激活按钮样式 (极致柔和化) */
+/* 深色模式下的磨玻璃激活按钮样式 */
 .dark-mode .button-glass {
-  background: rgba(79, 172, 254, 0.1) !important; /* 进一步降低透明度 */
-  border: 1px solid rgba(79, 172, 254, 0.08); /* 极淡边框 */
+  background: var(--glass-button-bg-dark, rgba(79, 172, 254, 0.1)) !important;
+  border: 1px solid var(--glass-button-border-dark, rgba(79, 172, 254, 0.08));
   box-shadow: 
-    0 4px 15px rgba(79, 172, 254, 0.05),
-    inset 0 0 4px rgba(255, 255, 255, 0.08); 
+    0 4px 15px var(--glass-button-shadow-dark, rgba(79, 172, 254, 0.05)),
+    inset 0 0 4px var(--glass-button-highlight-dark, rgba(255, 255, 255, 0.08));
 }
 
 .dark-mode .tab-button.active .tab-icon {
-  color: var(--accent-color); 
+  color: var(--accent-color-dark, #64b5f6);
 }
 
 .dark-mode .tab-button.active .tab-label {
-  color: var(--accent-color); 
+  color: var(--accent-color-dark, #64b5f6);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .ios-tab-bar-container {
+    padding: 0 16px;
+    bottom: 16px;
+  }
+  
+  .ios-tab-bar {
+    max-width: 360px;
+    padding: 6px;
+  }
+  
+  .tab-button {
+    padding: 6px 10px;
+  }
+  
+  .tab-icon {
+    font-size: 18px;
+  }
+  
+  .tab-label {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ios-tab-bar-container {
+    padding: 0 12px;
+    bottom: 12px;
+  }
+  
+  .ios-tab-bar {
+    max-width: 320px;
+    padding: 4px;
+  }
+  
+  .tab-button {
+    padding: 4px 8px;
+  }
+  
+  .tab-icon {
+    font-size: 16px;
+  }
+  
+  .tab-label {
+    font-size: 12px;
+    min-width: 24px;
+  }
 }
 </style>
