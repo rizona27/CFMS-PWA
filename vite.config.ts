@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
     VitePWA({
@@ -46,6 +46,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // 使用相对路径
+    base: './',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -58,6 +60,13 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    open: true
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'http://192.168.124.26:30443',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
-})
+}))

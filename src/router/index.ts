@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 
 // 路由懒加载
 const SummaryView = () => import('../views/SummaryView.vue')
@@ -11,11 +11,22 @@ const ManageHoldingsView = () => import('../views/ManageHoldingsView.vue')
 const APILogView = () => import('../views/APILogView.vue')
 const EditHoldingView = () => import('../views/EditHoldingView.vue')
 
-// 路由配置
+// 路由配置 - 根路径直接重定向到登录页面
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/summary'
+    name: 'root',
+    redirect: '/auth'
+  },
+  {
+    path: '/auth',
+    name: 'auth',
+    component: AuthView,
+    meta: { 
+      title: '用户登录',
+      requiresAuth: false,
+      showTabBar: false
+    }
   },
   {
     path: '/summary',
@@ -58,17 +69,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/auth',
-    name: 'auth',
-    component: AuthView,
-    meta: { 
-      title: '用户登录',
-      requiresAuth: false,
-      showTabBar: false
-    }
-  },
-  // 新增路由
-  {
     path: '/about',
     name: 'about',
     component: AboutView,
@@ -108,38 +108,51 @@ const routes: RouteRecordRaw[] = [
       showTabBar: false
     },
     props: true
+  },
+  {
+    // 添加404页面处理
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    redirect: '/auth'
   }
 ]
 
+// 使用 createWebHashHistory 代替 createWebHistory
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })
 
-// 全局前置守卫 - 添加路由守卫控制
-router.beforeEach((to, _from, next) => {
-  // 动态导入 authStore，避免循环依赖
-  import('@/stores/authStore').then(({ useAuthStore }) => {
-    const authStore = useAuthStore()
-    
-    // 设置页面标题
-    const title = to.meta.title as string || 'CFMS基金管理系统'
-    document.title = title
-    
-    // 检查是否需要认证
-    if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-      // 如果用户未登录且尝试访问需要认证的页面，重定向到登录页
-      next('/auth')
-    } else if (to.name === 'auth' && authStore.isLoggedIn) {
-      // 如果用户已登录且尝试访问登录页，重定向到首页
-      next('/')
-    } else {
-      next()
-    }
-  }).catch((error) => {
-    console.error('路由守卫错误:', error)
+// 简化路由守卫
+router.beforeEach((to, from, next) => {
+  // 设置页面标题
+  const title = to.meta.title as string || 'CFMS基金管理系统'
+  document.title = title
+  
+  // 检查是否需要认证
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const token = localStorage.getItem('auth_token')
+  
+  // 对于根路径，已经在前面的redirect中处理了，这里不再处理
+  if (to.path === '/') {
     next()
-  })
+    return
+  }
+  
+  // 如果访问的是/auth但已登录，重定向到首页
+  if (to.path === '/auth' && token) {
+    next('/summary')
+    return
+  }
+  
+  // 如果路由需要认证但用户未登录，重定向到登录页
+  if (requiresAuth && !token) {
+    next('/auth')
+    return
+  }
+  
+  // 其他情况正常导航
+  next()
 })
 
 export default router
