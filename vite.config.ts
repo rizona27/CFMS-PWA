@@ -63,13 +63,22 @@ export default defineConfig(({ mode }) => ({
     host: true,
     port: 5173,
     open: true,
-    // 开发时使用代理
+    // 开发时使用代理 - 更新为更可靠的配置
     proxy: {
       '/api': {
-        target: 'http://192.168.124.26:30443',
+        target: 'http://localhost:8315', // 改为本地后端端口
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+        ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('代理错误:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('代理请求:', req.method, req.url);
+          });
+        }
       }
     }
   }

@@ -10,13 +10,31 @@ const AboutView = () => import('../views/AboutView.vue')
 const ManageHoldingsView = () => import('../views/ManageHoldingsView.vue')
 const APILogView = () => import('../views/APILogView.vue')
 const EditHoldingView = () => import('../views/EditHoldingView.vue')
+const DebugView = () => import('../views/DebugView.vue')
 
-// 路由配置 - 根路径直接重定向到登录页面
+// 路由配置
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'root',
-    redirect: '/auth'
+    redirect: () => {
+      console.log('根路径重定向检查...')
+      const token = localStorage.getItem('auth_token')
+      const user = localStorage.getItem('auth_user')
+      console.log('token:', token)
+      console.log('user:', user)
+      
+      const hasValidToken = token && token !== 'null' && token !== 'undefined'
+      console.log('hasValidToken:', hasValidToken)
+      
+      if (hasValidToken) {
+        console.log('有有效token，重定向到 /config')
+        return '/config'
+      } else {
+        console.log('没有有效token，重定向到 /auth')
+        return '/auth'
+      }
+    }
   },
   {
     path: '/auth',
@@ -26,6 +44,26 @@ const routes: RouteRecordRaw[] = [
       title: '用户登录',
       requiresAuth: false,
       showTabBar: false
+    }
+  },
+  {
+    path: '/debug',
+    name: 'debug',
+    component: DebugView,
+    meta: { 
+      title: '调试信息',
+      requiresAuth: false,
+      showTabBar: false
+    }
+  },
+  {
+    path: '/config',
+    name: 'config',
+    component: ConfigView,
+    meta: { 
+      title: '系统设置',
+      requiresAuth: true,
+      showTabBar: true
     }
   },
   {
@@ -54,16 +92,6 @@ const routes: RouteRecordRaw[] = [
     component: TopPerformersView,
     meta: { 
       title: '业绩排名',
-      requiresAuth: true,
-      showTabBar: true
-    }
-  },
-  {
-    path: '/config',
-    name: 'config',
-    component: ConfigView,
-    meta: { 
-      title: '系统设置',
       requiresAuth: true,
       showTabBar: true
     }
@@ -123,35 +151,42 @@ const router = createRouter({
   routes
 })
 
-// 简化路由守卫
+// 简化的路由守卫
 router.beforeEach((to, from, next) => {
+  console.log(`\n=== 路由守卫开始 ===`)
+  console.log(`从: ${from.path} 到: ${to.path}`)
+  
   // 设置页面标题
   const title = to.meta.title as string || 'CFMS基金管理系统'
   document.title = title
   
   // 检查是否需要认证
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresAuth = to.meta.requiresAuth
   const token = localStorage.getItem('auth_token')
   
-  // 对于根路径，已经在前面的redirect中处理了，这里不再处理
-  if (to.path === '/') {
-    next()
+  console.log('requiresAuth:', requiresAuth)
+  console.log('token in localStorage:', token)
+  
+  // 检查token有效性
+  const hasValidToken = token && token !== 'null' && token !== 'undefined'
+  console.log('hasValidToken:', hasValidToken)
+  
+  // 访问登录页面但已登录，重定向到配置页面
+  if (to.path === '/auth' && hasValidToken) {
+    console.log('已登录用户访问登录页，重定向到 /config')
+    next('/config')
     return
   }
   
-  // 如果访问的是/auth但已登录，重定向到首页
-  if (to.path === '/auth' && token) {
-    next('/summary')
-    return
-  }
-  
-  // 如果路由需要认证但用户未登录，重定向到登录页
-  if (requiresAuth && !token) {
+  // 需要认证但未登录，重定向到登录页
+  if (requiresAuth && !hasValidToken) {
+    console.log('需要认证但未登录，重定向到 /auth')
     next('/auth')
     return
   }
   
-  // 其他情况正常导航
+  // 其他情况允许访问
+  console.log('允许访问:', to.path)
   next()
 })
 

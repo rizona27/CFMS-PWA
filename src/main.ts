@@ -15,24 +15,38 @@ app.mount('#app')
 
 // 初始化 - 确保用户访问根路径时显示正确页面
 const initApp = () => {
+  console.log('应用初始化开始...')
+  
   // 清空可能的错误 token
   const token = localStorage.getItem('auth_token')
+  const user = localStorage.getItem('auth_user')
+  
+  console.log('初始token:', token)
+  console.log('初始user:', user)
+  
   if (token === 'undefined' || token === 'null') {
+    console.log('清除无效token')
     localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user')
   }
   
   // 检查当前路径，如果是不存在的路径，重定向到 auth
-  const currentPath = window.location.pathname
-  const validPaths = ['/', '/auth', '/summary', '/client', '/ranking', '/config', '/about', '/holdings', '/logs', '/edit-holding']
+  const currentPath = window.location.hash ? window.location.hash.substring(1) : '/'
+  console.log('当前路径:', currentPath)
+  
+  const validPaths = ['/', '/auth', '/summary', '/client', '/ranking', '/config', '/about', '/holdings', '/logs', '/edit-holding', '/debug']
   
   if (!validPaths.includes(currentPath) && currentPath !== '/') {
-    // 如果路径无效，重定向到登录页
+    console.log('路径无效，重定向到 auth')
     router.push('/auth')
   }
+  
+  console.log('应用初始化完成')
 }
 
 // 等待路由就绪
 router.isReady().then(() => {
+  console.log('路由已就绪')
   initApp()
 })
 

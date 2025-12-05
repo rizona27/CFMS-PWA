@@ -3,7 +3,13 @@
     <div class="auth-scroll-container">
       <div class="auth-container">
         <div class="auth-card">
-          <h1 class="auth-title">CFMS基金管理系统</h1>
+          <h1 class="auth-title">CFMS·一基暴富</h1>
+          
+          <!-- 开发环境提示 -->
+          <div v-if="isDevEnvironment" class="dev-environment-banner">
+            <span class="dev-icon">🔧</span>
+            <span class="dev-text">开发环境 - 使用模拟登录</span>
+          </div>
           
           <!-- 模式切换标签 -->
           <div class="mode-tabs">
@@ -51,6 +57,14 @@
                 autocomplete="current-password"
                 class="icon-input"
               />
+            </div>
+            
+            <!-- 开发环境测试账号提示 -->
+            <div v-if="isDevEnvironment" class="dev-accounts">
+              <p class="dev-accounts-title">测试账号：</p>
+              <p class="dev-account">admin / 任意密码 (VIP权限)</p>
+              <p class="dev-account">user / 任意密码 (体验用户)</p>
+              <p class="dev-account">guest / 任意密码 (基础用户)</p>
             </div>
             
             <div v-if="showLoginCaptcha && loginAttempts >= 3" class="form-group captcha-group">
@@ -222,6 +236,11 @@ const successMessage = ref('')
 const loginAttempts = ref(0)
 const registerAttempts = ref(0)
 
+// 开发环境检测
+const isDevEnvironment = computed(() => {
+  return import.meta.env.DEV || window.location.hostname === 'localhost'
+})
+
 // 主题相关
 const themeMode = ref('system')
 const themeClass = computed(() => {
@@ -246,6 +265,7 @@ const captchaImage = computed(() => authStore.captchaImage)
 onMounted(() => {
   console.log('当前路径:', window.location.pathname)
   console.log('完整URL:', window.location.href)
+  console.log('开发环境:', isDevEnvironment.value)
   
   // 检查是否从404页面跳转过来
   if (window.location.pathname === '/404' || window.location.pathname === '/auth') {
@@ -365,12 +385,20 @@ const handleLogin = async () => {
       loginForm.value.captcha_id = authStore.captchaId
     }
     
-    const success = await authStore.login(
-      normalizedUsername, // 使用小写的用户名
-      loginForm.value.password,
-      needCaptcha ? loginForm.value.captcha_code : '',
-      needCaptcha ? loginForm.value.captcha_id : ''
-    )
+    // 开发环境下使用模拟登录，避免代理问题
+    let success
+    if (isDevEnvironment.value) {
+      console.log('开发环境，使用模拟登录')
+      // 直接调用模拟登录函数
+      success = authStore.mockLogin(normalizedUsername, loginForm.value.password)
+    } else {
+      success = await authStore.login(
+        normalizedUsername,
+        loginForm.value.password,
+        needCaptcha ? loginForm.value.captcha_code : '',
+        needCaptcha ? loginForm.value.captcha_id : ''
+      )
+    }
     
     if (success) {
       // 登录成功，重置尝试次数
@@ -378,10 +406,19 @@ const handleLogin = async () => {
       showLoginCaptcha.value = false
       successMessage.value = `登录成功！欢迎 ${authStore.displayName}`
       
-      // 延迟跳转到主页
-      setTimeout(() => {
-        router.push('/')
-      }, 1500)
+      console.log('登录成功，准备跳转到配置页面...')
+      
+      // 重要：使用路由的 replace 方法而不是 push
+      // 这样可以防止后退到登录页
+      router.replace('/config').then(() => {
+        console.log('跳转到 /config 成功')
+      }).catch(err => {
+        console.error('跳转到 /config 失败:', err)
+        // 备用方案：尝试跳转到首页
+        router.replace('/').catch(() => {
+          console.error('跳转到根路径也失败')
+        })
+      })
       
     } else {
       // 登录失败，增加尝试次数
@@ -390,8 +427,11 @@ const handleLogin = async () => {
       // 如果达到3次失败，显示验证码
       if (loginAttempts.value >= 3) {
         showLoginCaptcha.value = true
-        await authStore.getCaptcha()
-        loginForm.value.captcha_id = authStore.captchaId
+        // 开发环境下不需要验证码
+        if (!isDevEnvironment.value) {
+          await authStore.getCaptcha()
+          loginForm.value.captcha_id = authStore.captchaId
+        }
       }
       
       errorMessage.value = authStore.error || '登录失败，请检查用户名和密码'
@@ -399,7 +439,25 @@ const handleLogin = async () => {
     
   } catch (error: any) {
     console.error('登录错误:', error)
-    errorMessage.value = `登录失败: ${error.message || '请检查网络连接和服务器状态'}`
+    // 开发环境下的网络错误提示
+    if (isDevEnvironment.value && error.message && error.message.includes('fetch')) {
+      // 尝试使用模拟登录作为备选
+      console.log('网络请求失败，尝试模拟登录')
+      const normalizedUsername = loginForm.value.username.toLowerCase()
+      const success = authStore.mockLogin(normalizedUsername, loginForm.value.password)
+      if (success) {
+        successMessage.value = `模拟登录成功！欢迎 ${authStore.displayName}`
+        console.log('模拟登录成功，准备跳转到配置页面...')
+        // 使用 replace 而不是 push
+        router.replace('/config').catch(() => {
+          router.replace('/')
+        })
+      } else {
+        errorMessage.value = '登录失败，请使用测试账号：admin, user, guest'
+      }
+    } else {
+      errorMessage.value = `登录失败: ${error.message || '请检查网络连接和服务器状态'}`
+    }
   }
 }
 
@@ -409,6 +467,23 @@ const handleRegister = async () => {
   
   try {
     console.log('正在注册，用户名:', authStore.registerForm.username)
+    
+    // 开发环境下跳过注册，直接模拟注册
+    if (isDevEnvironment.value) {
+      console.log('开发环境，使用模拟注册')
+      // 使用模拟登录代替注册
+      const success = authStore.mockLogin(authStore.registerForm.username, authStore.registerForm.password)
+      if (success) {
+        registerAttempts.value = 0
+        showRegisterCaptcha.value = false
+        successMessage.value = `模拟注册成功！欢迎 ${authStore.displayName}`
+        
+        console.log('注册成功，准备跳转到配置页面...')
+        // 使用 replace 而不是 push
+        router.replace('/config')
+        return
+      }
+    }
     
     // 检查是否需要验证码
     const needCaptcha = registerAttempts.value >= 3
@@ -432,10 +507,9 @@ const handleRegister = async () => {
       showRegisterCaptcha.value = false
       successMessage.value = `注册成功！欢迎 ${authStore.displayName}`
       
-      // 延迟跳转到主页
-      setTimeout(() => {
-        router.push('/')
-      }, 1500)
+      console.log('注册成功，准备跳转到配置页面...')
+      // 使用 replace 而不是 push
+      router.replace('/config')
       
     } else {
       // 注册失败，增加尝试次数
@@ -466,6 +540,73 @@ const handleRegister = async () => {
   justify-content: center;
   overflow: auto;
   transition: background-color 0.3s ease;
+}
+
+/* 开发环境横幅 */
+.dev-environment-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 15px;
+  background: linear-gradient(135deg, #ff9800, #ff5722);
+  color: white;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  animation: pulse 2s infinite;
+}
+
+.dev-icon {
+  font-size: 14px;
+}
+
+.dev-text {
+  flex: 1;
+  text-align: center;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+/* 开发环境测试账号样式 */
+.dev-accounts {
+  margin: 10px 0 15px;
+  padding: 12px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.dev-accounts-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #4caf50;
+}
+
+.dev-account {
+  font-size: 12px;
+  margin: 3px 0;
+  color: #666;
+  padding-left: 8px;
+  position: relative;
+}
+
+.dev-account::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #4caf50;
 }
 
 /* 主题相关样式 */
@@ -1311,7 +1452,7 @@ const handleRegister = async () => {
 @media (prefers-color-scheme: dark) {
   .theme-system .auth-footer {
     color: #90a4ae;
-    border-top-color: rgba(144, 164, 174, 0.3);
+    border-top-color: rgba(144, 164, 174, 0.3)
   }
 }
 

@@ -1,20 +1,10 @@
 <template>
   <div class="config-view">
-    <!-- 自定义导航栏 -->
-    <div class="custom-navbar">
-      <button class="back-button" @click="goBack">
-        <span class="back-icon">←</span>
-        返回
-      </button>
-      <h1 class="page-title">系统设置</h1>
-      <div class="nav-spacer"></div>
-    </div>
-
     <div class="config-scroll-area">
       <div class="config-content-wrapper">
         <div class="config-content">
 
-          <!-- 用户信息卡片 -->
+          <!-- 用户信息卡片 - 直接放在顶部 -->
           <section class="section-container user-section">
             <div class="user-card-wrapper">
               <div class="user-card-compact">
@@ -46,13 +36,14 @@
                     >
                       {{ displayName }}
                     </p>
+                    <p class="user-email">{{ authStore.currentUser?.email || '未设置邮箱' }}</p>
                   </div>
                 </div>
 
                 <!-- 按钮容器 -->
                 <div class="user-card-buttons">
-                  <a href="#" class="upgrade-link" @click.stop="handleUpgrade">升级</a>
-                  <button class="action-btn-secondary logout-btn-compact" @click.stop="handleLogout">退出</button>
+                  <a href="#" class="upgrade-link" @click.prevent="handleUpgrade">升级</a>
+                  <button class="action-btn-secondary logout-btn-compact" @click="handleLogout">退出登录</button>
                 </div>
               </div>
             </div>
@@ -200,7 +191,7 @@
             </div>
           </section>
 
-          <!-- 关于卡片 -->
+          <!-- 关于卡片 - 添加底部间距避免被导航栏遮挡 -->
           <section class="section-container about-section">
             <div 
               class="feature-card about-card"
@@ -324,25 +315,38 @@ const fundAPIs = [
 ]
 const selectedAPI = ref('eastmoney')
 
+// 应用主题函数 - 确保立即应用到所有视图
 const applyTheme = (mode: string) => {
   selectedTheme.value = mode
   localStorage.setItem('themeMode', mode)
   
-  const root = document.getElementById('app')
-  if (!root) return
-
-  root.classList.remove('dark-mode', 'theme-light')
+  console.log(`应用主题: ${mode}`)
+  
+  // 应用主题到整个应用
+  const root = document.documentElement
+  const app = document.getElementById('app')
+  
+  // 移除所有主题类
+  root.classList.remove('theme-light', 'theme-dark', 'theme-system')
+  if (app) {
+    app.classList.remove('theme-light', 'theme-dark', 'theme-system')
+  }
   
   if (mode === 'dark') {
-    root.classList.add('dark-mode')
+    root.classList.add('theme-dark')
+    if (app) app.classList.add('theme-dark')
   } else if (mode === 'light') {
     root.classList.add('theme-light')
+    if (app) app.classList.add('theme-light')
   } else {
+    // 系统主题
+    root.classList.add('theme-system')
+    if (app) app.classList.add('theme-system')
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
     if (prefersDark) {
-      root.classList.add('dark-mode')
+      document.documentElement.classList.add('dark-mode')
     } else {
-      root.classList.add('theme-light')
+      document.documentElement.classList.add('theme-light')
     }
   }
 
@@ -386,14 +390,21 @@ const handleUpgrade = (e: Event) => {
   showToast('正在跳转到升级页面...', 'info')
 }
 
-const handleLogout = () => {
-  authStore.logout()
-  showToast('您已退出登录', 'info')
-  router.push('/auth')
-}
-
-const goBack = () => {
-  router.back()
+// 修复退出登录函数 - 避免路由跳转冲突
+const handleLogout = async () => {
+  try {
+    // 显示退出成功消息
+    showToast('您已成功退出登录', 'success')
+    
+    // 短暂延迟后调用authStore的logout方法
+    setTimeout(() => {
+      authStore.logout()
+    }, 800) // 增加延迟时间，确保Toast显示完成
+    
+  } catch (error) {
+    console.error('退出登录失败:', error)
+    showToast('退出登录失败，请重试', 'error')
+  }
 }
 
 watch(selectedAPI, (newAPI) => {
@@ -401,10 +412,21 @@ watch(selectedAPI, (newAPI) => {
 })
 
 onMounted(() => {
+  // 初始化应用主题
   applyTheme(selectedTheme.value)
   
   // 初始化数据
   dataStore.loadData()
+  
+  // 监听系统主题变化（仅当选择系统主题时）
+  if (selectedTheme.value === 'system') {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    mediaQuery.addEventListener('change', (e) => {
+      if (selectedTheme.value === 'system') {
+        applyTheme('system')
+      }
+    })
+  }
 })
 </script>
 
@@ -417,59 +439,12 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.custom-navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.back-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-primary);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.back-button:hover {
-  background: var(--accent-color);
-  color: white;
-  border-color: var(--accent-color);
-}
-
-.back-icon {
-  font-size: 18px;
-  line-height: 1;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.nav-spacer {
-  width: 80px;
-}
-
 .config-scroll-area {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   position: relative;
+  padding-top: 0; /* 移除顶部内边距，因为移除了导航栏 */
 }
 
 .config-content-wrapper {
@@ -483,13 +458,15 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  /* 添加底部内边距，确保内容不被底部导航栏遮挡 */
+  padding-bottom: calc(80px + 20px); /* 底部导航栏高度 + 额外间距 */
 }
 
 .section-container {
   width: 100%;
 }
 
-/* 用户卡片样式 */
+/* 用户卡片样式 - 添加邮箱显示 */
 .user-card-wrapper {
   position: relative;
   width: 100%;
@@ -503,7 +480,7 @@ onMounted(() => {
   border: 1px solid var(--border-color);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  min-height: 140px;
+  min-height: 150px; /* 稍微增加高度以容纳邮箱 */
   display: flex;
   flex-direction: column;
 }
@@ -549,6 +526,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 4px; /* 添加间距 */
 }
 
 .user-display-name {
@@ -557,6 +535,13 @@ onMounted(() => {
   margin: 0;
   line-height: 1.2;
   display: inline-block;
+}
+
+.user-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  opacity: 0.8;
 }
 
 .user-card-buttons {
@@ -747,7 +732,11 @@ onMounted(() => {
   border-color: var(--accent-color);
 }
 
-/* 关于卡片区域 */
+/* 关于卡片区域 - 确保不被底部导航栏遮挡 */
+.about-section {
+  margin-bottom: 40px; /* 添加底部边距，确保卡片完全可见 */
+}
+
 .about-card {
   min-height: 100px;
 }
@@ -824,6 +813,7 @@ onMounted(() => {
   .config-content {
     padding: 16px;
     gap: 20px;
+    padding-bottom: calc(60px + 20px); /* 调整底部导航栏高度 */
   }
   
   .features-grid {
@@ -858,6 +848,7 @@ onMounted(() => {
 @media (max-width: 480px) {
   .config-content {
     gap: 16px;
+    padding-bottom: calc(60px + 16px);
   }
   
   .features-grid {

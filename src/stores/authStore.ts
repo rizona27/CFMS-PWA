@@ -156,7 +156,8 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = ''
     
     try {
-      console.log(`登录尝试: ${username}`)
+      console.log(`登录尝试: ${username}, 环境: ${import.meta.env.MODE}`)
+      console.log(`API地址: ${API_BASE_URL}`)
 
       if (!username || !password) {
         error.value = '请输入用户名和密码'
@@ -203,6 +204,12 @@ export const useAuthStore = defineStore('auth', () => {
         
         token.value = data.token || ''
         isLoggedIn.value = true
+        
+        console.log('登录响应数据:', data)
+        console.log('用户数据:', userData)
+        console.log('登录成功，存储token和用户信息')
+        console.log('当前登录状态:', isLoggedIn.value)
+        console.log('当前用户:', currentUser.value)
         
         localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
         localStorage.setItem('auth_token', token.value)
@@ -333,6 +340,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function mockLogin(username: string, password: string): boolean {
+    console.log('开始模拟登录，用户名:', username, '密码:', password)
+    
     const mockUsers: Record<string, Partial<User>> = {
       'admin': {
         id: 1,
@@ -364,17 +373,34 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
 
-    const user = mockUsers[username]
+    const normalizedUsername = username.toLowerCase()
+    const user = mockUsers[normalizedUsername]
+    
     if (user && password) {
       currentUser.value = user as User
       isLoggedIn.value = true
       
+      // 关键：设置一个有效的token
+      const mockToken = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      token.value = mockToken
+      
+      // 确保保存到 localStorage
       localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
-      console.log(`模拟登录成功: ${username} (${user.user_type})`)
+      localStorage.setItem('auth_token', mockToken)
+      
+      console.log(`模拟登录成功: ${normalizedUsername} (${user.user_type})`)
+      console.log('设置的token:', mockToken)
+      console.log('localStorage 检查:')
+      console.log('  auth_token:', localStorage.getItem('auth_token'))
+      console.log('  auth_user:', localStorage.getItem('auth_user'))
+      console.log('当前登录状态:', isLoggedIn.value)
+      console.log('当前用户:', currentUser.value)
       
       return true
     } else {
       error.value = '用户名或密码错误'
+      console.log('模拟登录失败: 用户名或密码错误')
+      console.log('可用用户名:', Object.keys(mockUsers))
       return false
     }
   }
@@ -390,6 +416,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchUserProfile(): Promise<void> {
+    // 在开发环境下，如果后端不可用，跳过用户信息获取
+    if (import.meta.env.DEV) {
+      console.log('开发环境，跳过用户信息获取请求')
+      return
+    }
+    
     if (!currentUser.value || !token.value) return
     
     try {
@@ -452,7 +484,10 @@ export const useAuthStore = defineStore('auth', () => {
     if (user) {
       currentUser.value = user as User
       isLoggedIn.value = true
+      const mockToken = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      token.value = mockToken
       localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
+      localStorage.setItem('auth_token', mockToken)
       console.log(`强制登录成功: ${username}`)
     }
   }
@@ -466,14 +501,46 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('auth_user')
     localStorage.removeItem('auth_token')
     
-    const router = useRouter()
-    router.push('/auth')
+    console.log('清除登录状态完成，正在跳转到登录页...')
+    
+    // 使用 setTimeout 避免路由跳转冲突
+    setTimeout(() => {
+      try {
+        const router = useRouter()
+        // 使用 replace 而不是 push，避免用户能通过返回按钮回到已登录状态
+        router.replace('/auth').then(() => {
+          console.log('已成功跳转到登录页')
+          // 刷新页面以确保状态完全重置
+          setTimeout(() => {
+            window.location.reload()
+          }, 100)
+        }).catch(err => {
+          console.error('路由跳转失败，使用备用方案:', err)
+          // 如果路由跳转失败，使用 window.location 作为备用
+          window.location.hash = '#/auth'
+          // 刷新页面
+          setTimeout(() => {
+            window.location.reload()
+          }, 100)
+        })
+      } catch (routerError) {
+        console.error('无法使用路由，直接跳转:', routerError)
+        window.location.hash = '#/auth'
+        setTimeout(() => {
+          window.location.reload()
+        }, 100)
+      }
+    }, 100)
   }
 
   function autoLogin() {
     try {
+      console.log('尝试自动登录...')
       const savedUser = localStorage.getItem('auth_user')
       const savedToken = localStorage.getItem('auth_token')
+      
+      console.log('保存的用户:', savedUser)
+      console.log('保存的token:', savedToken)
       
       if (savedUser && savedToken) {
         const userData = JSON.parse(savedUser)
@@ -481,26 +548,36 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = savedToken
         isLoggedIn.value = true
         
-        validateToken().then(isValid => {
-          if (!isValid) {
-            console.log('Token已失效，清除登录状态')
-            logout()
-          } else {
-            console.log('自动登录成功:', userData.username)
-            fetchUserProfile()
-          }
-        }).catch(() => {
-          logout()
-        })
+        console.log('自动登录成功:', userData.username)
+        console.log('当前登录状态:', isLoggedIn.value)
+        
+        // 只在生产环境或后端可用时获取用户信息
+        if (import.meta.env.PROD) {
+          fetchUserProfile()
+        } else {
+          console.log('开发环境，跳过用户信息获取')
+        }
+        
+        return true
+      } else {
+        console.log('没有保存的登录信息，需要手动登录')
+        return false
       }
     } catch (error) {
       console.error('自动登录失败:', error)
       logout()
+      return false
     }
   }
 
   async function validateToken(): Promise<boolean> {
     if (!token.value) return false
+    
+    // 开发环境下使用模拟验证
+    if (import.meta.env.DEV && token.value.startsWith('mock_token_')) {
+      console.log('开发环境，模拟token验证成功')
+      return true
+    }
     
     try {
       const response = await fetch(`${API_BASE_URL}/validate-token`, {

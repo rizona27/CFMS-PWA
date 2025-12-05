@@ -31,9 +31,11 @@
     
     <!-- 未登录状态下显示登录页面 -->
     <template v-else>
-      <router-view v-slot="{ Component }">
-        <component :is="Component" />
-      </router-view>
+      <div class="auth-container-wrapper">
+        <router-view v-slot="{ Component }">
+          <component :is="Component" />
+        </router-view>
+      </div>
     </template>
     
     <!-- 全局Toast消息 -->
@@ -65,10 +67,16 @@ const getTransitionName = (route: RouteLocationNormalized) => {
   return (route.meta?.transition as string) || 'fade'
 }
 
-// 主题类名计算
+// 主题类名计算 - 监听localStorage变化
 const themeClass = computed(() => {
-  const theme = localStorage.getItem('themeMode') || 'light'
+  const theme = localStorage.getItem('themeMode') || 'system'
   return `theme-${theme}`
+})
+
+// 监听主题变化，立即应用到页面
+watch(themeClass, (newTheme) => {
+  console.log('主题变化:', newTheme)
+  applyThemeToDOM(newTheme)
 })
 
 // 是否显示底部导航栏
@@ -104,15 +112,93 @@ watch(() => route.path, (newPath) => {
   isTabBarHidden.value = hideTabBarRoutes.some(hideRoute => newPath.startsWith(hideRoute))
 })
 
+// 应用主题到DOM
+const applyThemeToDOM = (themeClass: string) => {
+  const root = document.documentElement
+  const app = document.getElementById('app')
+  
+  // 移除所有主题类
+  root.classList.remove('theme-light', 'theme-dark', 'theme-system', 'dark-mode')
+  if (app) {
+    app.classList.remove('theme-light', 'theme-dark', 'theme-system')
+  }
+  
+  // 应用新主题
+  if (themeClass === 'theme-dark') {
+    root.classList.add('theme-dark')
+    if (app) app.classList.add('theme-dark')
+  } else if (themeClass === 'theme-light') {
+    root.classList.add('theme-light')
+    if (app) app.classList.add('theme-light')
+  } else {
+    root.classList.add('theme-system')
+    if (app) app.classList.add('theme-system')
+    // 系统主题根据系统设置决定
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    if (prefersDark) {
+      root.classList.add('dark-mode')
+    }
+  }
+}
+
+// 检查登录状态
+const checkAuthState = () => {
+  const token = localStorage.getItem('auth_token')
+  const user = localStorage.getItem('auth_user')
+  
+  console.log('检查登录状态:')
+  console.log('  token:', token)
+  console.log('  user:', user)
+  console.log('  authStore.isLoggedIn:', authStore.isLoggedIn)
+  
+  const hasValidToken = token && token !== 'null' && token !== 'undefined'
+  
+  if (hasValidToken && !authStore.isLoggedIn) {
+    console.log('localStorage有token但store状态未更新，尝试自动登录')
+    authStore.autoLogin()
+  } else if (!hasValidToken && authStore.isLoggedIn) {
+    console.log('localStorage无token但store状态已登录，清除登录状态')
+    authStore.logout()
+  }
+}
+
 // 应用启动时的初始化
 onMounted(() => {
   console.log('CFMS PWA应用已启动')
   
-  // 自动登录
-  authStore.autoLogin()
+  // 初始化主题
+  const savedTheme = localStorage.getItem('themeMode') || 'system'
+  applyThemeToDOM(`theme-${savedTheme}`)
+  
+  // 检查并同步登录状态
+  setTimeout(() => {
+    checkAuthState()
+    
+    // 如果当前在需要认证的页面但未登录，重定向到登录页
+    if (route.meta?.requiresAuth && !authStore.isLoggedIn) {
+      console.log('当前页面需要认证但未登录，检查localStorage...')
+      const token = localStorage.getItem('auth_token')
+      const hasValidToken = token && token !== 'null' && token !== 'undefined'
+      
+      if (!hasValidToken) {
+        console.log('没有有效token，重定向到登录页')
+        // 使用hash直接跳转，避免路由冲突
+        window.location.hash = '#/auth'
+      }
+    }
+  }, 100)
   
   // 加载数据
   dataStore.loadData()
+  
+  // 监听系统主题变化
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  mediaQuery.addEventListener('change', (e) => {
+    const currentTheme = localStorage.getItem('themeMode') || 'system'
+    if (currentTheme === 'system') {
+      applyThemeToDOM('theme-system')
+    }
+  })
   
   // 监听全局事件
   window.addEventListener('show-toast', (event: any) => {
@@ -128,19 +214,54 @@ onMounted(() => {
   window.addEventListener('offline', () => {
     showToast('网络已断开', 'warning')
   })
+  
+  // 监听localStorage变化（主题变化）
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'themeMode') {
+      const newTheme = e.newValue || 'system'
+      applyThemeToDOM(`theme-${newTheme}`)
+    } else if (e.key === 'auth_token' || e.key === 'auth_user') {
+      // 登录状态变化时重新检查
+      setTimeout(() => checkAuthState(), 100)
+    }
+  })
 })
 
-// 全局错误处理
+// 全局错误处理 - 改进错误处理逻辑
 onMounted(() => {
-  window.addEventListener('error', (event) => {
+  const errorHandler = (event: ErrorEvent) => {
     console.error('全局错误:', event.error)
+    // 检查是否是路由相关错误
+    if (event.error && event.error.message && event.error.message.includes('router')) {
+      console.log('路由相关错误，忽略')
+      return
+    }
+    // 检查是否是Promise rejection错误
+    if (event.error && event.error.name === 'NavigationDuplicated') {
+      console.log('路由重复导航错误，忽略')
+      return
+    }
     showToast('应用发生错误，请刷新页面', 'error')
-  })
+  }
   
-  window.addEventListener('unhandledrejection', (event) => {
+  const rejectionHandler = (event: PromiseRejectionEvent) => {
     console.error('未处理的Promise拒绝:', event.reason)
+    // 检查是否是路由相关的rejection
+    if (event.reason && event.reason.name === 'NavigationDuplicated') {
+      console.log('路由重复导航rejection，忽略')
+      return
+    }
     showToast('操作失败，请重试', 'error')
-  })
+  }
+  
+  window.addEventListener('error', errorHandler)
+  window.addEventListener('unhandledrejection', rejectionHandler)
+  
+  // 清理函数
+  return () => {
+    window.removeEventListener('error', errorHandler)
+    window.removeEventListener('unhandledrejection', rejectionHandler)
+  }
 })
 </script>
 
@@ -158,6 +279,7 @@ onMounted(() => {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app-container {
@@ -172,7 +294,12 @@ onMounted(() => {
   position: relative;
 }
 
-/* 主题样式 */
+.auth-container-wrapper {
+  width: 100%;
+  height: 100vh;
+}
+
+/* 主题样式 - 确保主题变量正确应用到所有元素 */
 .theme-light {
   --bg-primary: #f5f5f5;
   --bg-card: #ffffff;
@@ -181,6 +308,7 @@ onMounted(() => {
   --text-secondary: #666666;
   --accent-color: #2196f3;
   --border-color: #e0e0e0;
+  --accent-color-rgb: 33, 150, 243;
   background-color: var(--bg-primary);
   color: var(--text-primary);
 }
@@ -193,8 +321,37 @@ onMounted(() => {
   --text-secondary: #b0b0b0;
   --accent-color: #64b5f6;
   --border-color: #333333;
+  --accent-color-rgb: 100, 181, 246;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+}
+
+.theme-system {
+  --bg-primary: #f5f5f5;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f0f0;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent-color: #2196f3;
+  --border-color: #e0e0e0;
+  --accent-color-rgb: 33, 150, 243;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-system {
+    --bg-primary: #121212;
+    --bg-card: #1e1e1e;
+    --bg-hover: #2d2d2d;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --accent-color: #64b5f6;
+    --border-color: #333333;
+    --accent-color-rgb: 100, 181, 246;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
 }
 
 /* 过渡动画 */
