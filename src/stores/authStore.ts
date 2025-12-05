@@ -42,9 +42,10 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string>('')
   const isRegistering = ref(false)
 
-  // 后端API地址 - 根据您的后端配置
-  // 注意：您的后端运行在 30443 端口，不是 11345
-  const API_BASE_URL = 'http://192.168.124.26:30443/api'
+  // 后端API地址 - 修改为新的后端域名
+  const API_BASE_URL = import.meta.env.PROD 
+    ? 'https://cfms.crnas.uk:8315/api'
+    : '/api'  // 开发时使用代理
   
   // 验证码相关状态
   const captchaImage = ref<string>('')
@@ -64,7 +65,6 @@ export const useAuthStore = defineStore('auth', () => {
   const userType = computed(() => {
     if (!currentUser.value) return UserType.FREE
     
-    // 根据数据库中的user_type字段映射到枚举
     switch (currentUser.value.user_type?.toLowerCase()) {
       case 'vip':
       case 'admin':
@@ -85,12 +85,10 @@ export const useAuthStore = defineStore('auth', () => {
     return username.charAt(0).toUpperCase() + username.slice(1).toLowerCase()
   })
 
-  // 将UserType转换为字符串格式
   const userTypeString = computed(() => {
     return userType.value.toString().toLowerCase()
   })
 
-  // 获取用户等级显示文本
   const userTypeDisplay = computed(() => {
     switch (userType.value) {
       case UserType.VIP:
@@ -103,7 +101,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   })
 
-  // 检查订阅是否有效
   const isSubscriptionValid = computed(() => {
     if (!currentUser.value || !currentUser.value.subscription_end) return false
     
@@ -112,7 +109,6 @@ export const useAuthStore = defineStore('auth', () => {
     return endDate > now
   })
 
-  // 获取剩余订阅天数
   const subscriptionDaysLeft = computed(() => {
     if (!currentUser.value || !currentUser.value.subscription_end || !isSubscriptionValid.value) return 0
     
@@ -124,14 +120,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   // ========== 验证码相关方法 ==========
   
-  // 获取验证码
   async function getCaptcha(): Promise<boolean> {
     try {
       const response = await fetch(`${API_BASE_URL}/captcha`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        credentials: 'include'  // 跨域请求需要携带凭证
       })
 
       const data = await response.json()
@@ -167,34 +163,30 @@ export const useAuthStore = defineStore('auth', () => {
         return false
       }
 
-      // 构建请求数据
       const requestData: any = {
         username: username,
         password: password
       }
       
-      // 如果需要验证码，添加到请求中
       if (captcha_code && captcha_id) {
         requestData.captcha_code = captcha_code
         requestData.captcha_id = captcha_id
       }
 
-      // 连接到后端API进行真实登录
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify(requestData),
+        credentials: 'include'  // 跨域请求需要携带凭证
       })
 
       const data = await response.json()
       
       if (response.ok && data.success) {
-        // 登录成功
         const userData = data.user_info || data.user
         
-        // 将数据库用户数据映射到User接口
         currentUser.value = {
           id: userData.user_id || userData.id,
           username: userData.username,
@@ -212,7 +204,6 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = data.token || ''
         isLoggedIn.value = true
         
-        // 存储到localStorage
         localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
         localStorage.setItem('auth_token', token.value)
         
@@ -220,10 +211,8 @@ export const useAuthStore = defineStore('auth', () => {
         
         return true
       } else {
-        // 登录失败，使用后端返回的错误消息或默认消息
         error.value = data.error || data.message || '用户名或密码错误'
         
-        // 如果需要验证码，重新获取验证码
         if (data.error && data.error.includes('验证码')) {
           await getCaptcha()
         }
@@ -235,7 +224,6 @@ export const useAuthStore = defineStore('auth', () => {
       console.error('登录错误:', err)
       error.value = err.message || '登录失败，请检查网络连接'
       
-      // 如果后端API不可用，作为备用，使用模拟数据
       if (err.message.includes('Failed to fetch') || err.message.includes('Network')) {
         console.log('后端API不可用，使用模拟登录作为备用')
         return mockLogin(username, password)
@@ -247,7 +235,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 注册方法
   async function register(formData: RegisterForm): Promise<boolean> {
     isLoading.value = true
     error.value = ''
@@ -260,28 +247,25 @@ export const useAuthStore = defineStore('auth', () => {
         return false
       }
 
-      // 如果密码太短
       if (formData.password.length < 6) {
         error.value = '密码至少需要6位'
         return false
       }
 
-      // 连接到后端API进行注册
       const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
+        credentials: 'include'  // 跨域请求需要携带凭证
       })
 
       const data = await response.json()
       
       if (response.ok && data.success) {
-        // 注册成功，自动登录
         const userData = data.user_info
         
-        // 将数据库用户数据映射到User接口
         currentUser.value = {
           id: userData.user_id,
           username: userData.username,
@@ -299,21 +283,17 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = data.token || ''
         isLoggedIn.value = true
         
-        // 存储到localStorage
         localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
         localStorage.setItem('auth_token', token.value)
         
         console.log(`注册并登录成功: ${formData.username} (${currentUser.value.user_type})`)
         
-        // 清空注册表单
         resetRegisterForm()
         
         return true
       } else {
-        // 注册失败
         error.value = data.error || data.message || '注册失败'
         
-        // 如果需要验证码，重新获取验证码
         if (data.error && (data.error.includes('验证码') || data.error.includes('captcha'))) {
           await getCaptcha()
         }
@@ -330,7 +310,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 重置注册表单
   function resetRegisterForm() {
     registerForm.value = {
       username: '',
@@ -344,20 +323,16 @@ export const useAuthStore = defineStore('auth', () => {
     captchaId.value = ''
   }
 
-  // 切换登录/注册模式
   function toggleRegisterMode() {
     isRegistering.value = !isRegistering.value
     error.value = ''
     
-    // 如果是注册模式，获取验证码
     if (isRegistering.value) {
       getCaptcha()
     }
   }
 
-  // 模拟登录作为备用
   function mockLogin(username: string, password: string): boolean {
-    // 模拟用户数据 - 可以根据您的数据库内容调整
     const mockUsers: Record<string, Partial<User>> = {
       'admin': {
         id: 1,
@@ -390,7 +365,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const user = mockUsers[username]
-    if (user && password) { // 模拟登录，只要密码非空就通过
+    if (user && password) {
       currentUser.value = user as User
       isLoggedIn.value = true
       
@@ -404,7 +379,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 检查数据库连接
   async function checkDatabaseConnection(): Promise<boolean> {
     try {
       const response = await fetch(`${API_BASE_URL}/health`)
@@ -415,7 +389,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 从数据库获取用户信息
   async function fetchUserProfile(): Promise<void> {
     if (!currentUser.value || !token.value) return
     
@@ -424,7 +397,8 @@ export const useAuthStore = defineStore('auth', () => {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token.value}`
-        }
+        },
+        credentials: 'include'  // 跨域请求需要携带凭证
       })
       
       if (response.ok) {
@@ -442,7 +416,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 添加一个强制登录方法用于测试
   function forceLogin(username: string) {
     const mockUsers: Record<string, Partial<User>> = {
       'admin': {
@@ -487,23 +460,12 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     console.log('用户退出登录')
     
-    // 调用后端登出接口（如果存在）
-    if (token.value) {
-      fetch(`${API_BASE_URL}/logout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token.value}`
-        }
-      }).catch(err => console.error('登出API调用失败:', err))
-    }
-    
     isLoggedIn.value = false
     currentUser.value = null
     token.value = ''
     localStorage.removeItem('auth_user')
     localStorage.removeItem('auth_token')
     
-    // 使用Vue Router进行跳转
     const router = useRouter()
     router.push('/auth')
   }
@@ -519,19 +481,15 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = savedToken
         isLoggedIn.value = true
         
-        // 验证token是否有效
         validateToken().then(isValid => {
           if (!isValid) {
             console.log('Token已失效，清除登录状态')
             logout()
           } else {
             console.log('自动登录成功:', userData.username)
-            
-            // 获取最新的用户信息
             fetchUserProfile()
           }
         }).catch(() => {
-          // 验证失败也清除登录状态
           logout()
         })
       }
@@ -541,7 +499,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 验证token有效性
   async function validateToken(): Promise<boolean> {
     if (!token.value) return false
     
@@ -550,7 +507,8 @@ export const useAuthStore = defineStore('auth', () => {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token.value}`
-        }
+        },
+        credentials: 'include'  // 跨域请求需要携带凭证
       })
       
       return response.ok
@@ -560,13 +518,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 检查用户权限
   function hasPermission(requiredType: UserType): boolean {
     if (!currentUser.value) return false
     
     const userLevel = userType.value
     
-    // 权限等级：VIP > SUBSCRIBED > FREE
     const levelValue = {
       [UserType.VIP]: 3,
       [UserType.SUBSCRIBED]: 2,
@@ -577,7 +533,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    // 状态
     isLoggedIn,
     currentUser,
     token,
@@ -589,7 +544,6 @@ export const useAuthStore = defineStore('auth', () => {
     captchaCode,
     registerForm,
     
-    // 计算属性
     userType,
     userTypeString,
     userTypeDisplay,
@@ -597,7 +551,6 @@ export const useAuthStore = defineStore('auth', () => {
     isSubscriptionValid,
     subscriptionDaysLeft,
     
-    // 方法
     login,
     register,
     resetRegisterForm,

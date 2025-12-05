@@ -17,6 +17,8 @@ export default defineConfig(({ mode }) => ({
         background_color: '#f5f5f5',
         display: 'standalone',
         orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -46,7 +48,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    // 使用相对路径
+    // 修改为相对路径以适应子域名部署
     base: './',
     rollupOptions: {
       output: {
@@ -61,11 +63,13 @@ export default defineConfig(({ mode }) => ({
     host: true,
     port: 5173,
     open: true,
+    // 开发时使用代理
     proxy: {
       '/api': {
         target: 'http://192.168.124.26:30443',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
       }
     }
   }
