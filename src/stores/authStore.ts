@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 
 // 定义用户类型枚举
 export enum UserType {
@@ -503,33 +502,13 @@ export const useAuthStore = defineStore('auth', () => {
     
     console.log('清除登录状态完成，正在跳转到登录页...')
     
-    // 使用 setTimeout 避免路由跳转冲突
+    // 直接使用 window.location 跳转，避免 useRouter() 问题
     setTimeout(() => {
-      try {
-        const router = useRouter()
-        // 使用 replace 而不是 push，避免用户能通过返回按钮回到已登录状态
-        router.replace('/auth').then(() => {
-          console.log('已成功跳转到登录页')
-          // 刷新页面以确保状态完全重置
-          setTimeout(() => {
-            window.location.reload()
-          }, 100)
-        }).catch(err => {
-          console.error('路由跳转失败，使用备用方案:', err)
-          // 如果路由跳转失败，使用 window.location 作为备用
-          window.location.hash = '#/auth'
-          // 刷新页面
-          setTimeout(() => {
-            window.location.reload()
-          }, 100)
-        })
-      } catch (routerError) {
-        console.error('无法使用路由，直接跳转:', routerError)
-        window.location.hash = '#/auth'
-        setTimeout(() => {
-          window.location.reload()
-        }, 100)
-      }
+      window.location.hash = '#/auth'
+      // 刷新页面以确保状态完全重置
+      setTimeout(() => {
+        window.location.reload()
+      }, 100)
     }, 100)
   }
 

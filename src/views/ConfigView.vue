@@ -4,7 +4,7 @@
       <div class="config-content-wrapper">
         <div class="config-content">
 
-          <!-- 用户信息卡片 - 直接放在顶部 -->
+          <!-- 用户信息卡片 -->
           <section class="section-container user-section">
             <div class="user-card-wrapper">
               <div class="user-card-compact">
@@ -49,75 +49,50 @@
             </div>
           </section>
 
-          <!-- 6个功能卡片统一放在一个section中 -->
+          <!-- 功能卡片区域 -->
           <section class="section-container features-section">
             <div class="features-grid">
               <!-- 第一行 -->
-              <div 
-                class="feature-card"
-                :class="{ 'disabled-card': authStore.userType === 'free' }"
-                :style="{
-                  background: authStore.userType !== 'free' ? 'rgba(147, 51, 234, 0.1)' : 'var(--bg-hover)',
-                  border: authStore.userType !== 'free' ? '1px solid rgba(147, 51, 234, 0.2)' : '1px solid var(--border-color)'
-                }"
+              <CustomCard
+                title="云端同步"
+                description="持仓数据上传与下载"
+                icon="☁️"
+                :bg-color="authStore.userType !== 'free' ? 'rgba(147, 51, 234, 0.1)' : 'var(--bg-hover)'"
+                :fg-color="authStore.userType !== 'free' ? '#9333ea' : 'var(--text-secondary)'"
                 @click="handleFeature('CloudSync')"
               >
-                <div class="card-inner">
-                  <div class="card-header">
-                    <span class="card-icon">☁️</span>
-                    <div class="text-group">
-                      <h3 class="card-title">云端同步</h3>
-                      <p class="card-description">持仓数据上传与下载</p>
-                    </div>
-                  </div>
+                <div v-if="authStore.userType === 'free'" class="vip-badge">
+                  VIP功能
                 </div>
-              </div>
+              </CustomCard>
               
-              <div 
-                class="feature-card"
-                style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2)"
+              <CustomCard
+                title="管理持仓"
+                description="新增、编辑或清空持仓数据"
+                icon="📁"
+                bg-color="rgba(59, 130, 246, 0.1)"
+                fg-color="#3b82f6"
                 @click="handleFeature('ManageHoldings')"
-              >
-                <div class="card-inner">
-                  <div class="card-header">
-                    <span class="card-icon">📁</span>
-                    <div class="text-group">
-                      <h3 class="card-title">管理持仓</h3>
-                      <p class="card-description">新增、编辑或清空持仓数据</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              />
               
               <!-- 第二行 -->
-              <div 
-                class="feature-card"
-                style="background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.2)"
+              <CustomCard
+                title="日志查询"
+                description="API请求与响应日志"
+                icon="📜"
+                bg-color="rgba(6, 182, 212, 0.1)"
+                fg-color="#06b6d4"
                 @click="handleFeature('APILog')"
-              >
-                <div class="card-inner">
-                  <div class="card-header">
-                    <span class="card-icon">📜</span>
-                    <div class="text-group">
-                      <h3 class="card-title">日志查询</h3>
-                      <p class="card-description">API请求与响应日志</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              />
               
-              <div 
-                class="feature-card"
-                style="background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.2)"
+              <CustomCard
+                title="数据接口"
+                description="切换基金数据源"
+                icon="🌐"
+                bg-color="rgba(249, 115, 22, 0.1)"
+                fg-color="#f97316"
               >
-                <div class="card-inner">
-                  <div class="card-header">
-                    <span class="card-icon">🌐</span>
-                    <div class="text-group">
-                      <h3 class="card-title">数据接口</h3>
-                      <p class="card-description">切换基金数据源</p>
-                    </div>
-                  </div>
+                <template #toggle>
                   <div class="api-selector">
                     <select v-model="selectedAPI" :disabled="authStore.userType === 'free'">
                       <option 
@@ -131,22 +106,18 @@
                     </select>
                     <span class="select-arrow">▼</span>
                   </div>
-                </div>
-              </div>
+                </template>
+              </CustomCard>
               
               <!-- 第三行 -->
-              <div 
-                class="feature-card setting-card"
-                style="background: rgba(20, 184, 166, 0.1); border: 1px solid rgba(20, 184, 166, 0.2)"
+              <CustomCard
+                title="隐私模式"
+                description="用户数据脱敏"
+                icon="🔒"
+                bg-color="rgba(20, 184, 166, 0.1)"
+                fg-color="#14b8a6"
               >
-                <div class="card-inner">
-                  <div class="card-header">
-                    <span class="card-icon">🔒</span>
-                    <div class="text-group">
-                      <h3 class="card-title">隐私模式</h3>
-                      <p class="card-description">用户数据脱敏</p>
-                    </div>
-                  </div>
+                <template #toggle>
                   <div class="setting-picker">
                     <button 
                       :class="{ active: dataStore.isPrivacyMode }" 
@@ -161,21 +132,17 @@
                       关闭
                     </button>
                   </div>
-                </div>
-              </div>
+                </template>
+              </CustomCard>
               
-              <div 
-                class="feature-card setting-card"
-                style="background: rgba(0, 150, 136, 0.1); border: 1px solid rgba(0, 150, 136, 0.2)"
+              <CustomCard
+                title="主题模式"
+                description="切换界面主题"
+                icon="🎨"
+                bg-color="rgba(0, 150, 136, 0.1)"
+                fg-color="#009688"
               >
-                <div class="card-inner">
-                  <div class="card-header">
-                    <span class="card-icon">🎨</span>
-                    <div class="text-group">
-                      <h3 class="card-title">主题模式</h3>
-                      <p class="card-description">切换界面主题</p>
-                    </div>
-                  </div>
+                <template #toggle>
                   <div class="setting-picker">
                     <button 
                       v-for="mode in themeModes" 
@@ -186,38 +153,34 @@
                       {{ mode.name }}
                     </button>
                   </div>
-                </div>
-              </div>
+                </template>
+              </CustomCard>
             </div>
           </section>
 
-          <!-- 关于卡片 - 添加底部间距避免被导航栏遮挡 -->
+          <!-- 关于卡片 -->
           <section class="section-container about-section">
-            <div 
-              class="feature-card about-card"
-              style="background: rgba(100, 116, 139, 0.1); border: 1px solid rgba(100, 116, 139, 0.2)"
+            <CustomCard
+              title="关于 CFMS"
+              description="程序版本信息和说明"
+              icon="ℹ️"
+              bg-color="rgba(100, 116, 139, 0.1)"
+              fg-color="#64748b"
               @click="handleFeature('About')"
-            >
-              <div class="card-inner">
-                <div class="card-header">
-                  <span class="card-icon">ℹ️</span>
-                  <div class="text-group">
-                    <h3 class="card-title">关于 CFMS</h3>
-                    <p class="card-description">程序版本信息和说明</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            />
           </section>
 
         </div>
       </div>
     </div>
 
-    <!-- Toast消息 -->
-    <div v-if="showLocalToast" class="toast-message" :class="toastType">
-      {{ localToastMessage }}
-    </div>
+    <!-- 使用ToastMessage组件 -->
+    <ToastMessage
+      :show="showToast"
+      :message="toastMessage"
+      :type="toastType"
+      @update:show="showToast = $event"
+    />
   </div>
 </template>
 
@@ -226,24 +189,26 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useDataStore } from '../stores/dataStore'
+import CustomCard from '@/components/common/CustomCard.vue'
+import ToastMessage from '@/components/common/ToastMessage.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const dataStore = useDataStore()
 
-// 本地Toast状态
-const showLocalToast = ref(false)
-const localToastMessage = ref('')
+// Toast状态
+const showToast = ref(false)
+const toastMessage = ref('')
 const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
 
 // 显示Toast消息
-const showToast = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
-  localToastMessage.value = message
+const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+  toastMessage.value = message
   toastType.value = type
-  showLocalToast.value = true
+  showToast.value = true
   
   setTimeout(() => {
-    showLocalToast.value = false
+    showToast.value = false
   }, 3000)
 }
 
@@ -315,12 +280,10 @@ const fundAPIs = [
 ]
 const selectedAPI = ref('eastmoney')
 
-// 应用主题函数 - 确保立即应用到所有视图
+// 应用主题函数
 const applyTheme = (mode: string) => {
   selectedTheme.value = mode
   localStorage.setItem('themeMode', mode)
-  
-  console.log(`应用主题: ${mode}`)
   
   // 应用主题到整个应用
   const root = document.documentElement
@@ -350,13 +313,13 @@ const applyTheme = (mode: string) => {
     }
   }
 
-  showToast(`主题已切换到: ${themeModes.find(m => m.value === mode)?.name || mode}`, 'success')
+  showNotification(`主题已切换到: ${themeModes.find(m => m.value === mode)?.name || mode}`, 'success')
 }
 
 const togglePrivacyMode = (enabled: boolean) => {
   dataStore.isPrivacyMode = enabled
   dataStore.saveData()
-  showToast(`隐私模式已${enabled ? '开启' : '关闭'}`, 'success')
+  showNotification(`隐私模式已${enabled ? '开启' : '关闭'}`, 'success')
 }
 
 const handleFeature = (featureName: string) => {
@@ -365,50 +328,46 @@ const handleFeature = (featureName: string) => {
       router.push('/about')
       break
     case 'ManageHoldings':
-      router.push('/holdings')
+      // 更新为新的持仓管理页面路由
+      router.push('/holdings/manage')
       break
     case 'APILog':
       router.push('/logs')
       break
     case 'CloudSync':
       if (authStore.userType === 'free') {
-        showToast('该功能需要升级到VIP用户', 'warning')
+        showNotification('该功能需要升级到VIP用户', 'warning')
       } else {
-        showToast('云端同步功能正在开发中...', 'info')
+        showNotification('云端同步功能正在开发中...', 'info')
       }
       break
-    case 'UserInfo':
-      showToast('用户信息功能正在开发中...', 'info')
-      break
     default:
-      showToast(`功能 ${featureName} 正在开发中...`, 'info')
+      showNotification(`功能 ${featureName} 正在开发中...`, 'info')
   }
 }
 
 const handleUpgrade = (e: Event) => {
   e.preventDefault()
-  showToast('正在跳转到升级页面...', 'info')
+  showNotification('正在跳转到升级页面...', 'info')
 }
 
-// 修复退出登录函数 - 避免路由跳转冲突
+// 退出登录函数
 const handleLogout = async () => {
   try {
-    // 显示退出成功消息
-    showToast('您已成功退出登录', 'success')
+    showNotification('您已成功退出登录', 'success')
     
-    // 短暂延迟后调用authStore的logout方法
     setTimeout(() => {
       authStore.logout()
-    }, 800) // 增加延迟时间，确保Toast显示完成
+    }, 800)
     
   } catch (error) {
     console.error('退出登录失败:', error)
-    showToast('退出登录失败，请重试', 'error')
+    showNotification('退出登录失败，请重试', 'error')
   }
 }
 
 watch(selectedAPI, (newAPI) => {
-  showToast(`数据接口已切换至: ${fundAPIs.find(a => a.value === newAPI)?.name || newAPI}`, 'success')
+  showNotification(`数据接口已切换至: ${fundAPIs.find(a => a.value === newAPI)?.name || newAPI}`, 'success')
 })
 
 onMounted(() => {
@@ -444,7 +403,7 @@ onMounted(() => {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   position: relative;
-  padding-top: 0; /* 移除顶部内边距，因为移除了导航栏 */
+  padding-top: 0;
 }
 
 .config-content-wrapper {
@@ -458,15 +417,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  /* 添加底部内边距，确保内容不被底部导航栏遮挡 */
-  padding-bottom: calc(80px + 20px); /* 底部导航栏高度 + 额外间距 */
+  padding-bottom: calc(80px + 20px);
 }
 
 .section-container {
   width: 100%;
 }
 
-/* 用户卡片样式 - 添加邮箱显示 */
+/* 用户卡片样式 */
 .user-card-wrapper {
   position: relative;
   width: 100%;
@@ -480,7 +438,7 @@ onMounted(() => {
   border: 1px solid var(--border-color);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  min-height: 150px; /* 稍微增加高度以容纳邮箱 */
+  min-height: 150px;
   display: flex;
   flex-direction: column;
 }
@@ -526,7 +484,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px; /* 添加间距 */
+  gap: 4px;
 }
 
 .user-display-name {
@@ -592,76 +550,24 @@ onMounted(() => {
   gap: 12px;
 }
 
-.feature-card {
-  min-height: 120px;
-  height: auto;
-  overflow: hidden;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.feature-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-.feature-card.disabled-card {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.feature-card.disabled-card:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-.card-inner {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
-  flex: 1;
-}
-
-.card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 4px;
-}
-
-.card-icon {
-  font-size: 24px;
-  margin-top: 2px;
-}
-
-.text-group {
-  flex: 1;
-}
-
-.card-title {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.card-description {
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--text-secondary);
+.vip-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+  color: #5d3d00;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* 设置选择器和API选择器样式 */
 .api-selector {
   position: relative;
-  margin-top: 8px;
+  width: 100%;
 }
 
 .api-selector select {
@@ -700,10 +606,6 @@ onMounted(() => {
 }
 
 /* 设置卡片特殊样式 */
-.setting-card {
-  min-height: 130px;
-}
-
 .setting-picker {
   display: flex;
   gap: 8px;
@@ -732,66 +634,9 @@ onMounted(() => {
   border-color: var(--accent-color);
 }
 
-/* 关于卡片区域 - 确保不被底部导航栏遮挡 */
+/* 关于卡片区域 */
 .about-section {
-  margin-bottom: 40px; /* 添加底部边距，确保卡片完全可见 */
-}
-
-.about-card {
-  min-height: 100px;
-}
-
-/* Toast消息 */
-.toast-message {
-  position: fixed;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 24px;
-  border-radius: 12px;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  max-width: 80%;
-  text-align: center;
-  animation: toast-in 0.3s ease, toast-out 0.3s ease 2.7s;
-  animation-fill-mode: forwards;
-  font-size: 14px;
-}
-
-.toast-message.info {
-  border-left: 4px solid #2196f3;
-}
-
-.toast-message.success {
-  border-left: 4px solid #4caf50;
-}
-
-.toast-message.error {
-  border-left: 4px solid #f44336;
-}
-
-.toast-message.warning {
-  border-left: 4px solid #ff9800;
-}
-
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 20px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-
-@keyframes toast-out {
-  to {
-    opacity: 0;
-    transform: translate(-50%, 20px);
-  }
+  margin-bottom: 40px;
 }
 
 /* 滚动条样式 */
@@ -813,20 +658,11 @@ onMounted(() => {
   .config-content {
     padding: 16px;
     gap: 20px;
-    padding-bottom: calc(60px + 20px); /* 调整底部导航栏高度 */
+    padding-bottom: calc(60px + 20px);
   }
   
   .features-grid {
     gap: 10px;
-  }
-  
-  .feature-card {
-    min-height: 115px;
-    padding: 14px;
-  }
-  
-  .setting-card {
-    min-height: 120px;
   }
   
   .user-card-compact {
@@ -855,23 +691,6 @@ onMounted(() => {
     gap: 8px;
   }
   
-  .feature-card {
-    min-height: 110px;
-    padding: 12px;
-  }
-  
-  .card-title {
-    font-size: 14px;
-  }
-  
-  .card-description {
-    font-size: 11px;
-  }
-  
-  .setting-card {
-    min-height: 115px;
-  }
-  
   .setting-picker {
     gap: 6px;
   }
@@ -879,30 +698,6 @@ onMounted(() => {
   .setting-picker button {
     padding: 6px 8px;
     font-size: 12px;
-  }
-  
-  .toast-message {
-    bottom: 80px;
-    max-width: 90%;
-    font-size: 13px;
-    padding: 10px 16px;
-  }
-}
-
-/* 防止在极窄的屏幕上卡片过小 */
-@media (max-width: 360px) {
-  .features-grid {
-    gap: 6px;
-  }
-  
-  .feature-card {
-    min-width: 110px;
-    min-height: 105px;
-    padding: 10px;
-  }
-  
-  .setting-card {
-    min-height: 110px;
   }
 }
 </style>

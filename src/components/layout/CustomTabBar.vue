@@ -78,8 +78,8 @@ watch(
   max-width: 400px; 
   margin: 0 auto;
   background: var(--glass-bg, rgba(255, 255, 255, 0.8));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); /* Safari 9+, iOS Safari 9.2+ */
+  backdrop-filter: blur(20px); /* Standard syntax */
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
   box-shadow: var(--card-shadow, 0 8px 32px rgba(0, 0, 0, 0.1)), 
               0 12px 60px rgba(79, 172, 254, 0.2);

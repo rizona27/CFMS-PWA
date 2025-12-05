@@ -1,27 +1,28 @@
 <template>
   <div class="about-view">
-    <!-- 自定义导航栏 -->
-    <div class="custom-navbar">
-      <button class="back-button" @click="goBack">
-        <span class="back-icon">←</span>
-        返回
-      </button>
-      <h1 class="page-title">关于 CFMS</h1>
-      <div class="nav-spacer"></div>
-    </div>
-
+    <!-- 移除顶部导航栏 -->
+    
     <!-- 内容区域 -->
     <div class="content-wrapper">
       <div class="content-scroll">
+        <!-- 添加返回按钮在顶部 -->
+        <div class="top-actions">
+          <button class="back-button-pill" @click="goBack">
+            <span class="back-icon">←</span>
+            返回
+          </button>
+        </div>
+        
         <div class="app-info">
           <h2 class="app-name">一基暴富</h2>
-          <p class="app-version">Version: 2.3.9      By: rizona.cn@gmail.com</p>
+          <p class="app-version">Version: 2.3.9</p>
+          <p class="app-author">By: rizona.cn@gmail.com</p>
         </div>
 
         <div class="divider"></div>
 
         <div class="update-log-section">
-          <h3 class="section-title">更新日志：</h3>
+          <h3 class="section-title">更新日志</h3>
           <div class="log-carousel-wrapper">
             <div class="log-carousel" :style="{ transform: `translateY(-${currentLogIndex * 100}%)` }">
               <div 
@@ -73,13 +74,18 @@
             </div>
           </div>
         </div>
+        
+        <!-- 底部装饰性分隔线 -->
+        <div class="divider decorative"></div>
       </div>
     </div>
 
-    <!-- 底部操作按钮 -->
+    <!-- 药丸状按钮 -->
     <div class="action-footer">
-      <button class="primary-button" @click="goBack">
-        朕知道了
+      <button class="pill-button" @click="goBack">
+        <span class="button-text">朕知道了</span>
+        <span class="button-sparkle">✨</span>
+        <span class="button-glow"></span>
       </button>
     </div>
   </div>
@@ -125,7 +131,6 @@ const stopCarousel = () => {
 const goToLog = (index: number) => {
   currentLogIndex.value = index
   stopCarousel()
-  // 重新启动轮播
   setTimeout(startCarousel, 5000)
 }
 
@@ -148,80 +153,78 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
+  position: relative;
 }
 
-.custom-navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+.top-actions {
+  padding: 16px 16px 0;
+  margin-bottom: 8px;
 }
 
-.back-button {
+.back-button-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 16px;
   background: var(--bg-hover);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 20px;
   color: var(--text-primary);
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
-.back-button:hover {
+.back-button-pill:hover {
   background: var(--accent-color);
   color: white;
   border-color: var(--accent-color);
+  transform: translateX(-2px);
 }
 
 .back-icon {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.nav-spacer {
-  width: 80px; /* 与返回按钮宽度一致保持居中 */
 }
 
 .content-wrapper {
   flex: 1;
   overflow: hidden;
-  padding: 16px;
+  padding: 0 16px;
 }
 
 .content-scroll {
   height: 100%;
   overflow-y: auto;
-  padding-bottom: 20px;
+  padding-bottom: 100px; /* 为底部按钮留出空间 */
 }
 
 .app-info {
   margin-bottom: 24px;
+  text-align: center;
+  padding-top: 8px;
 }
 
 .app-name {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: bold;
-  color: #FFD700;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .app-version {
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.app-author {
   font-size: 14px;
   color: var(--text-secondary);
   opacity: 0.8;
@@ -233,25 +236,35 @@ onUnmounted(() => {
   margin: 24px 0;
 }
 
+.divider.decorative {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+  margin: 32px 0;
+  opacity: 0.5;
+}
+
 .section-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   margin-bottom: 16px;
+  text-align: center;
 }
 
 .log-carousel-wrapper {
-  background: var(--bg-hover);
-  border-radius: 12px;
-  padding: 16px;
-  height: 200px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 20px;
+  height: 180px;
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .log-carousel {
   height: 100%;
-  transition: transform 0.5s ease-in-out;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .log-item {
@@ -259,20 +272,23 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 
 .log-version {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .log-description {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.6;
   white-space: pre-line;
+  max-width: 80%;
 }
 
 .carousel-indicators {
@@ -295,7 +311,8 @@ onUnmounted(() => {
 
 .carousel-indicators button.active {
   background: var(--accent-color);
-  transform: scale(1.2);
+  transform: scale(1.3);
+  box-shadow: 0 0 8px rgba(var(--accent-color-rgb), 0.5);
 }
 
 .features-section {
@@ -303,17 +320,19 @@ onUnmounted(() => {
 }
 
 .features-intro {
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-secondary);
   margin-bottom: 16px;
   line-height: 1.5;
+  text-align: center;
 }
 
 .features-subtitle {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 17px;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  text-align: center;
 }
 
 .features-list {
@@ -326,47 +345,113 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px;
+  padding: 16px;
   background: var(--bg-card);
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid var(--border-color);
+  transition: transform 0.3s ease;
+}
+
+.feature-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .bullet-point {
   font-size: 20px;
   line-height: 1;
   margin-top: 2px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .feature-text {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-primary);
   line-height: 1.4;
   flex: 1;
 }
 
 .action-footer {
-  padding: 16px;
-  background: var(--bg-card);
-  border-top: 1px solid var(--border-color);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 16px;
+  background: linear-gradient(transparent, var(--bg-primary) 70%);
+  z-index: 10;
+  display: flex;
+  justify-content: center;
 }
 
-.primary-button {
+.pill-button {
+  position: relative;
   width: 100%;
-  padding: 14px;
-  background: var(--accent-color);
+  max-width: 320px;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, var(--accent-color), #667eea);
   color: white;
   border: none;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 8px 32px rgba(var(--accent-color-rgb), 0.3);
 }
 
-.primary-button:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
+.pill-button:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 48px rgba(var(--accent-color-rgb), 0.4);
+}
+
+.pill-button:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+.button-text {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.button-sparkle {
+  position: relative;
+  z-index: 2;
+  font-size: 16px;
+  animation: sparkle 2s infinite;
+}
+
+.button-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.3), transparent 70%);
+  border-radius: 999px;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pill-button:hover .button-glow {
+  opacity: 1;
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 /* 滚动条样式 */
@@ -384,16 +469,51 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .content-wrapper {
-    padding: 12px;
+  .app-name {
+    font-size: 32px;
   }
   
+  .log-carousel-wrapper {
+    height: 160px;
+    padding: 16px;
+  }
+  
+  .log-version {
+    font-size: 16px;
+  }
+  
+  .log-description {
+    font-size: 14px;
+  }
+  
+  .pill-button {
+    max-width: 280px;
+    padding: 14px 28px;
+    font-size: 16px;
+  }
+  
+  .action-footer {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
   .app-name {
     font-size: 28px;
   }
   
-  .log-carousel-wrapper {
-    height: 180px;
+  .features-list {
+    gap: 8px;
+  }
+  
+  .feature-item {
+    padding: 12px;
+  }
+  
+  .pill-button {
+    max-width: 240px;
+    padding: 12px 24px;
+    font-size: 16px;
   }
 }
 </style>

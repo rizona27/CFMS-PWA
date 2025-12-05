@@ -7,10 +7,16 @@ const TopPerformersView = () => import('../views/TopPerformersView.vue')
 const ConfigView = () => import('../views/ConfigView.vue')
 const AuthView = () => import('../views/AuthView.vue')
 const AboutView = () => import('../views/AboutView.vue')
-const ManageHoldingsView = () => import('../views/ManageHoldingsView.vue')
 const APILogView = () => import('../views/APILogView.vue')
-const EditHoldingView = () => import('../views/EditHoldingView.vue')
 const DebugView = () => import('../views/DebugView.vue')
+
+// 持仓管理相关路由
+const ManageHoldingsView = () => import('../views/holdings/ManageHoldingsView.vue')
+const AddHoldingView = () => import('../views/holdings/AddHoldingView.vue')
+const EditHoldingView = () => import('../views/holdings/EditHoldingView.vue')
+const ImportHoldingView = () => import('../views/holdings/ImportHoldingView.vue')
+const ExportHoldingView = () => import('../views/holdings/ExportHoldingView.vue')
+const ClearHoldingsView = () => import('../views/holdings/ClearHoldingsView.vue')
 
 // 路由配置
 const routes: RouteRecordRaw[] = [
@@ -107,16 +113,6 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/holdings',
-    name: 'holdings',
-    component: ManageHoldingsView,
-    meta: { 
-      title: '持仓管理',
-      requiresAuth: true,
-      showTabBar: false
-    }
-  },
-  {
     path: '/logs',
     name: 'logs',
     component: APILogView,
@@ -126,17 +122,80 @@ const routes: RouteRecordRaw[] = [
       showTabBar: false
     }
   },
+  
+  // ==================== 持仓管理相关路由 ====================
   {
-    path: '/edit-holding/:id?',
-    name: 'edit-holding',
+    path: '/holdings',
+    name: 'holdings',
+    redirect: '/holdings/manage'
+  },
+  {
+    path: '/holdings/manage',
+    name: 'ManageHoldings',
+    component: ManageHoldingsView,
+    meta: { 
+      title: '持仓管理',
+      requiresAuth: true,
+      showTabBar: false
+    }
+  },
+  {
+    path: '/holdings/add',
+    name: 'AddHolding',
+    component: AddHoldingView,
+    meta: { 
+      title: '新增持仓',
+      requiresAuth: true,
+      showTabBar: false
+    }
+  },
+  {
+    path: '/holdings/edit',
+    name: 'EditHolding',
     component: EditHoldingView,
     meta: { 
       title: '编辑持仓',
       requiresAuth: true,
       showTabBar: false
-    },
-    props: true
+    }
   },
+  {
+    path: '/holdings/import',
+    name: 'ImportHolding',
+    component: ImportHoldingView,
+    meta: { 
+      title: '导入持仓',
+      requiresAuth: true,
+      showTabBar: false
+    }
+  },
+  {
+    path: '/holdings/export',
+    name: 'ExportHolding',
+    component: ExportHoldingView,
+    meta: { 
+      title: '导出持仓',
+      requiresAuth: true,
+      showTabBar: false
+    }
+  },
+  {
+    path: '/holdings/clear',
+    name: 'ClearHoldings',
+    component: ClearHoldingsView,
+    meta: { 
+      title: '清空持仓',
+      requiresAuth: true,
+      showTabBar: false
+    }
+  },
+  {
+    // 保留旧路径兼容性
+    path: '/edit-holding/:id?',
+    name: 'edit-holding-old',
+    redirect: '/holdings/edit'
+  },
+  
   {
     // 添加404页面处理
     path: '/:pathMatch(.*)*',

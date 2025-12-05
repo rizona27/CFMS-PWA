@@ -81,6 +81,7 @@ export const useDataStore = defineStore('data', () => {
   const refreshProgress = reactive({ current: 0, total: 0 })
   const toastMessage = ref('')
   const showToast = ref(false)
+  const showRefreshButton = ref(false)
 
   // 计算属性
   const holdingsCount = computed(() => holdings.value.length)
@@ -120,6 +121,21 @@ export const useDataStore = defineStore('data', () => {
     
     holdings.value.forEach(holding => {
       const key = `${holding.clientName}|${holding.clientID}`
+      if (!groups[key]) {
+        groups[key] = []
+      }
+      groups[key].push(holding)
+    })
+    
+    return groups
+  })
+
+  // 获取按基金代码分组的持仓
+  const groupedByFund = computed(() => {
+    const groups: Record<string, FundHolding[]> = {}
+    
+    holdings.value.forEach(holding => {
+      const key = holding.fundCode
       if (!groups[key]) {
         groups[key] = []
       }
@@ -314,7 +330,7 @@ export const useDataStore = defineStore('data', () => {
     if (index !== -1) {
       const holding = holdings.value[index]
       holding.isPinned = !holding.isPinned
-      holding.pinnedTimestamp = holding.isPinned ? new Date() : undefined // 修复这里
+      holding.pinnedTimestamp = holding.isPinned ? new Date() : undefined
       
       // 重新排序数组，让置顶的显示在前面
       holdings.value.splice(index, 1)
@@ -358,7 +374,7 @@ export const useDataStore = defineStore('data', () => {
     showToastMessage('日志已清空')
   }
 
-  function showToastMessage(message: string) { // 移除未使用的type参数
+  function showToastMessage(message: string) {
     toastMessage.value = message
     showToast.value = true
     
@@ -405,6 +421,35 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
+  // 获取基金分组排序后的代码列表
+  function getSortedFundCodes(sortKey: string = 'none', sortOrder: 'ascending' | 'descending' = 'descending'): string[] {
+    const groups = groupedByFund.value
+    const codes = Object.keys(groups)
+    
+    if (sortKey === 'none') {
+      return codes.sort()
+    }
+    
+    return codes.sort((code1, code2) => {
+      const fund1 = groups[code1]?.[0]
+      const fund2 = groups[code2]?.[0]
+      
+      if (!fund1 || !fund2) return 0
+      
+      let value1 = 0
+      let value2 = 0
+      
+      switch (sortKey) {
+        case 'navReturn1m': value1 = fund1.navReturn1m || 0; value2 = fund2.navReturn1m || 0; break
+        case 'navReturn3m': value1 = fund1.navReturn3m || 0; value2 = fund2.navReturn3m || 0; break
+        case 'navReturn6m': value1 = fund1.navReturn6m || 0; value2 = fund2.navReturn6m || 0; break
+        case 'navReturn1y': value1 = fund1.navReturn1y || 0; value2 = fund2.navReturn1y || 0; break
+      }
+      
+      return sortOrder === 'ascending' ? value1 - value2 : value2 - value1
+    })
+  }
+
   // 初始化
   function init() {
     loadData()
@@ -420,6 +465,7 @@ export const useDataStore = defineStore('data', () => {
     refreshProgress,
     toastMessage,
     showToast,
+    showRefreshButton,
     
     // 计算属性
     holdingsCount,
@@ -428,6 +474,7 @@ export const useDataStore = defineStore('data', () => {
     totalProfit,
     pinnedHoldings,
     groupedByClient,
+    groupedByFund,
     
     // 方法
     loadData,
@@ -444,6 +491,7 @@ export const useDataStore = defineStore('data', () => {
     updateRefreshProgress,
     completeRefresh,
     getClientDisplayName,
+    getSortedFundCodes,
     init
   }
 })
