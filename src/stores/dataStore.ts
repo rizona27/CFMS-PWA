@@ -1,3 +1,4 @@
+// dataStore.ts 完整代码
 import { defineStore } from 'pinia'
 import { ref, computed, reactive } from 'vue'
 
@@ -42,9 +43,55 @@ export interface TableColumn {
   isSelected: boolean
 }
 
+export interface APIFilterState {
+  selectedLogTypes: string[]
+  expandedLogTypes: string[]
+}
+
+export interface ExportHistoryItem {
+  id: number
+  filename: string
+  filesize: string
+  date: string
+  format: string
+  records: number
+  data: string | null
+}
+
+export interface ImportSettings {
+  overwrite: boolean
+  skipDuplicates: boolean
+  autoFetchFundInfo: boolean
+}
+
+export interface UserPreferences {
+  isPrivacyMode: boolean
+  selectedFundAPI: string
+  selectedLogTypes: string[]
+  expandedLogTypes: string[]
+  exportHistory: ExportHistoryItem[]
+  importSettings: ImportSettings
+  showRefreshButton: boolean
+}
+
+// 缓存基金信息接口
+export interface CachedFundInfo {
+  code: string
+  name: string
+  nav: number
+  navDate: string
+  returns?: {
+    navReturn1m?: number
+    navReturn3m?: number
+    navReturn6m?: number
+    navReturn1y?: number
+  }
+  timestamp: number
+}
+
 // 初始化一个默认的FundHolding实例
 const createFundHolding = (data: Partial<FundHolding> = {}): FundHolding => ({
-  id: data.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+  id: data.id || crypto.randomUUID(),
   clientName: data.clientName || '',
   clientID: data.clientID || '',
   fundCode: data.fundCode || '',
@@ -72,16 +119,92 @@ const isValidHolding = (holding: FundHolding): boolean => {
            holding.purchaseShares > 0)
 }
 
+// 获取今日日期字符串
+const getTodayString = (): string => {
+  return new Date().toISOString().split('T')[0]
+}
+
+// ==================== 类型转换函数 ====================
+// 转换函数：Holding -> FundHolding（dataStore类型）
+const convertHoldingToFundHolding = (holding: any): FundHolding => {
+  return {
+    id: holding.id || crypto.randomUUID(),
+    clientName: holding.client_name || holding.clientName || '',
+    clientID: holding.client_id || holding.clientID || '',
+    fundCode: holding.fund_code || holding.fundCode || '',
+    fundName: holding.fund_name || holding.fundName || '未加载',
+    purchaseAmount: holding.purchase_amount || holding.purchaseAmount || 0,
+    purchaseShares: holding.purchase_shares || holding.purchaseShares || 0,
+    purchaseDate: new Date(holding.purchase_date || holding.purchaseDate || new Date()),
+    remarks: holding.remarks || '',
+    currentNav: holding.current_nav || holding.currentNav || 0,
+    navDate: new Date(holding.nav_date || holding.navDate || new Date()),
+    isValid: true,
+    isPinned: holding.is_pinned || holding.isPinned || false,
+    pinnedTimestamp: holding.pinned_timestamp || holding.pinnedTimestamp ? new Date(holding.pinned_timestamp || holding.pinnedTimestamp) : undefined,
+    navReturn1m: holding.nav_return_1m || holding.navReturn1m,
+    navReturn3m: holding.nav_return_3m || holding.navReturn3m,
+    navReturn6m: holding.nav_return_6m || holding.navReturn6m,
+    navReturn1y: holding.nav_return_1y || holding.navReturn1y
+  }
+}
+
+// 转换函数：FundHolding -> Holding（types/data类型）
+const convertFundHoldingToHolding = (fundHolding: FundHolding): any => {
+  return {
+    id: fundHolding.id,
+    client_name: fundHolding.clientName,
+    client_id: fundHolding.clientID,
+    fund_code: fundHolding.fundCode,
+    fund_name: fundHolding.fundName,
+    purchase_date: fundHolding.purchaseDate.toISOString().split('T')[0],
+    purchase_amount: fundHolding.purchaseAmount,
+    purchase_shares: fundHolding.purchaseShares,
+    current_nav: fundHolding.currentNav,
+    nav_date: fundHolding.navDate.toISOString().split('T')[0],
+    is_pinned: fundHolding.isPinned,
+    pinned_timestamp: fundHolding.pinnedTimestamp?.toISOString() || null,
+    remarks: fundHolding.remarks,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    nav_return_1m: fundHolding.navReturn1m,
+    nav_return_3m: fundHolding.navReturn3m,
+    nav_return_6m: fundHolding.navReturn6m,
+    nav_return_1y: fundHolding.navReturn1y
+  }
+}
+
+// ==================== 数据存储 ====================
 export const useDataStore = defineStore('data', () => {
-  // 状态
+  // 核心业务数据状态
   const holdings = ref<FundHolding[]>([])
   const logMessages = ref<LogEntry[]>([])
+  
+  // UI/应用状态
   const isPrivacyMode = ref(true)
   const isRefreshing = ref(false)
   const refreshProgress = reactive({ current: 0, total: 0 })
   const toastMessage = ref('')
   const showToast = ref(false)
   const showRefreshButton = ref(false)
+  
+  // 用户偏好设置
+  const userPreferences = ref<UserPreferences>({
+    isPrivacyMode: true,
+    selectedFundAPI: 'eastmoney',
+    selectedLogTypes: ['info', 'success', 'error', 'warning', 'network', 'cache'],
+    expandedLogTypes: ['info', 'success', 'error', 'warning', 'network', 'cache'],
+    exportHistory: [],
+    importSettings: {
+      overwrite: false,
+      skipDuplicates: true,
+      autoFetchFundInfo: true
+    },
+    showRefreshButton: false
+  })
+
+  // 基金缓存
+  const fundCache = ref<Map<string, CachedFundInfo>>(new Map())
 
   // 计算属性
   const holdingsCount = computed(() => holdings.value.length)
@@ -145,8 +268,63 @@ export const useDataStore = defineStore('data', () => {
     return groups
   })
 
-  // 方法
-  function loadData() {
+  // 加载基金缓存
+  const loadFundCache = () => {
+    try {
+      const savedCache = localStorage.getItem('fundCache')
+      if (savedCache) {
+        const data = JSON.parse(savedCache)
+        fundCache.value = new Map(Object.entries(data))
+      }
+    } catch (error) {
+      console.error('加载基金缓存失败:', error)
+      addLog('加载基金缓存失败', 'error')
+    }
+  }
+
+  // 保存基金缓存
+  const saveFundCache = () => {
+    try {
+      const cacheObj: Record<string, CachedFundInfo> = {}
+      fundCache.value.forEach((value, key) => {
+        cacheObj[key] = value
+      })
+      localStorage.setItem('fundCache', JSON.stringify(cacheObj))
+    } catch (error) {
+      console.error('保存基金缓存失败:', error)
+      addLog('保存基金缓存失败', 'error')
+    }
+  }
+
+  // 获取基金缓存
+  const getFundFromCache = (code: string): CachedFundInfo | null => {
+    const cached = fundCache.value.get(code)
+    if (!cached) return null
+    
+    // 检查缓存是否过期（24小时）
+    const isExpired = Date.now() - cached.timestamp > 24 * 60 * 60 * 1000
+    if (isExpired) {
+      return null
+    }
+    
+    return cached
+  }
+
+  // 保存到基金缓存
+  const saveToFundCache = (code: string, data: CachedFundInfo) => {
+    fundCache.value.set(code, data)
+    saveFundCache()
+  }
+
+  // 清空基金缓存
+  const clearFundCache = () => {
+    fundCache.value.clear()
+    localStorage.removeItem('fundCache')
+    addLog('基金缓存已清空', 'info')
+  }
+
+  // 主数据加载方法
+  const loadData = () => {
     try {
       // 加载持仓数据
       const savedHoldings = localStorage.getItem('fundHoldings')
@@ -159,13 +337,15 @@ export const useDataStore = defineStore('data', () => {
           navDate: new Date(item.navDate),
           pinnedTimestamp: item.pinnedTimestamp ? new Date(item.pinnedTimestamp) : undefined
         }))
-        console.log('持仓数据加载成功，数量:', holdings.value.length)
       }
       
-      // 加载隐私模式设置
-      const savedPrivacyMode = localStorage.getItem('isPrivacyModeEnabled')
-      if (savedPrivacyMode !== null) {
-        isPrivacyMode.value = JSON.parse(savedPrivacyMode)
+      // 加载用户偏好设置
+      const savedPreferences = localStorage.getItem('userPreferences')
+      if (savedPreferences) {
+        const data = JSON.parse(savedPreferences)
+        userPreferences.value = { ...userPreferences.value, ...data }
+        isPrivacyMode.value = data.isPrivacyMode || true
+        showRefreshButton.value = data.showRefreshButton || false
       }
       
       // 加载日志
@@ -178,14 +358,23 @@ export const useDataStore = defineStore('data', () => {
         }))
       }
       
-      console.log('数据加载完成')
+      // 加载导出历史
+      const savedExportHistory = localStorage.getItem('exportHistory')
+      if (savedExportHistory) {
+        userPreferences.value.exportHistory = JSON.parse(savedExportHistory)
+      }
+      
+      // 加载基金缓存
+      loadFundCache()
+      
     } catch (error) {
       console.error('数据加载失败:', error)
       showToastMessage('数据加载失败')
     }
   }
 
-  function saveData() {
+  // 主数据保存方法
+  const saveData = () => {
     try {
       // 保存持仓数据
       const holdingsData = holdings.value.map(holding => ({
@@ -210,8 +399,8 @@ export const useDataStore = defineStore('data', () => {
       }))
       localStorage.setItem('fundHoldings', JSON.stringify(holdingsData))
       
-      // 保存隐私模式设置
-      localStorage.setItem('isPrivacyModeEnabled', JSON.stringify(isPrivacyMode.value))
+      // 保存用户偏好设置
+      localStorage.setItem('userPreferences', JSON.stringify(userPreferences.value))
       
       // 保存日志（最多保留500条）
       const logsToSave = logMessages.value.slice(-500).map(log => ({
@@ -220,14 +409,78 @@ export const useDataStore = defineStore('data', () => {
       }))
       localStorage.setItem('fundLogs', JSON.stringify(logsToSave))
       
-      console.log('数据保存成功')
+      // 保存导出历史
+      localStorage.setItem('exportHistory', JSON.stringify(userPreferences.value.exportHistory))
+      
     } catch (error) {
       console.error('数据保存失败:', error)
       showToastMessage('数据保存失败')
     }
   }
 
-  function addHolding(holdingData: Partial<FundHolding>): FundHolding {
+  // 用户偏好设置相关方法
+  const updateUserPreferences = (preferences: Partial<UserPreferences>) => {
+    const oldPrivacyMode = isPrivacyMode.value
+    
+    userPreferences.value = { ...userPreferences.value, ...preferences }
+    
+    if (preferences.isPrivacyMode !== undefined) {
+      isPrivacyMode.value = preferences.isPrivacyMode
+      
+      // 发送全局隐私模式变化事件
+      const event = new CustomEvent('privacy-mode-changed', { 
+        detail: { 
+          enabled: preferences.isPrivacyMode,
+          oldValue: oldPrivacyMode,
+          timestamp: Date.now()
+        }
+      })
+      window.dispatchEvent(event)
+    }
+    
+    if (preferences.showRefreshButton !== undefined) {
+      showRefreshButton.value = preferences.showRefreshButton
+    }
+    
+    saveData()
+  }
+
+  const updateAPIFilterState = (filterState: Partial<APIFilterState>) => {
+    if (filterState.selectedLogTypes) {
+      userPreferences.value.selectedLogTypes = filterState.selectedLogTypes
+    }
+    if (filterState.expandedLogTypes) {
+      userPreferences.value.expandedLogTypes = filterState.expandedLogTypes
+    }
+    saveData()
+  }
+
+  const updateImportSettings = (settings: Partial<ImportSettings>) => {
+    userPreferences.value.importSettings = { 
+      ...userPreferences.value.importSettings, 
+      ...settings 
+    }
+    saveData()
+  }
+
+  const addExportHistory = (item: ExportHistoryItem) => {
+    userPreferences.value.exportHistory.unshift(item)
+    // 只保留最近10条记录
+    if (userPreferences.value.exportHistory.length > 10) {
+      userPreferences.value.exportHistory = userPreferences.value.exportHistory.slice(0, 10)
+    }
+    saveData()
+  }
+
+  const deleteExportHistory = (id: number) => {
+    userPreferences.value.exportHistory = userPreferences.value.exportHistory.filter(
+      item => item.id !== id
+    )
+    saveData()
+  }
+
+  // 持仓管理方法
+  const addHolding = (holdingData: Partial<FundHolding>): FundHolding => {
     try {
       const newHolding = createFundHolding(holdingData)
       
@@ -251,7 +504,7 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  function updateHolding(holdingId: string, updates: Partial<FundHolding>): FundHolding {
+  const updateHolding = (holdingId: string, updates: Partial<FundHolding>): FundHolding => {
     try {
       const index = holdings.value.findIndex(h => h.id === holdingId)
       if (index === -1) {
@@ -284,7 +537,7 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  function deleteHolding(holdingId: string) {
+  const deleteHolding = (holdingId: string) => {
     try {
       const index = holdings.value.findIndex(h => h.id === holdingId)
       if (index === -1) {
@@ -307,7 +560,24 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  function calculateProfit(holding: FundHolding): ProfitResult {
+  const clearAllHoldings = () => {
+    try {
+      const count = holdings.value.length
+      holdings.value = []
+      saveData()
+      
+      addLog(`清空所有持仓数据，共${count}条记录`, 'warning')
+      showToastMessage(`已清空${count}条持仓记录`)
+      
+      return count
+    } catch (error: any) {
+      console.error('清空持仓失败:', error)
+      showToastMessage(`清空失败: ${error.message}`)
+      throw error
+    }
+  }
+
+  const calculateProfit = (holding: FundHolding): ProfitResult => {
     const currentMarketValue = holding.currentNav * holding.purchaseShares
     const absoluteProfit = currentMarketValue - holding.purchaseAmount
 
@@ -325,7 +595,7 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  function togglePinStatus(holdingId: string) {
+  const togglePinStatus = (holdingId: string) => {
     const index = holdings.value.findIndex(h => h.id === holdingId)
     if (index !== -1) {
       const holding = holdings.value[index]
@@ -349,7 +619,8 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  function addLog(message: string, type: LogEntry['type'] = 'info') {
+  // 日志管理方法
+  const addLog = (message: string, type: LogEntry['type'] = 'info') => {
     const logEntry: LogEntry = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       message,
@@ -368,13 +639,14 @@ export const useDataStore = defineStore('data', () => {
     saveData()
   }
 
-  function clearLogs() {
+  const clearLogs = () => {
     logMessages.value = []
     saveData()
     showToastMessage('日志已清空')
   }
 
-  function showToastMessage(message: string) {
+  // UI/工具方法
+  const showToastMessage = (message: string) => {
     toastMessage.value = message
     showToast.value = true
     
@@ -383,7 +655,7 @@ export const useDataStore = defineStore('data', () => {
     }, 3000)
   }
 
-  function startRefresh() {
+  const startRefresh = () => {
     isRefreshing.value = true
     refreshProgress.current = 0
     refreshProgress.total = holdings.value.length
@@ -392,11 +664,11 @@ export const useDataStore = defineStore('data', () => {
     addLog('开始刷新持仓数据', 'info')
   }
 
-  function updateRefreshProgress(current: number) {
+  const updateRefreshProgress = (current: number) => {
     refreshProgress.current = current
   }
 
-  function completeRefresh() {
+  const completeRefresh = () => {
     isRefreshing.value = false
     refreshProgress.current = 0
     refreshProgress.total = 0
@@ -407,7 +679,7 @@ export const useDataStore = defineStore('data', () => {
   }
 
   // 获取客户名称（考虑隐私模式）
-  function getClientDisplayName(clientName: string): string {
+  const getClientDisplayName = (clientName: string): string => {
     if (!isPrivacyMode.value) {
       return clientName
     }
@@ -422,7 +694,7 @@ export const useDataStore = defineStore('data', () => {
   }
 
   // 获取基金分组排序后的代码列表
-  function getSortedFundCodes(sortKey: string = 'none', sortOrder: 'ascending' | 'descending' = 'descending'): string[] {
+  const getSortedFundCodes = (sortKey: string = 'none', sortOrder: 'ascending' | 'descending' = 'descending'): string[] => {
     const groups = groupedByFund.value
     const codes = Object.keys(groups)
     
@@ -451,9 +723,8 @@ export const useDataStore = defineStore('data', () => {
   }
 
   // 初始化
-  function init() {
+  const init = () => {
     loadData()
-    console.log('DataStore初始化完成')
   }
 
   return {
@@ -466,6 +737,8 @@ export const useDataStore = defineStore('data', () => {
     toastMessage,
     showToast,
     showRefreshButton,
+    userPreferences,
+    fundCache,
     
     // 计算属性
     holdingsCount,
@@ -476,22 +749,47 @@ export const useDataStore = defineStore('data', () => {
     groupedByClient,
     groupedByFund,
     
-    // 方法
+    // 核心数据方法
     loadData,
     saveData,
+    init,
+    
+    // 持仓管理方法
     addHolding,
     updateHolding,
     deleteHolding,
+    clearAllHoldings,
     calculateProfit,
     togglePinStatus,
+    
+    // 日志管理方法
     addLog,
     clearLogs,
+    
+    // 用户偏好设置方法
+    updateUserPreferences,
+    updateAPIFilterState,
+    updateImportSettings,
+    addExportHistory,
+    deleteExportHistory,
+    
+    // UI/工具方法
     showToastMessage,
     startRefresh,
     updateRefreshProgress,
     completeRefresh,
     getClientDisplayName,
     getSortedFundCodes,
-    init
+    
+    // 基金缓存方法
+    loadFundCache,
+    saveFundCache,
+    getFundFromCache,
+    saveToFundCache,
+    clearFundCache,
+    
+    // ==================== 新增：类型转换方法 ====================
+    convertHoldingToFundHolding,
+    convertFundHoldingToHolding
   }
 })

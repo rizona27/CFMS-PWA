@@ -271,21 +271,34 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useDataStore } from '../../stores/dataStore'
-import { useAuthStore } from '../../stores/authStore'
-import type { FundHolding } from '../../stores/dataStore'
+import { useDataStore } from '@/stores/dataStore'
+import { useAuthStore } from '@/stores/authStore'
+import { fundService } from '@/services/fundService'
+import type { FundHolding } from '@/stores/dataStore'
 
 const router = useRouter()
 const dataStore = useDataStore()
 const authStore = useAuthStore()
 
-// 响应式状态
+// ========== 工具函数定义 ==========
+// 必须在响应式状态之前定义，避免变量访问顺序问题
+const getTodayDate = () => {
+  const now = new Date()
+  return now.toISOString().split('T')[0]
+}
+
+// 日志记录方法
+const logAction = (action: string, message: string, type: 'info' | 'success' | 'error' | 'warning' | 'network' | 'cache' = 'info') => {
+  dataStore.addLog(`${action}: ${message}`, type)
+}
+
+// ========== 响应式状态 ==========
 const clientName = ref('')
 const clientID = ref('')
 const fundCode = ref('')
 const purchaseAmount = ref('')
 const purchaseShares = ref('')
-const purchaseDate = ref(getTodayDate())
+const purchaseDate = ref(getTodayDate())  // 现在 getTodayDate 已经定义了
 const remarks = ref('')
 
 // 验证错误
@@ -303,7 +316,7 @@ const isSaving = ref(false)
 const isLoadingFundInfo = ref(false)
 const showValidationSummary = ref(false)
 
-// 计算属性
+// ========== 计算属性 ==========
 const today = computed(() => getTodayDate())
 const formattedDate = computed(() => {
   const date = new Date(purchaseDate.value)
@@ -343,14 +356,9 @@ const isFreeUser = computed(() => {
   return authStore.currentUser?.user_type === 'free'
 })
 
-// 方法
+// ========== 方法定义 ==========
 const goBack = () => {
   router.back()
-}
-
-const getTodayDate = () => {
-  const now = new Date()
-  return now.toISOString().split('T')[0]
 }
 
 const setToday = () => {
@@ -524,11 +532,11 @@ const saveHolding = async () => {
     // 记录开始保存日志
     logAction('持仓操作', `开始添加持仓: 客户 ${clientName.value} - 基金 ${fundCode.value}`, 'info')
     
-    // 获取基金信息
+    // 使用fundService获取基金信息（统一数据架构）
     logAction('基金查询', `查询基金信息: ${fundCode.value}`, 'network')
-    const fundInfo = await fetchFundInfo(fundCode.value)
+    const fundInfo = await fundService.fetchFundInfo(fundCode.value)
     
-    if (!fundInfo.isValid) {
+    if (!fundInfo || !fundInfo.name) {
       showToastMessage(`基金 ${fundCode.value} 不存在或无法获取信息`, 'error')
       logAction('基金查询', `基金查询失败: ${fundCode.value}`, 'error')
       isLoadingFundInfo.value = false
@@ -538,7 +546,7 @@ const saveHolding = async () => {
     
     logAction('基金查询', `基金查询成功: ${fundCode.value} - ${fundInfo.name}`, 'success')
     
-    // 创建持仓对象
+    // 创建持仓对象（符合统一数据架构）
     const newHolding: FundHolding = {
       id: crypto.randomUUID(),
       clientName: clientName.value.trim(),
@@ -549,18 +557,18 @@ const saveHolding = async () => {
       purchaseDate: new Date(purchaseDate.value),
       remarks: remarks.value.trim(),
       fundName: fundInfo.name,
-      currentNav: fundInfo.current_nav,
-      navDate: new Date(fundInfo.nav_date),
+      currentNav: fundInfo.nav,
+      navDate: new Date(fundInfo.navDate),
       isValid: true,
       isPinned: false,
       pinnedTimestamp: undefined,
-      navReturn1m: fundInfo.nav_return_1m,
-      navReturn3m: fundInfo.nav_return_3m,
-      navReturn6m: fundInfo.nav_return_6m,
-      navReturn1y: fundInfo.nav_return_1y
+      navReturn1m: fundInfo.returns?.navReturn1m,
+      navReturn3m: fundInfo.returns?.navReturn3m,
+      navReturn6m: fundInfo.returns?.navReturn6m,
+      navReturn1y: fundInfo.returns?.navReturn1y
     }
     
-    // 保存持仓
+    // 通过dataStore保存持仓（统一数据架构）
     dataStore.addHolding(newHolding)
     
     logAction('持仓操作', 
@@ -585,26 +593,6 @@ const saveHolding = async () => {
   } finally {
     isLoadingFundInfo.value = false
     isSaving.value = false
-  }
-}
-
-// 模拟获取基金信息
-const fetchFundInfo = async (code: string) => {
-  // 这里应该调用实际的API
-  // 模拟延迟
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  
-  // 模拟返回基金信息
-  return {
-    code: code,
-    name: `基金${code}号`,
-    current_nav: 1.2345,
-    nav_date: new Date().toISOString(),
-    nav_return_1m: 0.5,
-    nav_return_3m: 1.2,
-    nav_return_6m: 2.5,
-    nav_return_1y: 5.8,
-    isValid: true
   }
 }
 
@@ -637,12 +625,7 @@ const showToastMessage = (message: string, type: 'info' | 'success' | 'error' | 
   }, 3000)
 }
 
-// 日志记录方法
-const logAction = (action: string, message: string, type: 'info' | 'success' | 'error' | 'warning' | 'network' | 'cache' = 'info') => {
-  dataStore.addLog(`${action}: ${message}`, type)
-}
-
-// 生命周期
+// ========== 生命周期 ==========
 onMounted(() => {
   logAction('页面访问', '打开新增持仓页面', 'info')
 })

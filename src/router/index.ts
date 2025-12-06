@@ -150,7 +150,7 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/holdings/edit',
+    path: '/holdings/edit/:id?',
     name: 'EditHolding',
     component: EditHoldingView,
     meta: { 

@@ -1,138 +1,138 @@
 <template>
   <div class="clear-holdings-view">
-    <NavBar title="清空持仓" back-route="/holdings/manage" />
+    <!-- 返回按钮 -->
+    <div class="back-button" @click="goBack">
+      <span class="back-icon">←</span>
+    </div>
     
-    <div class="content">
-      <div class="clear-container">
-        <!-- 警告区域 -->
-        <div class="warning-section">
-          <div class="warning-icon">⚠️</div>
-          <h2 class="warning-title">危险操作</h2>
-          <p class="warning-subtitle">此操作将永久删除持仓数据，无法恢复</p>
-        </div>
-        
-        <!-- 数据统计 -->
-        <div class="stats-section">
-          <h3 class="stats-title">当前持仓统计</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value">{{ stats.totalClients }}</div>
-              <div class="stat-label">客户数量</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ stats.totalHoldings }}</div>
-              <div class="stat-label">持仓记录</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ stats.totalValue }}</div>
-              <div class="stat-label">总持仓金额</div>
-            </div>
+    <!-- 主要内容 -->
+    <div class="content-area">
+      <div class="header">
+        <h1 class="title">清空持仓数据</h1>
+        <p class="subtitle">此操作将永久删除所有持仓数据，请谨慎操作</p>
+      </div>
+      
+      <!-- 数据统计 -->
+      <div class="stats-section">
+        <h2 class="section-title">当前数据统计</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">{{ stats.totalHoldings }}</div>
+            <div class="stat-label">总持仓数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{ stats.totalClients }}</div>
+            <div class="stat-label">客户数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{ stats.totalValue }}</div>
+            <div class="stat-label">总价值</div>
           </div>
         </div>
+      </div>
+      
+      <!-- 警告信息 -->
+      <div class="warning-section">
+        <div class="warning-icon">⚠️</div>
+        <h3 class="warning-title">重要警告</h3>
+        <ul class="warning-list">
+          <li>此操作无法撤销，数据将永久删除</li>
+          <li>建议先导出数据备份</li>
+          <li>清空后需要重新导入或手动添加数据</li>
+        </ul>
+      </div>
+      
+      <!-- 确认步骤 -->
+      <div class="confirmation-section">
+        <h3 class="section-title">确认操作</h3>
         
-        <!-- 确认步骤 -->
-        <div class="confirmation-section">
-          <h3 class="confirmation-title">确认清空操作</h3>
-          
-          <!-- 第一步：确认理解风险 -->
-          <div class="confirmation-step">
-            <label class="step-label">
-              <input
-                type="checkbox"
-                v-model="confirmations.understoodRisk"
-              />
-              <span class="step-text">
-                <strong>我理解风险：</strong>清空后所有持仓数据将永久删除，无法通过撤销恢复。
-              </span>
-            </label>
-          </div>
-          
-          <!-- 第二步：确认备份 -->
-          <div class="confirmation-step">
-            <label class="step-label">
-              <input
-                type="checkbox"
-                v-model="confirmations.hasBackup"
-              />
-              <span class="step-text">
-                <strong>我已备份：</strong>我确认已经导出并备份了重要的持仓数据。
-              </span>
-            </label>
-          </div>
-          
-          <!-- 第三步：输入确认文本 -->
-          <div class="confirmation-step">
-            <div class="step-text">
-              <strong>输入确认文本：</strong>
-              请在下方输入框输入 "<strong>确认清空所有持仓</strong>" 以继续
-            </div>
-            <input
-              v-model="confirmationText"
-              type="text"
-              placeholder="请输入确认文本"
-              class="confirmation-input"
-            />
+        <div class="confirmation-item">
+          <input
+            type="checkbox"
+            id="understoodRisk"
+            v-model="confirmations.understoodRisk"
+            class="confirmation-checkbox"
+          />
+          <label for="understoodRisk" class="confirmation-label">
+            我理解此操作的风险，确认要继续
+          </label>
+        </div>
+        
+        <div class="confirmation-item">
+          <input
+            type="checkbox"
+            id="hasBackup"
+            v-model="confirmations.hasBackup"
+            class="confirmation-checkbox"
+          />
+          <label for="hasBackup" class="confirmation-label">
+            我已备份数据或确认不需要备份
+          </label>
+        </div>
+        
+        <div class="text-confirmation">
+          <label for="confirmationText" class="confirmation-label">
+            请在下方输入框输入"确认清空所有持仓"以继续：
+          </label>
+          <input
+            id="confirmationText"
+            v-model="confirmationText"
+            type="text"
+            placeholder="确认清空所有持仓"
+            class="confirmation-input"
+            :class="{ 'input-error': confirmationText !== '' && confirmationText !== '确认清空所有持仓' }"
+          />
+          <div v-if="confirmationText !== '' && confirmationText !== '确认清空所有持仓'" class="error-message">
+            请输入正确的确认文本
           </div>
         </div>
         
-        <!-- 操作按钮 -->
-        <div class="action-section">
-          <button
-            class="btn-clear"
-            :disabled="!canClear || isClearing"
-            @click="showFinalConfirmation"
-          >
-            <span v-if="!isClearing">
-              <span class="button-icon">🗑️</span>
-              清空所有持仓数据
-            </span>
-            <span v-else class="clearing-text">
-              <span class="spinner"></span>
-              正在清空...
-            </span>
+        <!-- 清空按钮 -->
+        <button
+          class="clear-button"
+          :class="{ 'enabled': canClear }"
+          :disabled="!canClear || isClearing"
+          @click="showFinalConfirmation"
+        >
+          <span v-if="isClearing" class="spinner"></span>
+          <span v-else>清空所有持仓数据</span>
+        </button>
+        
+        <!-- 取消按钮 -->
+        <button class="cancel-button" @click="goBack">
+          取消
+        </button>
+      </div>
+    </div>
+    
+    <!-- 最终确认模态框 -->
+    <div v-if="showFinalModal" class="final-modal-overlay">
+      <div class="final-modal">
+        <div class="modal-header">
+          <h3>最终确认</h3>
+          <button class="modal-close" @click="showFinalModal = false">×</button>
+        </div>
+        <div class="modal-content">
+          <div class="modal-icon">⚠️</div>
+          <p class="modal-text">
+            您即将永久删除 <strong>{{ stats.totalHoldings }}</strong> 条持仓记录，
+            涉及 <strong>{{ stats.totalClients }}</strong> 个客户，
+            总价值 <strong>{{ stats.totalValue }}</strong>。
+          </p>
+          <p class="modal-text">此操作无法撤销，确定要继续吗？</p>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-button cancel" @click="showFinalModal = false">
+            取消
           </button>
-          <button class="btn-cancel" @click="goBack">取消</button>
-        </div>
-        
-        <!-- 二次确认模态框 -->
-        <div v-if="showFinalModal" class="final-modal">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h3 class="modal-title">最后确认</h3>
-              <button class="modal-close" @click="showFinalModal = false">×</button>
-            </div>
-            
-            <div class="modal-body">
-              <div class="modal-warning">
-                <span class="modal-warning-icon">🔥</span>
-                <p>您确定要清空所有持仓数据吗？</p>
-              </div>
-              
-              <div class="modal-stats">
-                <p>这将删除：</p>
-                <ul>
-                  <li>{{ stats.totalClients }} 个客户的所有信息</li>
-                  <li>{{ stats.totalHoldings }} 条持仓记录</li>
-                  <li>{{ stats.totalValue }} 的持仓金额数据</li>
-                  <li>所有相关的收益计算和历史记录</li>
-                </ul>
-              </div>
-              
-              <div class="modal-actions">
-                <button class="modal-btn-cancel" @click="showFinalModal = false">
-                  再考虑一下
-                </button>
-                <button class="modal-btn-confirm" @click="performClear">
-                  是的，立即清空
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="modal-backdrop" @click="showFinalModal = false"></div>
+          <button class="modal-button confirm" @click="performClear">
+            确认清空
+          </button>
         </div>
       </div>
     </div>
     
+    <!-- Toast消息 -->
     <ToastMessage
       :show="showToast"
       :message="toastMessage"
@@ -143,17 +143,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import NavBar from '@/components/layout/NavBar.vue'
 import ToastMessage from '@/components/common/ToastMessage.vue'
+import { useDataStore } from '@/stores/dataStore'
 
 const router = useRouter()
+const dataStore = useDataStore()
 
 const stats = ref({
-  totalClients: 48,
-  totalHoldings: 156,
-  totalValue: '¥2,845,320.00'
+  totalClients: 0,
+  totalHoldings: 0,
+  totalValue: '¥0.00'
 })
 
 const confirmations = ref({
@@ -177,6 +178,28 @@ const canClear = computed(() => {
   )
 })
 
+// 计算统计数据
+const calculateStats = () => {
+  const holdings = dataStore.holdings
+  
+  // 计算不重复的客户数
+  const clientSet = new Set<string>()
+  holdings.forEach(holding => {
+    clientSet.add(`${holding.clientName}|${holding.clientID}`)
+  })
+  
+  // 计算总价值
+  const totalValue = holdings.reduce((total, holding) => {
+    return total + (holding.currentNav * holding.purchaseShares)
+  }, 0)
+  
+  stats.value = {
+    totalClients: clientSet.size,
+    totalHoldings: holdings.length,
+    totalValue: `¥${totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+}
+
 const showFinalConfirmation = () => {
   if (!canClear.value) return
   showFinalModal.value = true
@@ -186,16 +209,12 @@ const performClear = async () => {
   showFinalModal.value = false
   isClearing.value = true
   
-  // 模拟清空操作
-  setTimeout(() => {
-    isClearing.value = false
+  try {
+    // 清空持仓数据
+    dataStore.clearAllHoldings()
     
-    // 重置统计数据
-    stats.value = {
-      totalClients: 0,
-      totalHoldings: 0,
-      totalValue: '¥0.00'
-    }
+    // 重新计算统计数据
+    calculateStats()
     
     // 重置确认状态
     confirmations.value = {
@@ -210,7 +229,13 @@ const performClear = async () => {
     setTimeout(() => {
       router.push('/holdings/manage')
     }, 2000)
-  }, 3000)
+    
+  } catch (error) {
+    console.error('清空持仓失败:', error)
+    showNotification(`清空失败: ${error}`, 'error')
+  } finally {
+    isClearing.value = false
+  }
 }
 
 const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
@@ -222,95 +247,157 @@ const showNotification = (message: string, type: 'info' | 'success' | 'error' | 
 const goBack = () => {
   router.push('/holdings/manage')
 }
+
+// 初始化
+onMounted(() => {
+  calculateStats()
+})
 </script>
 
 <style scoped>
 .clear-holdings-view {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+  min-height: 100vh;
   background: var(--bg-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  position: relative;
 }
 
-.content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
+.back-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
 }
 
-.clear-container {
+.back-button:hover {
+  background: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.content-area {
+  padding: 80px 20px 40px;
   max-width: 600px;
   margin: 0 auto;
 }
 
-.warning-section {
+.header {
   text-align: center;
-  margin-bottom: 32px;
-  padding: 24px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), transparent);
-  border-radius: 16px;
-  border: 2px solid rgba(239, 68, 68, 0.3);
+  margin-bottom: 40px;
 }
 
-.warning-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.warning-title {
-  font-size: 24px;
+.title {
+  font-size: 28px;
   font-weight: 700;
-  color: #ef4444;
-  margin-bottom: 8px;
+  color: var(--text-primary);
+  margin-bottom: 12px;
 }
 
-.warning-subtitle {
+.subtitle {
   font-size: 16px;
   color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .stats-section {
-  margin-bottom: 32px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.stats-title {
+.section-title {
   font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   text-align: center;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .stat-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
   text-align: center;
+  padding: 16px;
+  background: var(--bg-hover);
+  border-radius: 12px;
   transition: all 0.3s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
 .stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 4px;
+  color: var(--accent-color);
+  margin-bottom: 8px;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-secondary);
+}
+
+.warning-section {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.warning-icon {
+  font-size: 40px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.warning-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #856404;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.warning-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.warning-list li {
+  padding: 8px 0;
+  color: #856404;
+  position: relative;
+  padding-left: 24px;
+}
+
+.warning-list li:before {
+  content: '•';
+  position: absolute;
+  left: 8px;
+  font-size: 20px;
 }
 
 .confirmation-section {
@@ -318,141 +405,101 @@ const goBack = () => {
   border-radius: 16px;
   padding: 24px;
   border: 1px solid var(--border-color);
-  margin-bottom: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.confirmation-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.confirmation-step {
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.confirmation-step:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.step-label {
+.confirmation-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: var(--bg-hover);
+  border-radius: 12px;
+}
+
+.confirmation-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   cursor: pointer;
 }
 
-.step-label input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-
-.step-text {
-  font-size: 14px;
+.confirmation-label {
+  flex: 1;
+  font-size: 16px;
   color: var(--text-primary);
-  line-height: 1.5;
+  cursor: pointer;
 }
 
-.step-text strong {
-  color: #ef4444;
+.text-confirmation {
+  margin: 32px 0;
 }
 
 .confirmation-input {
   width: 100%;
-  margin-top: 12px;
-  padding: 12px 16px;
+  padding: 16px;
   border: 2px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--bg-primary);
+  border-radius: 12px;
+  font-size: 16px;
+  margin-top: 12px;
+  transition: all 0.3s ease;
+  background: var(--bg-hover);
   color: var(--text-primary);
-  font-size: 14px;
-  transition: all 0.2s ease;
 }
 
 .confirmation-input:focus {
   outline: none;
+  border-color: var(--accent-color);
+}
+
+.confirmation-input.input-error {
   border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.05);
 }
 
-.confirmation-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.error-message {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 8px;
+  margin-left: 4px;
 }
 
-.action-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.btn-clear {
-  padding: 16px;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
+.clear-button {
+  width: 100%;
+  padding: 20px;
+  background: #f5f5f7;
   border: none;
   border-radius: 12px;
   font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
-}
-
-.btn-clear:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none;
-}
-
-.btn-clear:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(239, 68, 68, 0.4);
-}
-
-.btn-cancel {
-  padding: 14px;
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  font-size: 16px;
   font-weight: 600;
-  cursor: pointer;
+  color: #999;
+  cursor: not-allowed;
   transition: all 0.3s ease;
+  margin-bottom: 16px;
+  position: relative;
 }
 
-.btn-cancel:hover {
-  background: var(--border-color);
+.clear-button.enabled {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  cursor: pointer;
 }
 
-.button-icon {
-  font-size: 20px;
+.clear-button.enabled:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
 }
 
-.clearing-text {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.clear-button:disabled {
+  opacity: 0.6;
 }
 
 .spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;
   animation: spin 1s linear infinite;
@@ -462,61 +509,77 @@ const goBack = () => {
   to { transform: rotate(360deg); }
 }
 
-/* 模态框样式 */
-.final-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+.cancel-button {
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.modal-backdrop {
+.cancel-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-color);
+}
+
+.final-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
 }
 
-.modal-content {
-  position: relative;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.final-modal {
   background: var(--bg-card);
   border-radius: 20px;
+  padding: 24px;
+  max-width: 400px;
   width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  z-index: 1001;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+  margin-bottom: 24px;
 }
 
-.modal-title {
+.modal-header h3 {
   font-size: 20px;
-  font-weight: 700;
-  color: #ef4444;
+  font-weight: 600;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .modal-close {
   background: none;
   border: none;
-  font-size: 28px;
+  font-size: 24px;
   color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
@@ -525,7 +588,7 @@ const goBack = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 50%;
   transition: all 0.2s ease;
 }
 
@@ -534,61 +597,25 @@ const goBack = () => {
   color: var(--text-primary);
 }
 
-.modal-body {
-  padding: 24px;
-}
-
-.modal-warning {
+.modal-content {
   text-align: center;
-  margin-bottom: 24px;
-  padding: 20px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), transparent);
-  border-radius: 12px;
-  border: 2px solid rgba(239, 68, 68, 0.2);
+  margin-bottom: 32px;
 }
 
-.modal-warning-icon {
-  font-size: 40px;
-  display: block;
-  margin-bottom: 12px;
+.modal-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
 }
 
-.modal-warning p {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.modal-stats {
-  background: var(--bg-hover);
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
-}
-
-.modal-stats p {
-  font-size: 14px;
-  font-weight: 600;
+.modal-text {
+  font-size: 16px;
   color: var(--text-primary);
   margin-bottom: 12px;
+  line-height: 1.6;
 }
 
-.modal-stats ul {
-  list-style-type: none;
-  padding-left: 0;
-  margin: 0;
-}
-
-.modal-stats li {
-  font-size: 13px;
-  color: var(--text-secondary);
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.modal-stats li:last-child {
-  border-bottom: none;
+.modal-text strong {
+  color: var(--accent-color);
 }
 
 .modal-actions {
@@ -596,77 +623,87 @@ const goBack = () => {
   gap: 12px;
 }
 
-.modal-btn-cancel,
-.modal-btn-confirm {
+.modal-button {
   flex: 1;
   padding: 14px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.modal-btn-cancel {
+.modal-button.cancel {
   background: var(--bg-hover);
   color: var(--text-primary);
-  border: 1px solid var(--border-color);
 }
 
-.modal-btn-cancel:hover {
+.modal-button.cancel:hover {
   background: var(--border-color);
 }
 
-.modal-btn-confirm {
+.modal-button.confirm {
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
-.modal-btn-confirm:hover {
+.modal-button.confirm:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .clear-button {
+    background: #2c2c2e;
+  }
+  
+  .warning-section {
+    background: #332701;
+    border-color: #665800;
+  }
+  
+  .warning-list li,
+  .warning-title {
+    color: #ffd54f;
+  }
+  
+  .confirmation-input {
+    background: #2c2c2e;
+  }
+  
+  .modal-button.cancel {
+    background: #2c2c2e;
+  }
 }
 
 @media (max-width: 768px) {
-  .content {
-    padding: 16px;
+  .content-area {
+    padding: 70px 16px 32px;
+  }
+  
+  .title {
+    font-size: 24px;
   }
   
   .stats-grid {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 12px;
   }
   
+  .stats-section,
+  .warning-section,
   .confirmation-section {
     padding: 20px;
-  }
-  
-  .modal-content {
-    max-height: 80vh;
   }
   
   .modal-actions {
     flex-direction: column;
   }
-}
-
-@media (max-width: 480px) {
-  .warning-section {
-    padding: 20px;
-  }
   
-  .warning-icon {
-    font-size: 40px;
-  }
-  
-  .warning-title {
-    font-size: 20px;
-  }
-  
-  .step-label {
-    align-items: flex-start;
+  .clear-button {
+    padding: 18px;
   }
 }
 </style>

@@ -1,277 +1,14 @@
-<template>
-  <div class="export-holding-view">
-    <NavBar title="导出持仓" back-route="/holdings/manage" />
-    
-    <div class="content">
-      <div class="export-container">
-        <h2 class="export-title">导出持仓数据</h2>
-        <p class="export-subtitle">将持仓数据导出为文件，便于备份或共享</p>
-        
-        <div class="export-options">
-          <!-- 导出格式选择 -->
-          <div class="format-selection">
-            <h3 class="section-title">选择导出格式</h3>
-            <div class="format-options">
-              <div
-                v-for="format in exportFormats"
-                :key="format.id"
-                class="format-card"
-                :class="{ selected: selectedFormat.id === format.id }"
-                @click="selectFormat(format)"
-              >
-                <div class="format-icon">{{ format.icon }}</div>
-                <h4 class="format-name">{{ format.name }}</h4>
-                <p class="format-desc">{{ format.description }}</p>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 导出范围 -->
-          <div class="scope-selection">
-            <h3 class="section-title">选择导出范围</h3>
-            <div class="scope-options">
-              <label class="scope-option">
-                <input
-                  type="radio"
-                  v-model="exportScope"
-                  value="all"
-                />
-                <span class="radio-label">
-                  <span class="option-title">全部持仓</span>
-                  <span class="option-desc">导出所有客户的持仓记录</span>
-                </span>
-              </label>
-              
-              <label class="scope-option">
-                <input
-                  type="radio"
-                  v-model="exportScope"
-                  value="filtered"
-                />
-                <span class="radio-label">
-                  <span class="option-title">按条件筛选</span>
-                  <span class="option-desc">根据筛选条件导出部分持仓</span>
-                </span>
-              </label>
-            </div>
-            
-            <!-- 筛选条件 -->
-            <div v-if="exportScope === 'filtered'" class="filter-options">
-              <div class="filter-group">
-                <label>客户姓名</label>
-                <input
-                  type="text"
-                  v-model="filters.clientName"
-                  placeholder="输入客户姓名"
-                />
-              </div>
-              
-              <div class="filter-group">
-                <label>客户编号</label>
-                <input
-                  type="text"
-                  v-model="filters.clientId"
-                  placeholder="输入客户编号"
-                />
-              </div>
-              
-              <div class="filter-row">
-                <div class="filter-group">
-                  <label>基金代码</label>
-                  <input
-                    type="text"
-                    v-model="filters.fundCode"
-                    placeholder="输入基金代码"
-                  />
-                </div>
-                
-                <div class="filter-group">
-                  <label>置顶状态</label>
-                  <select v-model="filters.isPinned">
-                    <option value="">全部</option>
-                    <option value="pinned">已置顶</option>
-                    <option value="not_pinned">未置顶</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div class="filter-group">
-                <label>持仓日期范围</label>
-                <div class="date-inputs">
-                  <input
-                    type="date"
-                    v-model="filters.startDate"
-                    placeholder="开始日期"
-                  />
-                  <span class="date-separator">至</span>
-                  <input
-                    type="date"
-                    v-model="filters.endDate"
-                    placeholder="结束日期"
-                  />
-                </div>
-              </div>
-              
-              <div class="filter-group">
-                <label>购买金额范围</label>
-                <div class="range-inputs">
-                  <input
-                    type="number"
-                    v-model.number="filters.minAmount"
-                    placeholder="最小金额"
-                    step="0.01"
-                    min="0"
-                  />
-                  <span class="range-separator">-</span>
-                  <input
-                    type="number"
-                    v-model.number="filters.maxAmount"
-                    placeholder="最大金额"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 导出选项 -->
-          <div class="export-settings">
-            <h3 class="section-title">导出选项</h3>
-            <div class="setting-options">
-              <label class="setting-option">
-                <input type="checkbox" v-model="options.includeCalculations" checked />
-                <span>包含收益计算结果</span>
-              </label>
-              <label class="setting-option">
-                <input type="checkbox" v-model="options.includeFundInfo" checked />
-                <span>包含基金信息（名称、净值）</span>
-              </label>
-              <label class="setting-option">
-                <input type="checkbox" v-model="options.compressFile" />
-                <span>压缩导出文件</span>
-              </label>
-              <label class="setting-option">
-                <input type="checkbox" v-model="options.includeTimestamps" />
-                <span>包含时间戳（创建/更新时间）</span>
-              </label>
-            </div>
-          </div>
-          
-          <!-- 字段选择 -->
-          <div class="field-selection">
-            <h3 class="section-title">选择导出字段</h3>
-            <div class="field-options">
-              <div
-                v-for="field in exportFields"
-                :key="field.id"
-                class="field-item"
-                :class="{ required: field.required }"
-              >
-                <label class="field-label">
-                  <input
-                    type="checkbox"
-                    v-model="selectedFields"
-                    :value="field.id"
-                    :disabled="field.required"
-                  />
-                  <span class="field-name">{{ field.name }}</span>
-                  <span class="field-type">{{ field.type }}</span>
-                </label>
-                <span class="field-desc">{{ field.description }}</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 预估信息 -->
-          <div class="export-preview">
-            <div class="preview-info">
-              <div class="info-item">
-                <span class="info-label">预计导出记录：</span>
-                <span class="info-value">{{ estimatedRecords }} 条</span>
-              </div>
-              <div v-if="selectedFormat.id === 'csv'" class="info-item">
-                <span class="info-label">CSV编码：</span>
-                <span class="info-value">UTF-8 with BOM</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">导出格式：</span>
-                <span class="info-value">{{ selectedFormat.name }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">包含字段：</span>
-                <span class="info-value">{{ selectedFields.length }} 个</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 操作按钮 -->
-          <div class="export-actions">
-            <button 
-              class="btn-export" 
-              @click="startExport"
-              :disabled="isExporting || estimatedRecords === 0"
-            >
-              <span v-if="!isExporting">
-                <span class="button-icon">💾</span>
-                开始导出
-              </span>
-              <span v-else class="exporting-text">
-                <span class="spinner"></span>
-                导出中... {{ exportProgress }}%
-              </span>
-            </button>
-            <button class="btn-cancel" @click="goBack">取消</button>
-          </div>
-          
-          <!-- 导出历史 -->
-          <div class="export-history" v-if="exportHistory.length > 0">
-            <h3 class="section-title">最近导出记录</h3>
-            <div class="history-list">
-              <div
-                v-for="item in exportHistory"
-                :key="item.id"
-                class="history-item"
-              >
-                <div class="history-info">
-                  <div class="history-main">
-                    <span class="history-filename">{{ item.filename }}</span>
-                    <span class="history-filesize">{{ item.filesize }}</span>
-                  </div>
-                  <div class="history-meta">
-                    <span class="history-date">{{ item.date }}</span>
-                    <span class="history-format">{{ item.format.toUpperCase() }}</span>
-                    <span class="history-records">{{ item.records }} 条记录</span>
-                  </div>
-                </div>
-                <div class="history-actions">
-                  <button class="history-btn" @click="downloadAgain(item)">重新下载</button>
-                  <button class="history-btn delete" @click="deleteHistory(item)">删除</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <ToastMessage
-      :show="showToast"
-      :message="toastMessage"
-      :type="toastType"
-      @update:show="showToast = $event"
-    />
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import NavBar from '@/components/layout/NavBar.vue'
 import ToastMessage from '@/components/common/ToastMessage.vue'
-import type { Holding } from '@/types/data'
+import { useDataStore } from '@/stores/dataStore'
+import type { Holding, FundHolding } from '@/types/data'
+import { convertFundHoldingToHolding } from '@/types/data'
 
 const router = useRouter()
+const dataStore = useDataStore()
 
 const exportFormats = [
   { id: 'csv', name: 'CSV', icon: '📝', description: '标准CSV格式，兼容Excel' },
@@ -321,70 +58,48 @@ const exportFields = ref([
 
 const selectedFields = ref<string[]>(['client_name', 'client_id', 'fund_code', 'fund_name', 'purchase_date', 'purchase_amount', 'purchase_shares', 'current_nav', 'nav_date', 'remarks'])
 
-// 模拟导出历史
-const exportHistory = ref([
-  { 
-    id: 1, 
-    filename: '持仓数据_2024-03-15.csv', 
-    filesize: '45.2 KB',
-    date: '2024-03-15 14:30', 
-    format: 'csv',
-    records: 156,
-    data: null as string | null
-  },
-  { 
-    id: 2, 
-    filename: '持仓数据_2024-03-10.xlsx', 
-    filesize: '68.7 KB',
-    date: '2024-03-10 10:15', 
-    format: 'excel',
-    records: 142,
-    data: null as string | null
-  },
-  { 
-    id: 3, 
-    filename: 'VIP客户持仓.json', 
-    filesize: '32.1 KB',
-    date: '2024-03-05 16:45', 
-    format: 'json',
-    records: 42,
-    data: null as string | null
-  }
-])
+// 使用dataStore中的导出历史
+const exportHistory = ref(dataStore.userPreferences.exportHistory)
 
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
 
-// 模拟持仓数据
-const mockHoldings: Holding[] = [
-  {
-    id: '1',
-    client_name: '张三',
-    client_id: 'C001',
-    fund_code: '005827',
-    fund_name: '易方达蓝筹精选混合',
-    purchase_date: '2024-01-15',
-    purchase_amount: 100000.00,
-    purchase_shares: 40000.0000,
-    current_nav: 2.5000,
-    nav_date: '2024-03-15',
-    is_pinned: false,
-    pinned_timestamp: null,
-    remarks: '首次购买',
-    created_at: '2024-01-15 10:30:00',
-    updated_at: '2024-03-15 15:45:00'
-  },
-  // 更多模拟数据...
-]
+// 从dataStore获取持仓数据并转换为Holding格式
+const getHoldingsFromDataStore = (): Holding[] => {
+  return dataStore.holdings.map(fundHolding => {
+    // 准备转换参数
+    const fundHoldingData: any = {
+      ...fundHolding,
+      purchaseDate: fundHolding.purchaseDate instanceof Date 
+        ? fundHolding.purchaseDate.toISOString().split('T')[0]
+        : fundHolding.purchaseDate,
+      navDate: fundHolding.navDate instanceof Date
+        ? fundHolding.navDate.toISOString().split('T')[0]
+        : fundHolding.navDate
+    }
+    
+    // 处理 pinnedTimestamp，如果是Date则转换为字符串
+    if (fundHolding.pinnedTimestamp instanceof Date) {
+      fundHoldingData.pinnedTimestamp = fundHolding.pinnedTimestamp.toISOString()
+    } else if (fundHolding.pinnedTimestamp !== undefined) {
+      fundHoldingData.pinnedTimestamp = fundHolding.pinnedTimestamp
+    }
+    
+    const converted = convertFundHoldingToHolding(fundHoldingData)
+    return converted
+  })
+}
 
 // 计算属性
 const estimatedRecords = computed(() => {
+  const holdings = getHoldingsFromDataStore()
+  
   if (exportScope.value === 'all') {
-    return mockHoldings.length
+    return holdings.length
   }
   
-  let filtered = [...mockHoldings]
+  let filtered = [...holdings]
   
   if (filters.value.clientName) {
     filtered = filtered.filter(h => 
@@ -510,7 +225,7 @@ const startExport = async () => {
 
 const completeExport = () => {
   // 获取筛选后的数据
-  let dataToExport = [...mockHoldings]
+  let dataToExport = getHoldingsFromDataStore()
   
   if (exportScope.value === 'filtered') {
     dataToExport = applyFilters(dataToExport)
@@ -543,7 +258,7 @@ const completeExport = () => {
       break
   }
   
-  // 添加导出历史
+  // 添加导出历史到dataStore
   const newHistoryItem = {
     id: Date.now(),
     filename,
@@ -554,7 +269,8 @@ const completeExport = () => {
     data: exportData
   }
   
-  exportHistory.value.unshift(newHistoryItem)
+  dataStore.addExportHistory(newHistoryItem)
+  exportHistory.value = dataStore.userPreferences.exportHistory
   
   // 触发下载
   downloadFile(exportData, filename, mimeType)
@@ -652,11 +368,9 @@ const downloadAgain = (item: any) => {
 }
 
 const deleteHistory = (item: any) => {
-  const index = exportHistory.value.findIndex(h => h.id === item.id)
-  if (index !== -1) {
-    exportHistory.value.splice(index, 1)
-    showNotification('导出记录已删除', 'info')
-  }
+  dataStore.deleteExportHistory(item.id)
+  exportHistory.value = dataStore.userPreferences.exportHistory
+  showNotification('导出记录已删除', 'info')
 }
 
 const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
@@ -680,551 +394,658 @@ onMounted(() => {
 })
 </script>
 
+<template>
+  <div class="export-holding-view">
+    <NavBar title="导出持仓数据" show-back @back="goBack" />
+    
+    <div class="container">
+      <!-- 导出设置区域 -->
+      <div class="settings-section">
+        <h2 class="section-title">导出设置</h2>
+        
+        <div class="settings-grid">
+          <!-- 导出格式选择 -->
+          <div class="format-selection">
+            <h3 class="subsection-title">选择导出格式</h3>
+            <div class="format-options">
+              <div
+                v-for="format in exportFormats"
+                :key="format.id"
+                class="format-option"
+                :class="{ active: selectedFormat.id === format.id }"
+                @click="selectFormat(format)"
+              >
+                <div class="format-icon">{{ format.icon }}</div>
+                <div class="format-info">
+                  <h4>{{ format.name }}</h4>
+                  <p>{{ format.description }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 导出范围 -->
+          <div class="export-scope">
+            <h3 class="subsection-title">导出范围</h3>
+            <div class="scope-options">
+              <label class="scope-option">
+                <input
+                  type="radio"
+                  v-model="exportScope"
+                  value="all"
+                />
+                <span class="radio-label">全部持仓 ({{ dataStore.holdings.length }} 条记录)</span>
+              </label>
+              <label class="scope-option">
+                <input
+                  type="radio"
+                  v-model="exportScope"
+                  value="filtered"
+                />
+                <span class="radio-label">筛选结果 ({{ estimatedRecords }} 条记录)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 筛选条件（当选择筛选结果时显示） -->
+      <div v-if="exportScope === 'filtered'" class="filters-section">
+        <h2 class="section-title">筛选条件</h2>
+        
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label>客户姓名</label>
+            <input
+              type="text"
+              v-model="filters.clientName"
+              placeholder="输入客户姓名..."
+            />
+          </div>
+          
+          <div class="filter-group">
+            <label>客户编号</label>
+            <input
+              type="text"
+              v-model="filters.clientId"
+              placeholder="输入客户编号..."
+            />
+          </div>
+          
+          <div class="filter-group">
+            <label>基金代码</label>
+            <input
+              type="text"
+              v-model="filters.fundCode"
+              placeholder="输入基金代码..."
+            />
+          </div>
+          
+          <div class="filter-group">
+            <label>置顶状态</label>
+            <select v-model="filters.isPinned">
+              <option value="">全部</option>
+              <option value="pinned">已置顶</option>
+              <option value="not_pinned">未置顶</option>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label>购买日期范围</label>
+            <div class="date-range">
+              <input
+                type="date"
+                v-model="filters.startDate"
+                class="date-input"
+              />
+              <span class="date-separator">至</span>
+              <input
+                type="date"
+                v-model="filters.endDate"
+                class="date-input"
+              />
+            </div>
+          </div>
+          
+          <div class="filter-group">
+            <label>购买金额范围 (元)</label>
+            <div class="amount-range">
+              <input
+                type="number"
+                v-model="filters.minAmount"
+                placeholder="最小金额"
+                class="amount-input"
+                min="0"
+                step="0.01"
+              />
+              <span class="amount-separator">-</span>
+              <input
+                type="number"
+                v-model="filters.maxAmount"
+                placeholder="最大金额"
+                class="amount-input"
+                min="0"
+                step="0.01"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 导出选项 -->
+      <div class="options-section">
+        <h2 class="section-title">导出选项</h2>
+        
+        <div class="options-grid">
+          <div class="option-item">
+            <label class="option-label">
+              <input
+                type="checkbox"
+                v-model="options.includeCalculations"
+              />
+              <span>包含计算字段（当前市值、收益率等）</span>
+            </label>
+          </div>
+          
+          <div class="option-item">
+            <label class="option-label">
+              <input
+                type="checkbox"
+                v-model="options.includeFundInfo"
+              />
+              <span>包含基金基本信息</span>
+            </label>
+          </div>
+          
+          <div class="option-item">
+            <label class="option-label">
+              <input
+                type="checkbox"
+                v-model="options.compressFile"
+              />
+              <span>压缩导出文件</span>
+            </label>
+          </div>
+          
+          <div class="option-item">
+            <label class="option-label">
+              <input
+                type="checkbox"
+                v-model="options.includeTimestamps"
+              />
+              <span>包含时间戳字段</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 字段选择 -->
+      <div class="fields-section">
+        <h2 class="section-title">选择导出字段</h2>
+        
+        <div class="fields-grid">
+          <div
+            v-for="field in exportFields"
+            :key="field.id"
+            class="field-item"
+            :class="{ required: field.required }"
+          >
+            <label class="field-label">
+              <input
+                type="checkbox"
+                :value="field.id"
+                v-model="selectedFields"
+                :disabled="field.required"
+              />
+              <span class="field-name">{{ field.name }}</span>
+              <span class="field-type">{{ field.type }}</span>
+            </label>
+            <p class="field-description">{{ field.description }}</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 导出按钮 -->
+      <div class="export-button-section">
+        <button
+          class="export-button"
+          :class="{ exporting: isExporting }"
+          @click="startExport"
+          :disabled="isExporting || estimatedRecords === 0"
+        >
+          <span v-if="!isExporting">开始导出 ({{ estimatedRecords }} 条记录)</span>
+          <span v-else>导出中... {{ exportProgress }}%</span>
+        </button>
+        
+        <!-- 进度条 -->
+        <div v-if="isExporting" class="progress-container">
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              :style="{ width: exportProgress + '%' }"
+            ></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 导出历史 -->
+      <div v-if="exportHistory.length > 0" class="history-section">
+        <h2 class="section-title">导出历史</h2>
+        
+        <div class="history-list">
+          <div
+            v-for="item in exportHistory"
+            :key="item.id"
+            class="history-item"
+          >
+            <div class="history-info">
+              <div class="history-filename">{{ item.filename }}</div>
+              <div class="history-details">
+                <span class="history-date">{{ item.date }}</span>
+                <span class="history-format">{{ item.format.toUpperCase() }}</span>
+                <span class="history-size">{{ item.filesize }}</span>
+                <span class="history-records">{{ item.records }} 条记录</span>
+              </div>
+            </div>
+            
+            <div class="history-actions">
+              <button
+                class="action-button download"
+                @click="downloadAgain(item)"
+              >
+                下载
+              </button>
+              <button
+                class="action-button delete"
+                @click="deleteHistory(item)"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Toast消息 -->
+    <ToastMessage
+      :show="showToast"
+      :message="toastMessage"
+      :type="toastType"
+      @close="showToast = false"
+    />
+  </div>
+</template>
+
 <style scoped>
 .export-holding-view {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-primary);
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-.export-container {
+.container {
   max-width: 1200px;
   margin: 0 auto;
-}
-
-.export-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-  text-align: center;
-}
-
-.export-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 24px;
-  text-align: center;
-}
-
-.export-options {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  padding: 2rem;
 }
 
 .section-title {
-  font-size: 16px;
+  color: white;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 16px;
+}
+
+.settings-grid,
+.filters-grid,
+.options-grid,
+.fields-grid {
+  display: grid;
+  gap: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.settings-grid {
+  grid-template-columns: 2fr 1fr;
 }
 
 .format-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
+  gap: 1rem;
 }
 
-.format-card {
-  background: var(--bg-card);
-  border: 2px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
+.format-option {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.format-card:hover {
-  border-color: var(--accent-color);
+.format-option:hover {
+  border-color: #667eea;
   transform: translateY(-2px);
 }
 
-.format-card.selected {
-  border-color: var(--accent-color);
-  background: rgba(var(--accent-color-rgb), 0.05);
-  box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.1);
+.format-option.active {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
 }
 
 .format-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
+  font-size: 2rem;
+  margin-right: 1rem;
 }
 
-.format-name {
-  font-size: 14px;
+.format-info h4 {
+  margin: 0;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
 }
 
-.format-desc {
-  font-size: 11px;
-  color: var(--text-secondary);
-  line-height: 1.3;
+.format-info p {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.subsection-title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
 }
 
 .scope-options {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 0.75rem;
 }
 
 .scope-option {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  align-items: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  font-size: 0.95rem;
 }
 
-.scope-option:hover {
-  border-color: var(--accent-color);
-}
-
-.scope-option input[type="radio"] {
-  margin-top: 3px;
+.scope-option input {
+  margin-right: 0.5rem;
 }
 
 .radio-label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
+  color: #4b5563;
 }
 
-.option-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.option-desc {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.filter-options {
-  background: var(--bg-card);
-  border-radius: 8px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  border: 1px solid var(--border-color);
+.filters-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.filter-row {
-  display: flex;
-  gap: 12px;
-}
-
-.filter-row .filter-group {
-  flex: 1;
+  gap: 0.5rem;
 }
 
 .filter-group label {
-  font-size: 13px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: #374151;
+  font-size: 0.875rem;
 }
 
 .filter-group input,
 .filter-group select {
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  font-size: 13px;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: border-color 0.3s ease;
 }
 
 .filter-group input:focus,
 .filter-group select:focus {
   outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.date-inputs,
-.range-inputs {
+.date-range,
+.amount-range {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
-.date-inputs input,
-.range-inputs input {
+.date-input,
+.amount-input {
   flex: 1;
+  min-width: 0;
 }
 
 .date-separator,
-.range-separator {
-  font-size: 12px;
-  color: var(--text-secondary);
-  padding: 0 4px;
+.amount-separator {
+  color: #6b7280;
+  font-size: 0.875rem;
 }
 
-.range-inputs input {
-  text-align: center;
+.options-grid,
+.fields-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
 
-.export-settings {
-  background: var(--bg-card);
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid var(--border-color);
-}
-
-.setting-options {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.setting-option {
+.option-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--text-primary);
-  cursor: pointer;
 }
 
-.setting-option input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-}
-
-.field-selection {
-  background: var(--bg-card);
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid var(--border-color);
-}
-
-.field-options {
+.option-label {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
-  padding: 4px;
+  align-items: center;
+  cursor: pointer;
+  gap: 0.5rem;
+  color: #374151;
+  font-size: 0.95rem;
 }
 
 .field-item {
-  padding: 8px;
-  border-radius: 6px;
-  background: var(--bg-primary);
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.field-item:hover {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
 }
 
 .field-item.required {
-  background: rgba(239, 68, 68, 0.05);
-  border-left: 3px solid #ef4444;
+  background: rgba(245, 158, 11, 0.05);
+  border-color: #f59e0b;
 }
 
 .field-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--text-primary);
+  gap: 0.5rem;
   cursor: pointer;
-  margin-bottom: 4px;
-}
-
-.field-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-}
-
-.field-label input[type="checkbox"]:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  margin-bottom: 0.5rem;
 }
 
 .field-name {
   font-weight: 500;
-  flex: 1;
+  color: #1f2937;
 }
 
 .field-type {
-  font-size: 11px;
-  color: var(--text-secondary);
-  background: var(--bg-hover);
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
 }
 
-.field-desc {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-left: 24px;
+.field-description {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #6b7280;
 }
 
-.export-preview {
-  background: linear-gradient(135deg, rgba(var(--accent-color-rgb), 0.05), transparent);
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid var(--border-color);
+.export-button-section {
+  margin-top: 3rem;
+  text-align: center;
 }
 
-.preview-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.info-label {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.info-value {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.export-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.btn-export {
-  flex: 2;
-  padding: 14px;
-  background: var(--accent-color);
+.export-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  padding: 1rem 3rem;
+  font-size: 1.125rem;
   font-weight: 600;
+  border-radius: 0.75rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.btn-export:disabled {
+.export-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+.export-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none !important;
 }
 
-.btn-export:not(:disabled):hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
+.export-button.exporting {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
 }
 
-.btn-cancel {
-  flex: 1;
-  padding: 14px;
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.progress-container {
+  margin-top: 1rem;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.btn-cancel:hover {
-  background: var(--border-color);
+.progress-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-.exporting-text {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transition: width 0.3s ease;
 }
 
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.export-history {
-  border-top: 1px solid var(--border-color);
-  padding-top: 24px;
-  margin-top: 8px;
+.history-section {
+  margin-top: 3rem;
 }
 
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
 .history-item {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
 }
 
 .history-item:hover {
-  border-color: var(--accent-color);
-  transform: translateX(2px);
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
 }
 
 .history-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
   flex: 1;
 }
 
-.history-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .history-filename {
-  font-size: 13px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: #1f2937;
+  margin-bottom: 0.5rem;
 }
 
-.history-filesize {
-  font-size: 11px;
-  color: var(--text-secondary);
-  background: var(--bg-hover);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.history-meta {
+.history-details {
   display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.history-date {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.history-format {
-  font-size: 11px;
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-}
-
-.history-records {
-  font-size: 11px;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
 }
 
 .history-actions {
   display: flex;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
-.history-btn {
-  padding: 6px 12px;
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 12px;
+.action-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
-.history-btn:hover {
-  background: var(--accent-color);
+.action-button.download {
+  background: #10b981;
   color: white;
-  border-color: var(--accent-color);
 }
 
-.history-btn.delete:hover {
+.action-button.download:hover {
+  background: #059669;
+}
+
+.action-button.delete {
   background: #ef4444;
-  border-color: #ef4444;
+  color: white;
 }
 
+.action-button.delete:hover {
+  background: #dc2626;
+}
+
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .content {
-    padding: 16px;
+  .container {
+    padding: 1rem;
   }
   
-  .format-options {
+  .settings-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .export-actions {
-    flex-direction: column;
   }
   
   .history-item {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    gap: 1rem;
+    text-align: center;
   }
   
-  .history-actions {
-    align-self: flex-end;
-  }
-  
-  .filter-row {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .preview-info {
-    grid-template-columns: 1fr;
-  }
-  
-  .history-meta {
+  .history-details {
     flex-wrap: wrap;
-    gap: 8px;
+    justify-content: center;
   }
 }
 </style>

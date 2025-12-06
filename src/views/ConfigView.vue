@@ -1,5 +1,372 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
+import { useDataStore } from '../stores/dataStore'
+import CustomCard from '@/components/common/CustomCard.vue'
+import ToastMessage from '@/components/common/ToastMessage.vue'
+
+const router = useRouter()
+const authStore = useAuthStore()
+const dataStore = useDataStore()
+
+// 主题键，用于强制重新渲染
+const themeKey = ref(0)
+// 隐私模式键，用于强制重新渲染相关组件
+const privacyKey = ref(0)
+
+// Toast状态
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
+
+// 显示Toast消息
+const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+  
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+  
+  // 记录到API日志
+  dataStore.addLog(`系统提示: ${message}`, type)
+}
+
+// 监听隐私模式变化 - 增强事件广播
+watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
+  console.log(`隐私模式变化: ${oldValue} -> ${newValue}`)
+  
+  // 强制更新隐私模式键，触发相关组件重新渲染
+  privacyKey.value = Date.now()
+  
+  // 广播全局隐私模式变化事件
+  const event = new CustomEvent('privacy-mode-changed-global', { 
+    detail: { 
+      enabled: newValue,
+      oldValue: oldValue,
+      timestamp: Date.now(),
+      source: 'ConfigView'
+    }
+  })
+  window.dispatchEvent(event)
+  
+  // 同时发送原事件保持兼容性
+  const legacyEvent = new CustomEvent('privacy-mode-changed', { 
+    detail: { 
+      enabled: newValue,
+      oldValue: oldValue
+    }
+  })
+  window.dispatchEvent(legacyEvent)
+  
+  nextTick(() => {
+    showNotification(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')
+  })
+})
+
+// 获取显示名称
+const displayName = computed(() => {
+  return authStore.displayName || '用户'
+})
+
+// 根据等级计算绶带文本
+const userTypeDisplay = computed(() => {
+  switch (authStore.userType) {
+    case 'vip': return '尊享用户'
+    case 'subscribed': return '体验用户'
+    case 'free': 
+    default: return '基础用户'
+  }
+})
+
+// 用户卡片和用户名动态样式
+const userCardStyles = computed(() => {
+  switch (authStore.userType) {
+    case 'vip':
+      return {
+        cardBg: 'linear-gradient(135deg, rgba(255, 223, 0, 0.1), rgba(255, 165, 0, 0.15))',
+        nameGradient: 'linear-gradient(135deg, #FFD700, #FFA500, #FFCC33)',
+        ribbonBg: 'linear-gradient(90deg, #ffd700, #ff8c00)',
+        ribbonColor: '#5d3d00',
+        borderColor: 'rgba(255, 192, 0, 0.5)',
+      }
+    case 'subscribed':
+      return {
+        cardBg: 'linear-gradient(135deg, rgba(240, 240, 240, 0.1), rgba(200, 200, 200, 0.15))',
+        nameGradient: 'linear-gradient(135deg, #a0a0a0, #c0c0c0, #f0f0f0)',
+        ribbonBg: '#e0e0e0',
+        ribbonColor: '#424242',
+        borderColor: 'rgba(200, 200, 200, 0.5)',
+      }
+    case 'free':
+    default:
+      return {
+        cardBg: 'var(--bg-card)',
+        nameGradient: 'var(--text-primary)',
+        ribbonBg: '#bbb',
+        ribbonColor: '#555',
+        borderColor: 'var(--border-color)',
+      }
+  }
+})
+
+const themeModes = [
+  { name: '浅色', value: 'light' },
+  { name: '深色', value: 'dark' },
+  { name: '系统', value: 'system' }
+]
+
+// 从localStorage获取初始主题，如果不存在则检查系统偏好
+const getInitialTheme = () => {
+  if (typeof window !== 'undefined') {
+    const savedTheme = localStorage.getItem('themeMode')
+    if (savedTheme) return savedTheme
+    
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    return prefersDark ? 'dark' : 'light'
+  }
+  return 'light'
+}
+
+const selectedTheme = ref(getInitialTheme()) 
+
+const fundAPIs = [
+  { name: '天天基金', value: 'eastmoney' },
+  { name: '同花顺', value: 'ths' },
+  { name: '腾讯财经', value: 'tencent' },
+  { name: '蚂蚁基金', value: 'fund123' }
+]
+const selectedAPI = ref(dataStore.userPreferences.selectedFundAPI || 'eastmoney')
+
+// 应用主题函数 - 立即生效
+const applyTheme = (mode: string) => {
+  const previousTheme = selectedTheme.value
+  selectedTheme.value = mode
+  
+  // 立即保存到localStorage
+  localStorage.setItem('themeMode', mode)
+  
+  // 保存到dataStore
+  dataStore.updateUserPreferences({ selectedFundAPI: selectedAPI.value })
+  
+  // 立即应用主题到当前页面
+  applyThemeToDocument(mode)
+  
+  // 改变主题键强制重新渲染
+  themeKey.value = Date.now()
+  
+  // 记录操作日志
+  dataStore.addLog(`主题已切换到: ${themeModes.find(m => m.value === mode)?.name || mode}`, 'info')
+  
+  // 广播主题变化事件
+  const themeEvent = new CustomEvent('theme-changed-global', { 
+    detail: { 
+      theme: mode,
+      previousTheme: previousTheme,
+      timestamp: Date.now()
+    }
+  })
+  window.dispatchEvent(themeEvent)
+  
+  // 兼容旧事件
+  const legacyThemeEvent = new CustomEvent('theme-changed', { 
+    detail: { 
+      theme: mode
+    }
+  })
+  window.dispatchEvent(legacyThemeEvent)
+  
+  // 只有在主题真正改变时才显示通知
+  if (previousTheme !== mode) {
+    showNotification(`主题已切换到: ${themeModes.find(m => m.value === mode)?.name || mode}`, 'success')
+  }
+}
+
+// 独立的主题应用函数，确保立即生效
+const applyThemeToDocument = (mode: string) => {
+  const root = document.documentElement
+  const body = document.body
+  
+  // 移除所有主题类
+  root.classList.remove('theme-light', 'theme-dark', 'theme-system')
+  body.classList.remove('light-mode', 'dark-mode')
+  
+  if (mode === 'dark') {
+    root.classList.add('theme-dark')
+    body.classList.add('dark-mode')
+    updateCSSVariables('dark')
+  } else if (mode === 'light') {
+    root.classList.add('theme-light')
+    body.classList.add('light-mode')
+    updateCSSVariables('light')
+  } else {
+    // 系统主题
+    root.classList.add('theme-system')
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    if (prefersDark) {
+      body.classList.add('dark-mode')
+      updateCSSVariables('dark')
+    } else {
+      body.classList.add('light-mode')
+      updateCSSVariables('light')
+    }
+  }
+  
+  // 强制重绘当前组件，确保样式立即生效
+  nextTick(() => {
+    // 强制重绘body以确保主题应用
+    void body.offsetHeight
+  })
+}
+
+// 立即更新CSS变量
+const updateCSSVariables = (theme: 'light' | 'dark') => {
+  const root = document.documentElement
+  
+  if (theme === 'dark') {
+    root.style.setProperty('--bg-primary', '#000000')
+    root.style.setProperty('--bg-card', '#1c1c1e')
+    root.style.setProperty('--bg-hover', '#2c2c2e')
+    root.style.setProperty('--text-primary', '#ffffff')
+    root.style.setProperty('--text-secondary', '#8e8e93')
+    root.style.setProperty('--border-color', '#3a3a3c')
+    root.style.setProperty('--accent-color', '#3b82f6')
+    root.style.setProperty('--accent-color-rgb', '59, 130, 246')
+    root.style.setProperty('--glass-bg', 'rgba(30, 30, 30, 0.8)')
+    root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.1)')
+    root.style.setProperty('--glass-button-bg', 'rgba(79, 172, 254, 0.1)')
+    root.style.setProperty('--glass-button-border', 'rgba(79, 172, 254, 0.08)')
+    root.style.setProperty('--card-shadow', '0 8px 32px rgba(0, 0, 0, 0.4)')
+  } else {
+    root.style.setProperty('--bg-primary', '#f5f5f7')
+    root.style.setProperty('--bg-card', '#ffffff')
+    root.style.setProperty('--bg-hover', '#f0f7ff')
+    root.style.setProperty('--text-primary', '#333333')
+    root.style.setProperty('--text-secondary', '#666666')
+    root.style.setProperty('--border-color', '#e5e5e7')
+    root.style.setProperty('--accent-color', '#3b82f6')
+    root.style.setProperty('--accent-color-rgb', '59, 130, 246')
+    root.style.setProperty('--glass-bg', 'rgba(255, 255, 255, 0.8)')
+    root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.2)')
+    root.style.setProperty('--glass-button-bg', 'rgba(79, 172, 254, 0.1)')
+    root.style.setProperty('--glass-button-border', 'rgba(79, 172, 254, 0.05)')
+    root.style.setProperty('--card-shadow', '0 8px 32px rgba(0, 0, 0, 0.1), 0 12px 60px rgba(79, 172, 254, 0.2)')
+  }
+}
+
+const togglePrivacyMode = (enabled: boolean) => {
+  const oldValue = dataStore.isPrivacyMode
+  console.log(`切换隐私模式: ${oldValue} -> ${enabled}`)
+  
+  // 直接更新dataStore，触发watch监听
+  dataStore.updateUserPreferences({ isPrivacyMode: enabled })
+  
+  // 记录操作日志
+  dataStore.addLog(`隐私模式已${enabled ? '开启' : '关闭'}`, 'info')
+  
+  // 强制保存到localStorage
+  localStorage.setItem('privacy_mode', enabled.toString())
+}
+
+const handleAPIChange = () => {
+  const oldAPI = dataStore.userPreferences.selectedFundAPI
+  dataStore.updateUserPreferences({ selectedFundAPI: selectedAPI.value })
+  
+  // 记录操作日志
+  dataStore.addLog(`数据接口已从${oldAPI}切换至: ${selectedAPI.value}`, 'info')
+  
+  showNotification(`数据接口已切换至: ${fundAPIs.find(a => a.value === selectedAPI.value)?.name || selectedAPI.value}`, 'success')
+}
+
+const handleFeature = (featureName: string) => {
+  switch (featureName) {
+    case 'About':
+      router.push('/about')
+      break
+    case 'ManageHoldings':
+      router.push('/holdings/manage')
+      break
+    case 'APILog':
+      router.push('/logs')
+      break
+    case 'CloudSync':
+      if (authStore.userType === 'free') {
+        showNotification('该功能需要升级到VIP用户', 'warning')
+      } else {
+        showNotification('云端同步功能正在开发中...', 'info')
+      }
+      break
+    default:
+      showNotification(`功能 ${featureName} 正在开发中...`, 'info')
+  }
+  
+  // 记录操作日志
+  dataStore.addLog(`用户操作: 点击${featureName}功能`, 'info')
+}
+
+const handleUpgrade = (e: Event) => {
+  e.preventDefault()
+  showNotification('正在跳转到升级页面...', 'info')
+  dataStore.addLog('用户点击升级按钮', 'info')
+}
+
+// 退出登录函数
+const handleLogout = async () => {
+  try {
+    dataStore.addLog('用户执行退出登录操作', 'info')
+    showNotification('您已成功退出登录', 'success')
+    
+    setTimeout(() => {
+      authStore.logout()
+      dataStore.addLog('用户已成功退出登录', 'success')
+    }, 800)
+    
+  } catch (error) {
+    console.error('退出登录失败:', error)
+    dataStore.addLog('退出登录失败: ' + (error as Error).message, 'error')
+    showNotification('退出登录失败，请重试', 'error')
+  }
+}
+
+onMounted(() => {
+  // 初始化应用主题
+  applyThemeToDocument(selectedTheme.value)
+  
+  // 初始化数据
+  dataStore.loadData()
+  
+  // 确保隐私模式状态与dataStore同步
+  nextTick(() => {
+    if (dataStore.userPreferences.isPrivacyMode !== undefined) {
+      dataStore.isPrivacyMode = dataStore.userPreferences.isPrivacyMode
+    }
+  })
+  
+  // 监听系统主题变化（仅当选择系统主题时）
+  if (selectedTheme.value === 'system') {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      if (selectedTheme.value === 'system') {
+        dataStore.addLog('系统主题变化，重新应用主题', 'info')
+        applyTheme('system')
+      }
+    }
+    mediaQuery.addEventListener('change', handleSystemThemeChange)
+    
+    onUnmounted(() => {
+      mediaQuery.removeEventListener('change', handleSystemThemeChange)
+    })
+  }
+  
+  // 记录访问日志
+  dataStore.addLog('用户访问配置页面', 'info')
+})
+</script>
+
 <template>
-  <div class="config-view">
+  <div class="config-view" :key="`${themeKey}-${privacyKey}`">
     <div class="config-scroll-area">
       <div class="config-content-wrapper">
         <div class="config-content">
@@ -94,7 +461,7 @@
               >
                 <template #toggle>
                   <div class="api-selector">
-                    <select v-model="selectedAPI" :disabled="authStore.userType === 'free'">
+                    <select v-model="selectedAPI" :disabled="authStore.userType === 'free'" @change="handleAPIChange">
                       <option 
                         v-for="api in fundAPIs" 
                         :key="api.value" 
@@ -183,211 +550,6 @@
     />
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/authStore'
-import { useDataStore } from '../stores/dataStore'
-import CustomCard from '@/components/common/CustomCard.vue'
-import ToastMessage from '@/components/common/ToastMessage.vue'
-
-const router = useRouter()
-const authStore = useAuthStore()
-const dataStore = useDataStore()
-
-// Toast状态
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
-
-// 显示Toast消息
-const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
-  toastMessage.value = message
-  toastType.value = type
-  showToast.value = true
-  
-  setTimeout(() => {
-    showToast.value = false
-  }, 3000)
-}
-
-// 获取显示名称
-const displayName = computed(() => {
-  return authStore.displayName || '用户'
-})
-
-// 根据等级计算绶带文本
-const userTypeDisplay = computed(() => {
-  switch (authStore.userType) {
-    case 'vip': return '尊享用户'
-    case 'subscribed': return '体验用户'
-    case 'free': 
-    default: return '基础用户'
-  }
-})
-
-// 用户卡片和用户名动态样式
-const userCardStyles = computed(() => {
-  switch (authStore.userType) {
-    case 'vip':
-      return {
-        cardBg: 'linear-gradient(135deg, rgba(255, 223, 0, 0.1), rgba(255, 165, 0, 0.15))',
-        nameGradient: 'linear-gradient(135deg, #FFD700, #FFA500, #FFCC33)',
-        ribbonBg: 'linear-gradient(90deg, #ffd700, #ff8c00)',
-        ribbonColor: '#5d3d00',
-        borderColor: 'rgba(255, 192, 0, 0.5)',
-      }
-    case 'subscribed':
-      return {
-        cardBg: 'linear-gradient(135deg, rgba(240, 240, 240, 0.1), rgba(200, 200, 200, 0.15))',
-        nameGradient: 'linear-gradient(135deg, #a0a0a0, #c0c0c0, #f0f0f0)',
-        ribbonBg: '#e0e0e0',
-        ribbonColor: '#424242',
-        borderColor: 'rgba(200, 200, 200, 0.5)',
-      }
-    case 'free':
-    default:
-      return {
-        cardBg: 'var(--bg-card)',
-        nameGradient: 'var(--text-primary)',
-        ribbonBg: '#bbb',
-        ribbonColor: '#555',
-        borderColor: 'var(--border-color)',
-      }
-  }
-})
-
-const themeModes = [
-  { name: '浅色', value: 'light' },
-  { name: '深色', value: 'dark' },
-  { name: '系统', value: 'system' }
-]
-
-const getInitialTheme = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('themeMode') || 'system'
-  }
-  return 'system'
-}
-const selectedTheme = ref(getInitialTheme()) 
-
-const fundAPIs = [
-  { name: '天天基金', value: 'eastmoney' },
-  { name: '同花顺', value: 'ths' },
-  { name: '腾讯财经', value: 'tencent' },
-  { name: '蚂蚁基金', value: 'fund123' }
-]
-const selectedAPI = ref('eastmoney')
-
-// 应用主题函数
-const applyTheme = (mode: string) => {
-  selectedTheme.value = mode
-  localStorage.setItem('themeMode', mode)
-  
-  // 应用主题到整个应用
-  const root = document.documentElement
-  const app = document.getElementById('app')
-  
-  // 移除所有主题类
-  root.classList.remove('theme-light', 'theme-dark', 'theme-system')
-  if (app) {
-    app.classList.remove('theme-light', 'theme-dark', 'theme-system')
-  }
-  
-  if (mode === 'dark') {
-    root.classList.add('theme-dark')
-    if (app) app.classList.add('theme-dark')
-  } else if (mode === 'light') {
-    root.classList.add('theme-light')
-    if (app) app.classList.add('theme-light')
-  } else {
-    // 系统主题
-    root.classList.add('theme-system')
-    if (app) app.classList.add('theme-system')
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-    if (prefersDark) {
-      document.documentElement.classList.add('dark-mode')
-    } else {
-      document.documentElement.classList.add('theme-light')
-    }
-  }
-
-  showNotification(`主题已切换到: ${themeModes.find(m => m.value === mode)?.name || mode}`, 'success')
-}
-
-const togglePrivacyMode = (enabled: boolean) => {
-  dataStore.isPrivacyMode = enabled
-  dataStore.saveData()
-  showNotification(`隐私模式已${enabled ? '开启' : '关闭'}`, 'success')
-}
-
-const handleFeature = (featureName: string) => {
-  switch (featureName) {
-    case 'About':
-      router.push('/about')
-      break
-    case 'ManageHoldings':
-      // 更新为新的持仓管理页面路由
-      router.push('/holdings/manage')
-      break
-    case 'APILog':
-      router.push('/logs')
-      break
-    case 'CloudSync':
-      if (authStore.userType === 'free') {
-        showNotification('该功能需要升级到VIP用户', 'warning')
-      } else {
-        showNotification('云端同步功能正在开发中...', 'info')
-      }
-      break
-    default:
-      showNotification(`功能 ${featureName} 正在开发中...`, 'info')
-  }
-}
-
-const handleUpgrade = (e: Event) => {
-  e.preventDefault()
-  showNotification('正在跳转到升级页面...', 'info')
-}
-
-// 退出登录函数
-const handleLogout = async () => {
-  try {
-    showNotification('您已成功退出登录', 'success')
-    
-    setTimeout(() => {
-      authStore.logout()
-    }, 800)
-    
-  } catch (error) {
-    console.error('退出登录失败:', error)
-    showNotification('退出登录失败，请重试', 'error')
-  }
-}
-
-watch(selectedAPI, (newAPI) => {
-  showNotification(`数据接口已切换至: ${fundAPIs.find(a => a.value === newAPI)?.name || newAPI}`, 'success')
-})
-
-onMounted(() => {
-  // 初始化应用主题
-  applyTheme(selectedTheme.value)
-  
-  // 初始化数据
-  dataStore.loadData()
-  
-  // 监听系统主题变化（仅当选择系统主题时）
-  if (selectedTheme.value === 'system') {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    mediaQuery.addEventListener('change', (e) => {
-      if (selectedTheme.value === 'system') {
-        applyTheme('system')
-      }
-    })
-  }
-})
-</script>
 
 <style scoped>
 .config-view {
@@ -699,5 +861,47 @@ onMounted(() => {
     padding: 6px 8px;
     font-size: 12px;
   }
+}
+
+/* 使用:deep()替代已弃用的>>>选择器 */
+:deep(.custom-card) {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.custom-card-content) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.card-main) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+:deep(.card-content) {
+  flex: 1;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.card-description) {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.custom-card .card-toggle) {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+:deep(.custom-card .card-toggle-content) {
+  width: 100%;
 }
 </style>

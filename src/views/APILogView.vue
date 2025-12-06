@@ -142,6 +142,7 @@ const loadFilterState = () => {
     }
   } catch (error) {
     console.error('加载日志筛选状态失败:', error)
+    dataStore.addLog('加载日志筛选状态失败: ' + (error as Error).message, 'error')
   }
 }
 
@@ -152,6 +153,7 @@ const saveFilterState = () => {
     localStorage.setItem('expandedLogTypes', JSON.stringify(expandedLogTypes.value))
   } catch (error) {
     console.error('保存日志筛选状态失败:', error)
+    dataStore.addLog('保存日志筛选状态失败: ' + (error as Error).message, 'error')
   }
 }
 
@@ -174,6 +176,7 @@ const filteredLogTypes = computed(() => {
 // 方法
 const goBack = () => {
   router.back()
+  dataStore.addLog('从API日志页面返回', 'info')
 }
 
 const getLogTypeDisplayName = (type: string): string => {
