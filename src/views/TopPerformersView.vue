@@ -6,12 +6,10 @@ import { useDataStore } from '@/stores/dataStore'
 const router = useRouter()
 const dataStore = useDataStore()
 
-// 重新渲染键
 const refreshKey = ref(0)
 const privacyKey = ref(0)
 const themeKey = ref(0)
 
-// 状态
 const isFilterExpanded = ref(false)
 const fundCodeFilterInput = ref('')
 const minAmountInput = ref('')
@@ -76,13 +74,11 @@ const sortButtonIcon = computed(() => {
   return map[selectedSortKey.value]
 })
 
-// 计算属性
 const holdings = computed(() => dataStore.holdings)
 
 const filteredAndSortedHoldings = computed(() => {
   let results = [...precomputedHoldings.value]
   
-  // 应用筛选
   if (appliedFundCodeFilter.value) {
     const filterLower = appliedFundCodeFilter.value.toLowerCase()
     results = results.filter(item =>
@@ -121,7 +117,6 @@ const filteredAndSortedHoldings = computed(() => {
     results = results.filter(item => item.profit.annualized <= maxProfit)
   }
   
-  // 应用排序
   if (selectedSortKey.value !== 'none') {
     results.sort((a, b) => {
       let valueA = 0
@@ -149,7 +144,6 @@ const filteredAndSortedHoldings = computed(() => {
       return sortOrder.value === 'ascending' ? valueA - valueB : valueB - valueA
     })
   } else {
-    // 默认按基金代码排序
     results.sort((a, b) => a.holding.fundCode.localeCompare(b.holding.fundCode))
   }
   
@@ -164,7 +158,6 @@ const zeroProfitIndex = computed(() => {
   const holdings = filteredAndSortedHoldings.value
   
   if (sortOrder.value === 'descending') {
-    // 手动实现 findLastIndex 功能
     let lastPositiveIndex = -1
     for (let i = holdings.length - 1; i >= 0; i--) {
       if (holdings[i].profit.annualized >= 0) {
@@ -174,7 +167,6 @@ const zeroProfitIndex = computed(() => {
     }
     return lastPositiveIndex < holdings.length - 1 ? lastPositiveIndex : null
   } else {
-    // 手动实现 findLastIndex 功能
     let lastNegativeIndex = -1
     for (let i = holdings.length - 1; i >= 0; i--) {
       if (holdings[i].profit.annualized < 0) {
@@ -186,7 +178,10 @@ const zeroProfitIndex = computed(() => {
   }
 })
 
-// 方法
+const getClientDisplayName = (clientName: string, clientID: string): string => {
+  return dataStore.getClientDisplayName(clientName, clientID)
+}
+
 const refreshData = () => {
   isLoading.value = true
   const computedData: typeof precomputedHoldings.value = []
@@ -208,7 +203,6 @@ const refreshData = () => {
   isLoading.value = false
   dataStore.addLog('收益排行: 重新计算持仓收益数据', 'info')
   
-  // 强制重新渲染
   refreshKey.value = Date.now()
 }
 
@@ -225,7 +219,6 @@ const applyFilters = () => {
   toastMessage.value = `已筛选出 ${filteredCount} 条记录`
   showingToast.value = true
   
-  // 记录筛选操作
   const filterDetails = []
   if (appliedFundCodeFilter.value) filterDetails.push(`代码/名称: ${appliedFundCodeFilter.value}`)
   if (appliedMinAmount.value || appliedMaxAmount.value) filterDetails.push(`金额: ${appliedMinAmount.value || '不限'}-${appliedMaxAmount.value || '不限'}万`)
@@ -293,29 +286,18 @@ const formatAmountInTenThousands = (amount: number) => {
   return tenThousand.toFixed(2)
 }
 
-// 修复：负数显示绿色，正数显示红色，零显示灰色
 const getValueColor = (value: number) => {
-  if (value > 0) return '#ef4444'  // 正数：红色
-  if (value < 0) return '#10b981'  // 负数：绿色
-  return '#666'                    // 零：灰色
+  if (value > 0) return '#ef4444'
+  if (value < 0) return '#10b981'
+  return '#666'
 }
 
-const processClientName = (name: string) => {
-  if (!dataStore.isPrivacyMode) return name
-  if (name.length <= 1) return name
-  if (name.length === 2) return name.charAt(0) + '*'
-  return name.charAt(0) + '*'.repeat(name.length - 2) + name.charAt(name.length - 1)
-}
-
-// 隐私模式变化处理器
 const handlePrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
   console.log(`TopPerformersView: 隐私模式变化到 ${enabled}`)
   
-  // 直接更新dataStore
   dataStore.isPrivacyMode = enabled
   
-  // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
@@ -323,21 +305,17 @@ const handlePrivacyModeChange = (event: any) => {
   dataStore.addLog(`隐私模式变化: ${enabled ? '开启' : '关闭'}`, 'info')
 }
 
-// 全局隐私模式变化处理器
 const handleGlobalPrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
   console.log(`TopPerformersView: 收到全局隐私模式变化事件: ${enabled}`)
   
-  // 直接更新dataStore
   dataStore.isPrivacyMode = enabled
   
-  // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
 }
 
-// 主题变化处理器
 const handleThemeChange = (event: any) => {
   const { theme } = event.detail
   console.log(`TopPerformersView: 主题变化到 ${theme}`)
@@ -346,12 +324,10 @@ const handleThemeChange = (event: any) => {
   refreshKey.value = Date.now()
 }
 
-// 应用主题到文档
 const applyThemeToDocument = (mode: string) => {
   const root = document.documentElement
   const body = document.body
   
-  // 移除所有主题类
   root.classList.remove('theme-light', 'theme-dark', 'theme-system')
   body.classList.remove('light-mode', 'dark-mode')
   
@@ -376,7 +352,6 @@ const applyThemeToDocument = (mode: string) => {
   }
 }
 
-// 立即更新CSS变量
 const updateCSSVariables = (theme: 'light' | 'dark') => {
   const root = document.documentElement
   
@@ -401,7 +376,6 @@ const updateCSSVariables = (theme: 'light' | 'dark') => {
   }
 }
 
-// 强制同步处理器
 const handleForcePrivacySync = () => {
   console.log('TopPerformersView: 收到强制隐私同步事件')
   privacyKey.value = Date.now()
@@ -416,7 +390,6 @@ const handleForceThemeSync = () => {
   refreshKey.value = Date.now()
 }
 
-// 监听隐私模式变化
 watch(() => dataStore.isPrivacyMode, (newValue) => {
   console.log(`TopPerformersView: dataStore.isPrivacyMode变化到 ${newValue}`)
   privacyKey.value = Date.now()
@@ -424,17 +397,14 @@ watch(() => dataStore.isPrivacyMode, (newValue) => {
   themeKey.value = Date.now()
 })
 
-// 监听持仓数据变化
 watch(holdings, () => {
   refreshData()
 })
 
-// 生命周期
 onMounted(() => {
   refreshData()
   dataStore.addLog('用户访问收益排行页面', 'info')
   
-  // 禁止缩放
   const metaViewport = document.querySelector('meta[name="viewport"]')
   if (metaViewport) {
     metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
@@ -445,25 +415,20 @@ onMounted(() => {
     document.head.appendChild(meta)
   }
   
-  // 监听隐私模式变化
   window.addEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.addEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
   
-  // 监听主题变化
   window.addEventListener('theme-changed', handleThemeChange)
   window.addEventListener('theme-changed-global', handleThemeChange)
   
-  // 监听强制同步事件
   window.addEventListener('force-privacy-sync', handleForcePrivacySync)
   window.addEventListener('force-theme-sync', handleForceThemeSync)
   
-  // 初始化主题
   const savedTheme = localStorage.getItem('themeMode') || 'system'
   applyThemeToDocument(savedTheme)
 })
 
 onUnmounted(() => {
-  // 移除监听器
   window.removeEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
   window.removeEventListener('theme-changed', handleThemeChange)
@@ -475,7 +440,6 @@ onUnmounted(() => {
 
 <template>
   <div class="top-performers-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <!-- 标题和状态栏 -->
     <div class="header-section">
       <div class="header-row">
         <div class="action-buttons">
@@ -489,27 +453,29 @@ onUnmounted(() => {
           </button>
         </div>
         
-        <div class="sort-controls" :class="{ 'with-filter': isFilterExpanded }">
-          <button
-            class="sort-btn"
-            :class="{ active: selectedSortKey !== 'none' }"
-            @click="cycleSortKey"
-            :style="{ color: selectedSortKey !== 'none' ? sortKeyColor : '' }"
-          >
-            <span class="sort-icon">{{ sortButtonIcon }}</span>
-            <span v-if="selectedSortKey !== 'none'" class="sort-label">
-              {{ sortKeyDisplay }}
-            </span>
-          </button>
-          
-          <button
-            v-if="selectedSortKey !== 'none'"
-            class="order-btn"
-            @click="toggleSortOrder"
-            :style="{ background: sortKeyColor }"
-          >
-            {{ sortOrder === 'ascending' ? '↑' : '↓' }}
-          </button>
+        <div class="sort-controls-wrapper" :class="{ 'with-filter': isFilterExpanded }">
+          <div class="sort-controls">
+            <button
+              class="sort-btn"
+              :class="{ active: selectedSortKey !== 'none' }"
+              @click="cycleSortKey"
+              :style="{ color: selectedSortKey !== 'none' ? sortKeyColor : '' }"
+            >
+              <span class="sort-icon">{{ sortButtonIcon }}</span>
+              <span v-if="selectedSortKey !== 'none'" class="sort-label">
+                {{ sortKeyDisplay }}
+              </span>
+            </button>
+            
+            <button
+              v-if="selectedSortKey !== 'none'"
+              class="order-btn"
+              @click="toggleSortOrder"
+              :style="{ background: sortKeyColor }"
+            >
+              {{ sortOrder === 'ascending' ? '↑' : '↓' }}
+            </button>
+          </div>
         </div>
         
         <div v-if="isFilterExpanded" class="filter-actions">
@@ -522,7 +488,6 @@ onUnmounted(() => {
         </div>
       </div>
       
-      <!-- 筛选区域 -->
       <div v-if="isFilterExpanded" class="filter-section">
         <div class="filter-row">
           <div class="filter-field">
@@ -595,7 +560,6 @@ onUnmounted(() => {
       </div>
     </div>
     
-    <!-- 主要内容 -->
     <div class="content-area">
       <div v-if="isLoading" class="loading-state">
         <div class="spinner"></div>
@@ -609,7 +573,6 @@ onUnmounted(() => {
       </div>
       
       <div v-else class="performers-table">
-        <!-- 表头 -->
         <div class="table-header">
           <div class="header-cell number">#</div>
           <div class="header-cell code-name">代码/名称</div>
@@ -620,7 +583,6 @@ onUnmounted(() => {
           <div class="header-cell client">客户</div>
         </div>
         
-        <!-- 表格内容 -->
         <div class="table-body">
           <div
             v-for="(item, index) in filteredAndSortedHoldings"
@@ -630,8 +592,8 @@ onUnmounted(() => {
           >
             <div class="row-cell number">{{ index + 1 }}.</div>
             <div class="row-cell code-name">
-              <div class="fund-code">{{ item.holding.fundCode }}</div>
               <div class="fund-name">{{ item.holding.fundName }}</div>
+              <div class="fund-code">{{ item.holding.fundCode }}</div>
             </div>
             <div class="row-cell amount">{{ formatAmountInTenThousands(item.holding.purchaseAmount) }}</div>
             <div class="row-cell profit" :style="{ color: getValueColor(item.profit.absolute) }">
@@ -642,7 +604,7 @@ onUnmounted(() => {
               {{ item.profit.annualized.toFixed(2) }}
             </div>
             <div class="row-cell client">
-              {{ processClientName(item.holding.clientName) }}
+              {{ getClientDisplayName(item.holding.clientName, item.holding.clientID) }}
             </div>
           </div>
         </div>
@@ -653,7 +615,6 @@ onUnmounted(() => {
       </div>
     </div>
     
-    <!-- Toast消息 -->
     <div v-if="showingToast" class="toast">
       {{ toastMessage }}
     </div>
@@ -670,21 +631,38 @@ onUnmounted(() => {
 
 .header-section {
   background: var(--bg-primary);
-  padding: 20px 16px 16px;
+  padding: 16px 16px 12px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .header-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
   gap: 8px;
 }
 
 .action-buttons {
   display: flex;
+  gap: 8px;
+}
+
+.sort-controls-wrapper {
+  flex: 1;
+  display: flex;
+}
+
+.sort-controls-wrapper.with-filter {
+  flex: 0;
+  margin-left: auto;
+}
+
+.sort-controls {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
@@ -712,18 +690,6 @@ onUnmounted(() => {
   border-color: var(--accent-color);
   background: var(--accent-color);
   color: white;
-}
-
-.sort-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  justify-content: flex-end;
-}
-
-.sort-controls.with-filter {
-  flex: 0;
 }
 
 .sort-btn {
@@ -809,22 +775,22 @@ onUnmounted(() => {
 
 .filter-section {
   background: var(--bg-card);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 10px;
+  padding: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin-top: 8px;
-  animation: slideDown 0.3s ease;
+  animation: slideDown 0.2s ease;
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
+  from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .filter-row {
   display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .filter-row:last-child {
@@ -837,17 +803,17 @@ onUnmounted(() => {
 
 .filter-label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .filter-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.2s ease;
   background: var(--bg-card);
@@ -867,6 +833,7 @@ onUnmounted(() => {
 .filter-input.range {
   flex: 1;
   text-align: center;
+  padding: 8px 6px;
 }
 
 .range-separator {
@@ -875,8 +842,8 @@ onUnmounted(() => {
 }
 
 .content-area {
-  padding: 16px;
-  min-height: calc(100vh - 150px);
+  padding: 12px;
+  min-height: calc(100vh - 120px);
   overflow-y: auto;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
@@ -888,8 +855,8 @@ onUnmounted(() => {
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border: 3px solid var(--bg-hover);
   border-top: 3px solid var(--accent-color);
   border-radius: 50%;
@@ -911,36 +878,37 @@ onUnmounted(() => {
   padding: 60px 20px;
   color: var(--text-secondary);
   background: var(--bg-card);
-  border-radius: 12px;
-  margin: 20px;
+  border-radius: 10px;
+  margin: 16px;
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
 }
 
 .empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+  font-size: 42px;
+  margin-bottom: 14px;
   opacity: 0.5;
 }
 
 .empty-state h3 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--text-primary);
 }
 
 .empty-state p {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .performers-table {
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
 }
 
 .table-header {
@@ -948,14 +916,14 @@ onUnmounted(() => {
   grid-template-columns: 0.5fr 1.5fr 0.8fr 0.8fr 0.6fr 0.8fr 1fr;
   background: var(--bg-hover);
   border-bottom: 1px solid var(--border-color);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   transition: all 0.3s ease;
 }
 
 .header-cell {
-  padding: 12px 8px;
+  padding: 10px 6px;
   text-align: center;
   display: flex;
   align-items: center;
@@ -997,18 +965,19 @@ onUnmounted(() => {
 }
 
 .row-cell {
-  padding: 12px 8px;
-  font-size: 12px;
+  padding: 10px 6px;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
+  min-height: 38px;
 }
 
 .row-cell.number {
   font-weight: 600;
   color: var(--text-primary);
   text-align: center;
+  font-size: 12px;
 }
 
 .row-cell.code-name {
@@ -1016,58 +985,68 @@ onUnmounted(() => {
   align-items: flex-start;
   justify-content: center;
   gap: 2px;
+  padding-left: 4px;
+}
+
+.fund-name {
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
 }
 
 .fund-code {
   font-weight: 600;
   color: var(--text-primary);
   font-family: 'Monaco', 'Courier New', monospace;
-}
-
-.fund-name {
-  font-size: 11px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  font-size: 12px;
 }
 
 .row-cell.amount {
   font-weight: 500;
   color: var(--text-primary);
   text-align: center;
+  font-size: 12px;
 }
 
 .row-cell.profit {
   font-weight: 600;
   text-align: center;
+  font-size: 12px;
 }
 
 .row-cell.days {
   color: var(--text-secondary);
   text-align: center;
+  font-size: 12px;
 }
 
 .row-cell.rate {
   font-weight: 600;
   text-align: center;
+  font-size: 12px;
 }
 
 .row-cell.client {
   text-align: left;
   justify-content: flex-start;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.3;
   color: var(--text-primary);
   padding-left: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .no-results {
   text-align: center;
-  padding: 40px 20px;
+  padding: 36px 16px;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .toast {
@@ -1079,9 +1058,10 @@ onUnmounted(() => {
   color: var(--bg-card);
   padding: 12px 24px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   z-index: 1000;
-  animation: slideUp 0.3s ease;
+  animation: slideUp 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 @keyframes slideUp {
@@ -1089,20 +1069,19 @@ onUnmounted(() => {
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
   .header-section {
-    padding: 15px 12px 12px;
+    padding: 14px 12px 10px;
   }
   
   .content-area {
-    padding: 12px;
-    min-height: calc(100vh - 130px);
+    padding: 10px;
+    min-height: calc(100vh - 110px);
   }
   
   .table-header {
     grid-template-columns: 0.5fr 1.2fr 0.7fr 0.7fr 0.5fr 0.7fr 0.8fr;
-    font-size: 11px;
+    font-size: 10px;
   }
   
   .table-row {
@@ -1110,12 +1089,100 @@ onUnmounted(() => {
   }
   
   .row-cell {
-    font-size: 11px;
-    padding: 10px 6px;
+    font-size: 10px;
+    padding: 8px 4px;
+    min-height: 34px;
   }
   
   .fund-name {
+    font-size: 9px;
+  }
+  
+  .fund-code {
+    font-size: 11px;
+  }
+  
+  .row-cell.client {
+    font-size: 9px;
+  }
+  
+  .filter-input {
+    font-size: 12px;
+    padding: 7px 9px;
+  }
+  
+  .filter-label {
     font-size: 10px;
+  }
+  
+  .toast {
+    bottom: 90px;
+    padding: 10px 18px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-area {
+    padding: 8px;
+  }
+  
+  .performers-table {
+    border-radius: 8px;
+  }
+  
+  .table-header {
+    font-size: 9px;
+    padding: 8px 0;
+  }
+  
+  .header-cell {
+    padding: 8px 3px;
+  }
+  
+  .row-cell {
+    font-size: 9px;
+    padding: 6px 3px;
+    min-height: 32px;
+  }
+  
+  .fund-name {
+    font-size: 8px;
+  }
+  
+  .fund-code {
+    font-size: 10px;
+  }
+  
+  .row-cell.client {
+    font-size: 8px;
+  }
+  
+  .filter-section {
+    padding: 10px;
+  }
+  
+  .filter-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .filter-field {
+    width: 100%;
+  }
+}
+
+.performers-table {
+  margin-top: 4px;
+}
+
+.empty-state {
+  margin: 12px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .table-row:active {
+    background: var(--bg-hover);
   }
 }
 </style>

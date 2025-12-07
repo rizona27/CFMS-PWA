@@ -1,8 +1,6 @@
-// dataStore.ts 完整代码
 import { defineStore } from 'pinia'
 import { ref, computed, reactive } from 'vue'
 
-// 定义类型
 export interface FundHolding {
   id: string
   clientName: string
@@ -74,7 +72,6 @@ export interface UserPreferences {
   showRefreshButton: boolean
 }
 
-// 缓存基金信息接口
 export interface CachedFundInfo {
   code: string
   name: string
@@ -89,7 +86,6 @@ export interface CachedFundInfo {
   timestamp: number
 }
 
-// 初始化一个默认的FundHolding实例
 const createFundHolding = (data: Partial<FundHolding> = {}): FundHolding => ({
   id: data.id || crypto.randomUUID(),
   clientName: data.clientName || '',
@@ -111,21 +107,17 @@ const createFundHolding = (data: Partial<FundHolding> = {}): FundHolding => ({
   navReturn1y: data.navReturn1y
 })
 
-// 验证持仓是否有效
 const isValidHolding = (holding: FundHolding): boolean => {
-  return !!(holding.clientName && 
-           holding.fundCode && 
-           holding.purchaseAmount > 0 && 
+  return !!(holding.clientName &&
+           holding.fundCode &&
+           holding.purchaseAmount > 0 &&
            holding.purchaseShares > 0)
 }
 
-// 获取今日日期字符串
 const getTodayString = (): string => {
   return new Date().toISOString().split('T')[0]
 }
 
-// ==================== 类型转换函数 ====================
-// 转换函数：Holding -> FundHolding（dataStore类型）
 const convertHoldingToFundHolding = (holding: any): FundHolding => {
   return {
     id: holding.id || crypto.randomUUID(),
@@ -149,7 +141,6 @@ const convertHoldingToFundHolding = (holding: any): FundHolding => {
   }
 }
 
-// 转换函数：FundHolding -> Holding（types/data类型）
 const convertFundHoldingToHolding = (fundHolding: FundHolding): any => {
   return {
     id: fundHolding.id,
@@ -174,13 +165,10 @@ const convertFundHoldingToHolding = (fundHolding: FundHolding): any => {
   }
 }
 
-// ==================== 数据存储 ====================
 export const useDataStore = defineStore('data', () => {
-  // 核心业务数据状态
   const holdings = ref<FundHolding[]>([])
   const logMessages = ref<LogEntry[]>([])
   
-  // UI/应用状态
   const isPrivacyMode = ref(true)
   const isRefreshing = ref(false)
   const refreshProgress = reactive({ current: 0, total: 0 })
@@ -188,7 +176,6 @@ export const useDataStore = defineStore('data', () => {
   const showToast = ref(false)
   const showRefreshButton = ref(false)
   
-  // 用户偏好设置
   const userPreferences = ref<UserPreferences>({
     isPrivacyMode: true,
     selectedFundAPI: 'eastmoney',
@@ -203,10 +190,8 @@ export const useDataStore = defineStore('data', () => {
     showRefreshButton: false
   })
 
-  // 基金缓存
   const fundCache = ref<Map<string, CachedFundInfo>>(new Map())
 
-  // 计算属性
   const holdingsCount = computed(() => holdings.value.length)
   
   const totalAssets = computed(() => {
@@ -234,11 +219,10 @@ export const useDataStore = defineStore('data', () => {
       .sort((a, b) => {
         const timeA = a.pinnedTimestamp?.getTime() || 0
         const timeB = b.pinnedTimestamp?.getTime() || 0
-        return timeB - timeA // 最新的在前面
+        return timeB - timeA
       })
   })
 
-  // 获取按客户分组的持仓
   const groupedByClient = computed(() => {
     const groups: Record<string, FundHolding[]> = {}
     
@@ -253,7 +237,6 @@ export const useDataStore = defineStore('data', () => {
     return groups
   })
 
-  // 获取按基金代码分组的持仓
   const groupedByFund = computed(() => {
     const groups: Record<string, FundHolding[]> = {}
     
@@ -268,7 +251,6 @@ export const useDataStore = defineStore('data', () => {
     return groups
   })
 
-  // 加载基金缓存
   const loadFundCache = () => {
     try {
       const savedCache = localStorage.getItem('fundCache')
@@ -282,7 +264,6 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  // 保存基金缓存
   const saveFundCache = () => {
     try {
       const cacheObj: Record<string, CachedFundInfo> = {}
@@ -296,12 +277,10 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  // 获取基金缓存
   const getFundFromCache = (code: string): CachedFundInfo | null => {
     const cached = fundCache.value.get(code)
     if (!cached) return null
     
-    // 检查缓存是否过期（24小时）
     const isExpired = Date.now() - cached.timestamp > 24 * 60 * 60 * 1000
     if (isExpired) {
       return null
@@ -310,23 +289,19 @@ export const useDataStore = defineStore('data', () => {
     return cached
   }
 
-  // 保存到基金缓存
   const saveToFundCache = (code: string, data: CachedFundInfo) => {
     fundCache.value.set(code, data)
     saveFundCache()
   }
 
-  // 清空基金缓存
   const clearFundCache = () => {
     fundCache.value.clear()
     localStorage.removeItem('fundCache')
     addLog('基金缓存已清空', 'info')
   }
 
-  // 主数据加载方法
   const loadData = () => {
     try {
-      // 加载持仓数据
       const savedHoldings = localStorage.getItem('fundHoldings')
       if (savedHoldings) {
         const data = JSON.parse(savedHoldings)
@@ -339,7 +314,6 @@ export const useDataStore = defineStore('data', () => {
         }))
       }
       
-      // 加载用户偏好设置
       const savedPreferences = localStorage.getItem('userPreferences')
       if (savedPreferences) {
         const data = JSON.parse(savedPreferences)
@@ -348,7 +322,6 @@ export const useDataStore = defineStore('data', () => {
         showRefreshButton.value = data.showRefreshButton || false
       }
       
-      // 加载日志
       const savedLogs = localStorage.getItem('fundLogs')
       if (savedLogs) {
         const logs = JSON.parse(savedLogs)
@@ -358,13 +331,11 @@ export const useDataStore = defineStore('data', () => {
         }))
       }
       
-      // 加载导出历史
       const savedExportHistory = localStorage.getItem('exportHistory')
       if (savedExportHistory) {
         userPreferences.value.exportHistory = JSON.parse(savedExportHistory)
       }
       
-      // 加载基金缓存
       loadFundCache()
       
     } catch (error) {
@@ -373,10 +344,8 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  // 主数据保存方法
   const saveData = () => {
     try {
-      // 保存持仓数据
       const holdingsData = holdings.value.map(holding => ({
         id: holding.id,
         clientName: holding.clientName,
@@ -399,17 +368,14 @@ export const useDataStore = defineStore('data', () => {
       }))
       localStorage.setItem('fundHoldings', JSON.stringify(holdingsData))
       
-      // 保存用户偏好设置
       localStorage.setItem('userPreferences', JSON.stringify(userPreferences.value))
       
-      // 保存日志（最多保留500条）
       const logsToSave = logMessages.value.slice(-500).map(log => ({
         ...log,
         timestamp: log.timestamp.toISOString()
       }))
       localStorage.setItem('fundLogs', JSON.stringify(logsToSave))
       
-      // 保存导出历史
       localStorage.setItem('exportHistory', JSON.stringify(userPreferences.value.exportHistory))
       
     } catch (error) {
@@ -418,7 +384,6 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  // 用户偏好设置相关方法
   const updateUserPreferences = (preferences: Partial<UserPreferences>) => {
     const oldPrivacyMode = isPrivacyMode.value
     
@@ -427,9 +392,8 @@ export const useDataStore = defineStore('data', () => {
     if (preferences.isPrivacyMode !== undefined) {
       isPrivacyMode.value = preferences.isPrivacyMode
       
-      // 发送全局隐私模式变化事件
-      const event = new CustomEvent('privacy-mode-changed', { 
-        detail: { 
+      const event = new CustomEvent('privacy-mode-changed', {
+        detail: {
           enabled: preferences.isPrivacyMode,
           oldValue: oldPrivacyMode,
           timestamp: Date.now()
@@ -456,16 +420,15 @@ export const useDataStore = defineStore('data', () => {
   }
 
   const updateImportSettings = (settings: Partial<ImportSettings>) => {
-    userPreferences.value.importSettings = { 
-      ...userPreferences.value.importSettings, 
-      ...settings 
+    userPreferences.value.importSettings = {
+      ...userPreferences.value.importSettings,
+      ...settings
     }
     saveData()
   }
 
   const addExportHistory = (item: ExportHistoryItem) => {
     userPreferences.value.exportHistory.unshift(item)
-    // 只保留最近10条记录
     if (userPreferences.value.exportHistory.length > 10) {
       userPreferences.value.exportHistory = userPreferences.value.exportHistory.slice(0, 10)
     }
@@ -479,7 +442,6 @@ export const useDataStore = defineStore('data', () => {
     saveData()
   }
 
-  // 持仓管理方法
   const addHolding = (holdingData: Partial<FundHolding>): FundHolding => {
     try {
       const newHolding = createFundHolding(holdingData)
@@ -491,7 +453,6 @@ export const useDataStore = defineStore('data', () => {
       holdings.value.push(newHolding)
       saveData()
       
-      // 添加日志
       addLog(`添加新持仓: ${newHolding.clientName} - ${newHolding.fundCode}`, 'info')
       
       showToastMessage('持仓添加成功')
@@ -514,7 +475,7 @@ export const useDataStore = defineStore('data', () => {
       const updatedHolding = {
         ...holdings.value[index],
         ...updates,
-        id: holdingId // 确保ID不变
+        id: holdingId
       }
       
       if (!isValidHolding(updatedHolding)) {
@@ -524,7 +485,6 @@ export const useDataStore = defineStore('data', () => {
       holdings.value[index] = updatedHolding
       saveData()
       
-      // 添加日志
       addLog(`更新持仓: ${updatedHolding.clientName} - ${updatedHolding.fundCode}`, 'info')
       
       showToastMessage('持仓更新成功')
@@ -548,7 +508,6 @@ export const useDataStore = defineStore('data', () => {
       holdings.value.splice(index, 1)
       saveData()
       
-      // 添加日志
       addLog(`删除持仓: ${holding.clientName} - ${holding.fundCode}`, 'warning')
       
       console.log('删除持仓:', holdingId)
@@ -581,12 +540,10 @@ export const useDataStore = defineStore('data', () => {
     const currentMarketValue = holding.currentNav * holding.purchaseShares
     const absoluteProfit = currentMarketValue - holding.purchaseAmount
 
-    // 计算持有天数
     const startDate = new Date(holding.purchaseDate)
     const endDate = new Date(holding.navDate)
     const daysHeld = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
 
-    // 计算年化收益率
     const annualizedReturn = daysHeld > 0 ? (absoluteProfit / holding.purchaseAmount) / daysHeld * 365 * 100 : 0
 
     return {
@@ -602,7 +559,6 @@ export const useDataStore = defineStore('data', () => {
       holding.isPinned = !holding.isPinned
       holding.pinnedTimestamp = holding.isPinned ? new Date() : undefined
       
-      // 重新排序数组，让置顶的显示在前面
       holdings.value.splice(index, 1)
       if (holding.isPinned) {
         holdings.value.unshift(holding)
@@ -612,14 +568,12 @@ export const useDataStore = defineStore('data', () => {
       
       saveData()
       
-      // 添加日志
       addLog(`切换置顶状态: ${holding.fundCode} - ${holding.isPinned ? '置顶' : '取消置顶'}`, 'info')
       
       showToastMessage(`${holding.fundCode} ${holding.isPinned ? '已置顶' : '已取消置顶'}`)
     }
   }
 
-  // 日志管理方法
   const addLog = (message: string, type: LogEntry['type'] = 'info') => {
     const logEntry: LogEntry = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -630,12 +584,10 @@ export const useDataStore = defineStore('data', () => {
     
     logMessages.value.push(logEntry)
     
-    // 限制日志数量
     if (logMessages.value.length > 500) {
       logMessages.value = logMessages.value.slice(-500)
     }
     
-    // 保存日志
     saveData()
   }
 
@@ -645,7 +597,6 @@ export const useDataStore = defineStore('data', () => {
     showToastMessage('日志已清空')
   }
 
-  // UI/工具方法
   const showToastMessage = (message: string) => {
     toastMessage.value = message
     showToast.value = true
@@ -660,7 +611,6 @@ export const useDataStore = defineStore('data', () => {
     refreshProgress.current = 0
     refreshProgress.total = holdings.value.length
     
-    // 添加日志
     addLog('开始刷新持仓数据', 'info')
   }
 
@@ -673,27 +623,30 @@ export const useDataStore = defineStore('data', () => {
     refreshProgress.current = 0
     refreshProgress.total = 0
     
-    // 添加日志
     addLog('持仓数据刷新完成', 'success')
     showToastMessage('数据刷新完成')
   }
 
-  // 获取客户名称（考虑隐私模式）
-  const getClientDisplayName = (clientName: string): string => {
-    if (!isPrivacyMode.value) {
-      return clientName
+  const getClientDisplayName = (clientName: string, clientID?: string): string => {
+    let displayName = clientName
+    
+    if (isPrivacyMode.value) {
+      if (clientName.length <= 1) {
+        displayName = clientName
+      } else if (clientName.length === 2) {
+        displayName = clientName.charAt(0) + '*'
+      } else {
+        displayName = clientName.charAt(0) + '*'.repeat(clientName.length - 2) + clientName.charAt(clientName.length - 1)
+      }
     }
     
-    if (clientName.length <= 1) {
-      return clientName
-    } else if (clientName.length === 2) {
-      return clientName.charAt(0) + '*'
+    if (clientID) {
+      return `${displayName}(${clientID})`
     } else {
-      return clientName.charAt(0) + '*'.repeat(clientName.length - 2) + clientName.charAt(clientName.length - 1)
+      return displayName
     }
   }
 
-  // 获取基金分组排序后的代码列表
   const getSortedFundCodes = (sortKey: string = 'none', sortOrder: 'ascending' | 'descending' = 'descending'): string[] => {
     const groups = groupedByFund.value
     const codes = Object.keys(groups)
@@ -722,13 +675,11 @@ export const useDataStore = defineStore('data', () => {
     })
   }
 
-  // 初始化
   const init = () => {
     loadData()
   }
 
   return {
-    // 状态
     holdings,
     logMessages,
     isPrivacyMode,
@@ -740,7 +691,6 @@ export const useDataStore = defineStore('data', () => {
     userPreferences,
     fundCache,
     
-    // 计算属性
     holdingsCount,
     totalAssets,
     totalInvestment,
@@ -749,12 +699,10 @@ export const useDataStore = defineStore('data', () => {
     groupedByClient,
     groupedByFund,
     
-    // 核心数据方法
     loadData,
     saveData,
     init,
     
-    // 持仓管理方法
     addHolding,
     updateHolding,
     deleteHolding,
@@ -762,18 +710,15 @@ export const useDataStore = defineStore('data', () => {
     calculateProfit,
     togglePinStatus,
     
-    // 日志管理方法
     addLog,
     clearLogs,
     
-    // 用户偏好设置方法
     updateUserPreferences,
     updateAPIFilterState,
     updateImportSettings,
     addExportHistory,
     deleteExportHistory,
     
-    // UI/工具方法
     showToastMessage,
     startRefresh,
     updateRefreshProgress,
@@ -781,14 +726,12 @@ export const useDataStore = defineStore('data', () => {
     getClientDisplayName,
     getSortedFundCodes,
     
-    // 基金缓存方法
     loadFundCache,
     saveFundCache,
     getFundFromCache,
     saveToFundCache,
     clearFundCache,
     
-    // ==================== 新增：类型转换方法 ====================
     convertHoldingToFundHolding,
     convertFundHoldingToHolding
   }

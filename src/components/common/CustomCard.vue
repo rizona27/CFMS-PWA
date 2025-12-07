@@ -1,6 +1,6 @@
 <template>
-  <div 
-    class="custom-card" 
+  <div
+    class="custom-card"
     :class="{ 'glass-effect': isGlassEffect }"
     :style="cardStyle"
     @click="handleClick"
@@ -32,7 +32,7 @@ import { computed } from 'vue'
 const props = defineProps({
   title: String,
   description: String,
-  icon: String, // Emoji or icon name
+  icon: String,
   bgColor: {
     type: String,
     default: 'var(--bg-card)'
@@ -62,11 +62,10 @@ const handleClick = () => {
 </script>
 
 <style scoped>
-/* 引用 style.css 中的变量 */
 .custom-card {
   background: var(--bg);
   color: var(--fg);
-  border-radius: var(--card-radius); /* 16px */
+  border-radius: var(--card-radius);
   padding: 18px;
   cursor: pointer;
   transition: all 0.25s ease;
@@ -135,7 +134,6 @@ const handleClick = () => {
   padding-top: 5px;
 }
 
-/* 强制插槽内的内容不继承 card 的颜色，使用 Vue 应用的标准颜色 */
 .card-content :deep(select),
 .card-content :deep(button) {
   color: var(--text-primary);

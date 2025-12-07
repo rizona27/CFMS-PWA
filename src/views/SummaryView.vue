@@ -1,3 +1,5 @@
+[file name]: SummaryView.vue
+[file content begin]
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
@@ -710,8 +712,9 @@ onMounted(() => {
           >
             <div class="fund-header">
               <div class="fund-info-single-line">
-                <h3 class="fund-name">{{ getFundName(fundCode) }}</h3>
-                <span class="fund-code-text">[{{ fundCode }}]</span>
+                <h3 class="fund-name">
+                  {{ getFundName(fundCode) }}<span class="fund-code-text">({{ fundCode }})</span>
+                </h3>
               </div>
               
               <div v-if="!isPrivacyMode" class="client-count">
@@ -723,12 +726,6 @@ onMounted(() => {
                   {{ groupedByFund[fundCode].length }}
                 </span>
                 <span class="count-unit">人</span>
-              </div>
-              
-              <div v-else class="client-count-placeholder"></div>
-              
-              <div class="expand-icon">
-                {{ expandedFundCodes.has(fundCode) ? '−' : '+' }}
               </div>
             </div>
             
@@ -774,7 +771,7 @@ onMounted(() => {
                   </div>
                 </div>
                 
-                <!-- 客户信息显示 - 仅在隐私模式关闭时显示 -->
+                <!-- 客户信息显示 - 仅在隐私模式关闭时显示（参照SummaryView.swift逻辑） -->
                 <div v-if="expandedFundCodes.has(fundCode) && !isPrivacyMode" class="clients-section">
                   <div class="clients-header">
                     <span class="clients-label">持有客户:</span>
@@ -1124,10 +1121,8 @@ onMounted(() => {
   font-size: 13px;
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
-  background: var(--bg-hover);
-  padding: 2px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
+  margin-left: 4px;
+  font-weight: normal;
 }
 
 .client-count {
@@ -1147,25 +1142,6 @@ onMounted(() => {
 .count-value {
   font-weight: 600;
   font-style: italic;
-}
-
-.client-count-placeholder {
-  width: 80px; /* 占位，保持对齐 */
-}
-
-.expand-icon {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  color: var(--text-secondary);
-  transition: transform 0.3s ease;
-}
-
-.fund-card.expanded .expand-icon {
-  transform: rotate(180deg);
 }
 
 .expanded-content {
@@ -1385,3 +1361,4 @@ onMounted(() => {
   }
 }
 </style>
+[file content end]

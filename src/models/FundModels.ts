@@ -1,4 +1,3 @@
-// 基金持仓数据模型
 export class FundHolding {
   id: string
   clientName: string
@@ -40,12 +39,10 @@ export class FundHolding {
     this.navReturn1y = data.navReturn1y || null
   }
 
-  // 计算总价值
   get totalValue(): number {
     return this.currentNav * this.purchaseShares
   }
 
-  // 验证持仓数据是否有效
   get isValidHolding(): boolean {
     return (
       this.clientName.trim() !== '' &&
@@ -56,7 +53,6 @@ export class FundHolding {
     )
   }
 
-  // 创建去重键
   createDeduplicationKey(): string {
     const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
       year: 'numeric',
@@ -68,7 +64,6 @@ export class FundHolding {
     return `${this.clientName}-${this.fundCode}-${this.purchaseAmount.toFixed(2)}-${this.purchaseShares.toFixed(2)}-${purchaseDateString}-${this.clientID}-${this.remarks}`
   }
 
-  // 转换为JSON可序列化对象
   toJSON(): object {
     return {
       id: this.id,
@@ -93,20 +88,17 @@ export class FundHolding {
   }
 }
 
-// 收益结果
 export interface ProfitResult {
   absolute: number
   annualized: number
 }
 
-// 用户类型枚举 - 必须在类外面定义
 export enum UserType {
   FREE = 'free',
   SUBSCRIBED = 'subscribed',
   VIP = 'vip'
 }
 
-// 主题模式
 export enum ThemeMode {
   LIGHT = 'light',
   DARK = 'dark',

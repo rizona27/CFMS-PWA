@@ -7,12 +7,10 @@ import { fundService } from '@/services/fundService'
 const router = useRouter()
 const dataStore = useDataStore()
 
-// 重新渲染键
 const refreshKey = ref(0)
 const privacyKey = ref(0)
 const themeKey = ref(0)
 
-// 状态
 const isSearchExpanded = ref(false)
 const searchText = ref('')
 const expandedClients = ref<Set<string>>(new Set())
@@ -23,10 +21,6 @@ const loadedGroupedClientCount = ref(10)
 const loadedSearchResultCount = ref(10)
 const refreshID = ref(0)
 
-// 移除手势相关状态
-// const swipedHoldingStates = ref<Record<string, { isSwiped: boolean; dragOffset: number }>>({})
-
-// 计算属性
 const holdings = computed(() => dataStore.holdings)
 const isPrivacyMode = computed(() => dataStore.isPrivacyMode)
 const showRefreshButton = computed(() => dataStore.showRefreshButton)
@@ -106,7 +100,6 @@ const groupedHoldingsByClientName = computed(() => {
     const totalAUM = holdings.reduce((sum, holding) => sum + (holding.currentNav * holding.purchaseShares), 0)
     const representativeClientID = holdings[0]?.clientID || ''
     
-    // 移除置顶相关的排序逻辑
     const sortedHoldings = [...holdings].sort((a, b) => {
       return new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime()
     })
@@ -146,54 +139,8 @@ const updatingText = computed(() => {
   return baseText + dots
 })
 
-// 方法
-const toggleAllCards = () => {
-  if (areAnyCardsExpanded.value) {
-    expandedClients.value.clear()
-  } else {
-    const allClientIds = new Set(groupedHoldingsByClientName.value.map(g => g.id))
-    expandedClients.value = allClientIds
-  }
-  dataStore.addLog(`客户视图: ${areAnyCardsExpanded.value ? '折叠' : '展开'}所有客户卡片`, 'info')
-}
-
-const toggleSearch = () => {
-  isSearchExpanded.value = !isSearchExpanded.value
-  if (!isSearchExpanded.value) {
-    searchText.value = ''
-  }
-  dataStore.addLog(`客户视图: ${isSearchExpanded.value ? '显示' : '隐藏'}搜索框`, 'info')
-}
-
-const performSearch = (text: string) => {
-  searchText.value = text
-  if (text) {
-    dataStore.addLog(`客户视图: 搜索 "${text}"`, 'info')
-  }
-}
-
-const clearSearch = () => {
-  searchText.value = ''
-  dataStore.addLog('客户视图: 清除搜索', 'info')
-}
-
-const processClientName = (name: string): string => {
-  if (!dataStore.isPrivacyMode) {
-    return name
-  }
-  
-  if (name.length <= 1) {
-    return name
-  } else if (name.length === 2) {
-    return name.charAt(0) + '*'
-  } else {
-    return name.charAt(0) + '*'.repeat(name.length - 2) + name.charAt(name.length - 1)
-  }
-}
-
-const getDisplayName = (clientName: string, clientID: string): string => {
-  const processedName = processClientName(clientName)
-  return clientID ? `${processedName}(${clientID})` : processedName
+const getClientDisplayName = (clientName: string, clientID: string): string => {
+  return dataStore.getClientDisplayName(clientName, clientID)
 }
 
 const colorForHoldingCount = (count: number) => {
@@ -201,13 +148,6 @@ const colorForHoldingCount = (count: number) => {
   if (count <= 3) return '#f97316'
   return '#ef4444'
 }
-
-// 移除置顶功能
-// const togglePin = (holdingId: string) => {
-//   dataStore.togglePinStatus(holdingId)
-//   refreshID.value++
-//   dataStore.addLog(`客户视图: 切换持仓置顶状态 (ID: ${holdingId.substring(0, 8)})`, 'info')
-// }
 
 const calculateHoldingDays = (holding: any) => {
   const endDate = new Date(holding.navDate)
@@ -224,7 +164,6 @@ const calculateProfit = (holding: any) => {
   const currentValue = holding.currentNav * holding.purchaseShares
   const absoluteProfit = currentValue - holding.purchaseAmount
   
-  // 年化收益率计算
   const holdingDays = calculateHoldingDays(holding)
   const absoluteReturnPercentage = (absoluteProfit / holding.purchaseAmount) * 100
   const annualizedReturn = holdingDays > 0 ?
@@ -257,9 +196,15 @@ const formatPercentage = (value: number) => {
 }
 
 const getReturnColor = (value: number) => {
-  if (value > 0) return '#ef4444'  // 正数：红色
-  if (value < 0) return '#10b981'  // 负数：绿色
-  return '#666'                    // 零：黑色/灰色
+  if (value > 0) return '#ef4444'
+  if (value < 0) return '#10b981'
+  return '#666'
+}
+
+const formatNavDate = (date: Date) => {
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  return `${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`
 }
 
 const isSameDay = (date1: Date, date2: Date) => {
@@ -333,7 +278,6 @@ const handleRefresh = async () => {
     stopUpdatingTextAnimation()
     dataStore.addLog('基金数据刷新完成', 'success')
     
-    // 强制重新渲染
     refreshKey.value = Date.now()
     
     setTimeout(() => {
@@ -360,7 +304,6 @@ const stopUpdatingTextAnimation = () => {
   }
 }
 
-// 从dataStore获取状态
 const showStatusText = computed({
   get: () => !dataStore.showRefreshButton,
   set: (value) => {
@@ -370,15 +313,12 @@ const showStatusText = computed({
   }
 })
 
-// 隐私模式变化处理器
 const handlePrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
   console.log(`ClientView: 隐私模式变化到 ${enabled}`)
   
-  // 直接更新dataStore
   dataStore.isPrivacyMode = enabled
   
-  // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
@@ -386,21 +326,17 @@ const handlePrivacyModeChange = (event: any) => {
   dataStore.addLog(`隐私模式变化: ${enabled ? '开启' : '关闭'}`, 'info')
 }
 
-// 全局隐私模式变化处理器
 const handleGlobalPrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
   console.log(`ClientView: 收到全局隐私模式变化事件: ${enabled}`)
   
-  // 直接更新dataStore
   dataStore.isPrivacyMode = enabled
   
-  // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
 }
 
-// 主题变化处理器
 const handleThemeChange = (event: any) => {
   const { theme } = event.detail
   console.log(`ClientView: 主题变化到 ${theme}`)
@@ -409,12 +345,10 @@ const handleThemeChange = (event: any) => {
   refreshKey.value = Date.now()
 }
 
-// 应用主题到文档
 const applyThemeToDocument = (mode: string) => {
   const root = document.documentElement
   const body = document.body
   
-  // 移除所有主题类
   root.classList.remove('theme-light', 'theme-dark', 'theme-system')
   body.classList.remove('light-mode', 'dark-mode')
   
@@ -438,13 +372,11 @@ const applyThemeToDocument = (mode: string) => {
     }
   }
   
-  // 强制重绘
   nextTick(() => {
     void body.offsetHeight
   })
 }
 
-// 立即更新CSS变量
 const updateCSSVariables = (theme: 'light' | 'dark') => {
   const root = document.documentElement
   
@@ -469,7 +401,6 @@ const updateCSSVariables = (theme: 'light' | 'dark') => {
   }
 }
 
-// 强制同步处理器
 const handleForcePrivacySync = () => {
   console.log('ClientView: 收到强制隐私同步事件')
   privacyKey.value = Date.now()
@@ -484,10 +415,8 @@ const handleForceThemeSync = () => {
   refreshKey.value = Date.now()
 }
 
-// 响应式变量
 const autoHideTimer = ref<number | null>(null)
 
-// 监听隐私模式变化
 watch(() => dataStore.isPrivacyMode, (newValue) => {
   console.log(`ClientView: dataStore.isPrivacyMode变化到 ${newValue}`)
   privacyKey.value = Date.now()
@@ -495,22 +424,16 @@ watch(() => dataStore.isPrivacyMode, (newValue) => {
   themeKey.value = Date.now()
 })
 
-// 监听持仓数据变化
 watch(holdings, () => {
-  // 当持仓数据变化时重新计算分组
   refreshKey.value = Date.now()
 })
 
-// 生命周期
 onMounted(() => {
-  // 初始化数据
   dataStore.init()
   
-  // 初始化主题
   const savedTheme = localStorage.getItem('themeMode') || 'system'
   applyThemeToDocument(savedTheme)
   
-  // 禁止缩放
   const metaViewport = document.querySelector('meta[name="viewport"]')
   if (metaViewport) {
     metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
@@ -523,19 +446,15 @@ onMounted(() => {
   
   dataStore.addLog('用户访问客户视图页面', 'info')
   
-  // 监听隐私模式变化事件
   window.addEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.addEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
   
-  // 监听主题变化事件
   window.addEventListener('theme-changed', handleThemeChange)
   window.addEventListener('theme-changed-global', handleThemeChange)
   
-  // 监听强制同步事件
   window.addEventListener('force-privacy-sync', handleForcePrivacySync)
   window.addEventListener('force-theme-sync', handleForceThemeSync)
   
-  // 监听系统主题变化
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   const handleSystemThemeChange = (e: MediaQueryListEvent) => {
     const currentTheme = localStorage.getItem('themeMode') || 'system'
@@ -548,11 +467,9 @@ onMounted(() => {
   mediaQuery.addEventListener('change', handleSystemThemeChange)
   
   onUnmounted(() => {
-    // 清理定时器
     updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
     autoHideTimer.value !== null && clearTimeout(autoHideTimer.value)
     
-    // 移除监听器
     window.removeEventListener('privacy-mode-changed', handlePrivacyModeChange)
     window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
     window.removeEventListener('theme-changed', handleThemeChange)
@@ -566,14 +483,13 @@ onMounted(() => {
 
 <template>
   <div class="client-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <!-- 标题和状态栏 -->
     <div class="header-section">
       <div class="header-row">
         <div class="action-buttons">
           <button
             class="action-btn"
             :class="{ active: areAnyCardsExpanded }"
-            @click="toggleAllCards"
+            @click="expandedClients.size > 0 ? expandedClients.clear() : groupedHoldingsByClientName.forEach(g => expandedClients.add(g.id))"
             :title="areAnyCardsExpanded ? '折叠所有' : '展开所有'"
           >
             {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
@@ -582,7 +498,7 @@ onMounted(() => {
           <button
             class="action-btn"
             :class="{ active: isSearchExpanded }"
-            @click="toggleSearch"
+            @click="isSearchExpanded = !isSearchExpanded"
             :title="isSearchExpanded ? '隐藏搜索' : '显示搜索'"
           >
             🔍
@@ -607,7 +523,6 @@ onMounted(() => {
         </div>
       </div>
       
-      <!-- 搜索框 -->
       <div v-if="isSearchExpanded" class="search-box">
         <div class="search-input-wrapper">
           <span class="search-icon">🔍</span>
@@ -616,12 +531,11 @@ onMounted(() => {
             type="text"
             placeholder="输入客户名、基金代码、基金名称..."
             class="search-input"
-            @input="performSearch(searchText)"
           />
           <button
             v-if="searchText"
             class="clear-search"
-            @click="clearSearch"
+            @click="searchText = ''"
           >
             ×
           </button>
@@ -629,9 +543,7 @@ onMounted(() => {
       </div>
     </div>
     
-    <!-- 主要内容 -->
     <div class="content-area">
-      <!-- 搜索结果显示 -->
       <div v-if="searchText" class="search-results">
         <div v-if="searchResults.length === 0" class="empty-state">
           <div class="empty-icon">🔍</div>
@@ -643,29 +555,29 @@ onMounted(() => {
           <div
             v-for="holding in searchResults.slice(0, loadedSearchResultCount)"
             :key="holding.id"
-            class="holding-card-detailed"
+            class="holding-card-compact"
           >
-            <div class="holding-header-detailed">
-              <div class="holding-info-detailed">
+            <div class="holding-header-compact">
+              <div class="holding-info-compact">
                 <div class="fund-name-row">
-                  <h4 class="fund-name">{{ holding.fundName }}</h4>
-                  <span class="fund-code">({{ holding.fundCode }})</span>
+                  <h4 class="fund-name">{{ holding.fundName }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
                 </div>
                 <div class="client-info-row">
-                  <span class="client-name-id">{{ getDisplayName(holding.clientName, holding.clientID) }}</span>
+                  <span class="client-name-id">{{ getClientDisplayName(holding.clientName, holding.clientID) }}</span>
                 </div>
               </div>
-              <div class="nav-info">
-                <span class="nav-value">{{ holding.currentNav.toFixed(4) }}</span>
-                <span class="nav-date">({{ new Date(holding.navDate).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) }})</span>
+              <div class="nav-info-single-line">
+                <span class="nav-with-date">
+                  {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
+                </span>
               </div>
             </div>
             
-            <div class="holding-details-detailed">
+            <div class="holding-details-compact">
               <div class="detail-row">
-                <span class="detail-label">购买金额:</span>
+                <span class="detail-label">金额:</span>
                 <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                <span class="detail-label" style="margin-left: 16px;">份额:</span>
+                <span class="detail-label" style="margin-left: 8px;">份额:</span>
                 <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
               </div>
               
@@ -674,26 +586,10 @@ onMounted(() => {
                 <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
                   {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
                 </span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">收益率:</span>
-                <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute / holding.purchaseAmount * 100) }">
-                  {{ formatPercentage(calculateProfit(holding).absolute / holding.purchaseAmount * 100) }}
-                </span>
-                <span class="detail-label-small">[绝对]</span>
-                <span class="separator">|</span>
+                <span class="detail-label" style="margin-left: 8px;">收益率:</span>
                 <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
                   {{ formatPercentage(calculateProfit(holding).annualized) }}
                 </span>
-                <span class="detail-label-small">[年化]</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">购买日期:</span>
-                <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
-                <span class="detail-label" style="margin-left: 16px;">持有天数:</span>
-                <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
               </div>
               
               <div v-if="holding.remarks" class="detail-row">
@@ -709,7 +605,6 @@ onMounted(() => {
         </div>
       </div>
       
-      <!-- 客户分组显示 -->
       <div v-else class="client-groups">
         <div v-if="holdings.length === 0" class="empty-state">
           <div class="empty-icon">📊</div>
@@ -718,7 +613,6 @@ onMounted(() => {
         </div>
         
         <div v-else class="clients-container">
-          <!-- 客户卡片 - 移除字母分类，直接显示每个客户 -->
           <div
             v-for="clientGroup in groupedHoldingsByClientName"
             :key="clientGroup.id"
@@ -730,12 +624,13 @@ onMounted(() => {
             >
               <div class="header-content-single">
                 <div class="client-info-single">
-                  <span class="client-name-id-single">{{ getDisplayName(clientGroup.clientName, clientGroup.clientID) }}</span>
+                  <span class="client-name-id-single">{{ getClientDisplayName(clientGroup.clientName, clientGroup.clientID) }}</span>
+                </div>
+                <div class="header-right-section">
                   <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
-                    {{ clientGroup.holdings.length }}支基金
+                    持仓数: <i>{{ clientGroup.holdings.length }}</i> 支
                   </span>
                 </div>
-                <span class="expand-icon-single">{{ expandedClients.has(clientGroup.id) ? '−' : '+' }}</span>
               </div>
             </div>
             
@@ -743,29 +638,26 @@ onMounted(() => {
               <div
                 v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
                 :key="holding.id"
-                class="holding-card-detailed"
+                class="holding-card-compact"
               >
-                <div class="holding-header-detailed">
-                  <div class="holding-info-detailed">
+                <div class="holding-header-compact">
+                  <div class="holding-info-compact">
                     <div class="fund-name-row">
-                      <h4 class="fund-name">{{ holding.fundName }}</h4>
-                      <span class="fund-code">({{ holding.fundCode }})</span>
-                    </div>
-                    <div v-if="!isPrivacyMode" class="client-info-row">
-                      <span class="purchase-date">购买日期: {{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN') }}</span>
+                      <h4 class="fund-name">{{ holding.fundName }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
                     </div>
                   </div>
-                  <div class="nav-info">
-                    <span class="nav-value">{{ holding.currentNav.toFixed(4) }}</span>
-                    <span class="nav-date">({{ new Date(holding.navDate).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) }})</span>
+                  <div class="nav-info-single-line">
+                    <span class="nav-with-date">
+                      {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
+                    </span>
                   </div>
                 </div>
                 
-                <div class="holding-details-detailed">
+                <div class="holding-details-compact">
                   <div class="detail-row">
-                    <span class="detail-label">购买金额:</span>
+                    <span class="detail-label">金额:</span>
                     <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                    <span class="detail-label" style="margin-left: 16px;">份额:</span>
+                    <span class="detail-label" style="margin-left: 8px;">份额:</span>
                     <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
                   </div>
                   
@@ -774,25 +666,16 @@ onMounted(() => {
                     <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
                       {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
                     </span>
-                  </div>
-                  
-                  <div class="detail-row">
-                    <span class="detail-label">收益率:</span>
-                    <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute / holding.purchaseAmount * 100) }">
-                      {{ formatPercentage(calculateProfit(holding).absolute / holding.purchaseAmount * 100) }}
-                    </span>
-                    <span class="detail-label-small">[绝对]</span>
-                    <span class="separator">|</span>
+                    <span class="detail-label" style="margin-left: 8px;">收益率:</span>
                     <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
                       {{ formatPercentage(calculateProfit(holding).annualized) }}
                     </span>
-                    <span class="detail-label-small">[年化]</span>
                   </div>
                   
                   <div class="detail-row">
                     <span class="detail-label">购买日期:</span>
                     <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
-                    <span class="detail-label" style="margin-left: 16px;">持有天数:</span>
+                    <span class="detail-label" style="margin-left: 8px;">持有天数:</span>
                     <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
                   </div>
                   
@@ -812,7 +695,6 @@ onMounted(() => {
       </div>
     </div>
     
-    <!-- 刷新进度 -->
     <div v-if="isRefreshing" class="refresh-overlay">
       <div class="refresh-progress">
         <div class="progress-text">
@@ -837,16 +719,19 @@ onMounted(() => {
 
 .header-section {
   background: var(--bg-primary);
-  padding: 20px 16px 16px;
+  padding: 16px 16px 12px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   gap: 8px;
 }
 
@@ -894,6 +779,7 @@ onMounted(() => {
   border-radius: 6px;
   background: var(--bg-hover);
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .status-text:hover {
@@ -939,7 +825,7 @@ onMounted(() => {
 }
 
 .search-box {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .search-input-wrapper {
@@ -994,8 +880,8 @@ onMounted(() => {
 }
 
 .content-area {
-  padding: 16px;
-  min-height: calc(100vh - 150px);
+  padding: 12px;
+  min-height: calc(100vh - 120px);
   overflow-y: auto;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
@@ -1003,63 +889,63 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: 40px 20px;
   color: var(--text-secondary);
   background: var(--bg-card);
-  border-radius: 12px;
-  margin: 20px;
+  border-radius: 10px;
+  margin: 16px;
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
 }
 
 .empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+  font-size: 36px;
+  margin-bottom: 12px;
   opacity: 0.5;
 }
 
 .empty-state h3 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--text-primary);
 }
 
 .empty-state p {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .search-results-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.holding-card-detailed {
+.holding-card-compact {
   background: var(--bg-card);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 10px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  margin-bottom: 6px;
 }
 
-.holding-card-detailed:hover {
+.holding-card-compact:hover {
   border-color: var(--accent-color);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(var(--accent-color-rgb), 0.1);
+  box-shadow: 0 2px 8px rgba(var(--accent-color-rgb), 0.08);
 }
 
-.holding-header-detailed {
+.holding-header-compact {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
-  gap: 12px;
+  margin-bottom: 8px;
+  gap: 8px;
 }
 
-.holding-info-detailed {
+.holding-info-compact {
   flex: 1;
   min-width: 0;
 }
@@ -1067,106 +953,114 @@ onMounted(() => {
 .fund-name-row {
   display: flex;
   align-items: center;
-  gap: 6px;
   margin-bottom: 4px;
   flex-wrap: wrap;
 }
 
 .fund-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
   line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.fund-code {
+.fund-code-inline {
   font-size: 12px;
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
+  margin-left: 4px;
+  font-weight: normal;
 }
 
 .client-info-row {
   display: flex;
   align-items: center;
-  gap: 4px;
   flex-wrap: wrap;
 }
 
 .client-name-id {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 4px;
+  line-height: 1.3;
 }
 
-.nav-info {
+.nav-info-single-line {
   text-align: right;
   min-width: 100px;
-}
-
-.nav-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--accent-color);
-  display: block;
-  margin-bottom: 2px;
-}
-
-.nav-date {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.holding-details-detailed {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+}
+
+.nav-with-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-color);
+  line-height: 1.2;
+  white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.nav-date-inline {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.holding-details-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bg-hover);
 }
 
 .detail-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
+  gap: 4px;
+  font-size: 12px;
   flex-wrap: wrap;
 }
 
 .detail-label {
   color: var(--text-secondary);
-  min-width: 60px;
+  min-width: 35px;
+  font-size: 11px;
 }
 
 .detail-value {
   font-weight: 500;
   color: var(--text-primary);
-}
-
-.detail-label-small {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.separator {
-  color: var(--text-secondary);
-  margin: 0 4px;
+  font-size: 11px;
 }
 
 .load-more {
   text-align: center;
-  padding: 12px;
+  padding: 10px;
 }
 
 .load-more button {
-  padding: 8px 16px;
+  padding: 6px 12px;
   background: var(--accent-color);
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   transition: background 0.2s ease;
 }
 
@@ -1177,25 +1071,25 @@ onMounted(() => {
 .clients-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
 .client-group-single {
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
 }
 
 .group-header-single {
-  padding: 12px 16px;
+  padding: 10px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
   transition: background 0.2s ease;
-  border-bottom: 1px solid var(--bg-hover);
 }
 
 .group-header-single:hover {
@@ -1207,52 +1101,54 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  gap: 10px;
 }
 
 .client-info-single {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .client-name-id-single {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.header-right-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .holdings-count-single {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
   background: rgba(var(--accent-color-rgb), 0.1);
+  white-space: nowrap;
 }
 
-.expand-icon-single {
-  font-size: 18px;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.holdings-count-single i {
+  font-style: italic;
+  font-weight: 600;
 }
 
 .group-content-single {
-  padding: 12px;
+  padding: 8px;
   background: var(--bg-hover);
   border-top: 1px solid var(--border-color);
-  animation: slideDown 0.3s ease;
+  animation: slideDown 0.2s ease;
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
+  from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -1271,69 +1167,187 @@ onMounted(() => {
 
 .refresh-progress {
   background: var(--bg-card);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
   text-align: center;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .progress-text {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .progress-details {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
   .header-section {
-    padding: 15px 12px 12px;
+    padding: 14px 12px 10px;
   }
   
   .content-area {
-    padding: 12px;
-    min-height: calc(100vh - 130px);
+    padding: 10px;
+    min-height: calc(100vh - 110px);
   }
   
-  .holding-header-detailed {
+  .holding-header-compact {
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
   
-  .nav-info {
-    text-align: left;
+  .nav-info-single-line {
     width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
   }
   
   .detail-row {
-    font-size: 13px;
+    font-size: 11px;
   }
   
   .detail-label {
-    min-width: 50px;
+    min-width: 30px;
+    font-size: 10px;
   }
   
-  .client-info-single {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+  .detail-value {
+    font-size: 10px;
   }
   
   .client-name-id-single {
-    width: 100%;
+    font-size: 13px;
+  }
+  
+  .holdings-count-single {
+    font-size: 10px;
+    padding: 2px 5px;
+  }
+  
+  .fund-name {
+    font-size: 13px;
+  }
+  
+  .fund-code-inline {
+    font-size: 11px;
+  }
+  
+  .nav-with-date {
+    font-size: 13px;
+  }
+  
+  .nav-date-inline {
+    font-size: 10px;
+  }
+  
+  .empty-state {
+    padding: 32px 16px;
+  }
+  
+  .empty-icon {
+    font-size: 32px;
+  }
+  
+  .empty-state h3 {
+    font-size: 15px;
+  }
+  
+  .empty-state p {
+    font-size: 12px;
   }
 }
 
-/* 深色模式特定样式 */
+@media (max-width: 480px) {
+  .content-area {
+    padding: 8px;
+  }
+  
+  .clients-container {
+    gap: 5px;
+  }
+  
+  .client-group-single {
+    border-radius: 6px;
+  }
+  
+  .group-header-single {
+    padding: 8px 10px;
+  }
+  
+  .client-name-id-single {
+    font-size: 12px;
+  }
+  
+  .holdings-count-single {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+  
+  .holding-card-compact {
+    padding: 8px;
+    margin-bottom: 5px;
+  }
+  
+  .group-content-single {
+    padding: 6px;
+  }
+  
+  .fund-name {
+    font-size: 12px;
+  }
+  
+  .fund-code-inline {
+    font-size: 10px;
+  }
+  
+  .client-name-id {
+    font-size: 11px;
+  }
+  
+  .nav-with-date {
+    font-size: 12px;
+  }
+  
+  .nav-date-inline {
+    font-size: 9px;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   body.dark-mode .refresh-btn {
     background: linear-gradient(135deg, #667eea, #764ba2);
+  }
+  
+  body.dark-mode .holding-card-compact {
+    background: rgba(28, 28, 30, 0.8);
+  }
+  
+  body.dark-mode .client-group-single {
+    background: rgba(28, 28, 30, 0.8);
+  }
+}
+
+.holding-card-compact {
+  margin-bottom: 6px;
+}
+
+.client-group-single {
+  margin-bottom: 6px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .group-header-single:active {
+    background: var(--bg-hover);
+  }
+  
+  .holding-card-compact:active {
+    transform: scale(0.98);
   }
 }
 </style>

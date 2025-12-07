@@ -26,7 +26,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const styleObject = computed(() => {
   return {
-    top: '20px',
+    bottom: '100px', // 显示在底部导航栏上方
     left: '50%',
     transform: 'translateX(-50%)',
     maxWidth: '90%',
@@ -36,6 +36,27 @@ const styleObject = computed(() => {
     overflow: 'hidden',
     textOverflow: 'ellipsis'
   }
+})
+
+// 自动关闭
+import { watch } from 'vue'
+import { ref } from 'vue'
+
+const emit = defineEmits(['update:show'])
+const showRef = ref(props.show)
+
+watch(() => props.show, (newVal) => {
+  showRef.value = newVal
+  if (newVal && props.duration > 0) {
+    setTimeout(() => {
+      showRef.value = false
+      emit('update:show', false)
+    }, props.duration)
+  }
+})
+
+watch(showRef, (newVal) => {
+  emit('update:show', newVal)
 })
 </script>
 
@@ -92,11 +113,11 @@ const styleObject = computed(() => {
   background: linear-gradient(135deg, var(--bg-card), rgba(255, 152, 0, 0.05));
 }
 
-/* 动画 */
+/* 动画 - 从底部弹出 */
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -20px);
+    transform: translate(-50%, 20px);
   }
   to {
     opacity: 1;
@@ -107,7 +128,7 @@ const styleObject = computed(() => {
 @keyframes toast-out {
   to {
     opacity: 0;
-    transform: translate(-50%, -20px);
+    transform: translate(-50%, 20px);
   }
 }
 
@@ -117,7 +138,11 @@ const styleObject = computed(() => {
     padding: 10px 16px;
     font-size: 13px;
     max-width: 92%;
-    top: 15px;
+    bottom: 90px;
+  }
+  
+  .toast-icon {
+    font-size: 14px;
   }
 }
 
@@ -126,11 +151,11 @@ const styleObject = computed(() => {
     padding: 8px 14px;
     font-size: 12px;
     max-width: 95%;
-    top: 12px;
+    bottom: 85px;
   }
   
   .toast-icon {
-    font-size: 14px;
+    font-size: 13px;
   }
 }
 </style>

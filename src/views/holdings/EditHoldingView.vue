@@ -48,8 +48,7 @@
             >
               <div class="result-info">
                 <div class="client-info">
-                  <span class="client-name">{{ dataStore.getClientDisplayName(holding.clientName) }}</span>
-                  <span class="client-id" v-if="holding.clientID">({{ holding.clientID }})</span>
+                  <span class="client-name">{{ dataStore.getClientDisplayName(holding.clientName, holding.clientID) }}</span>
                 </div>
                 <div class="holding-info">
                   <div class="fund-info">
@@ -105,27 +104,62 @@
         />
       </div>
     </div>
+
+    <!-- Toast消息组件 -->
+    <ToastMessage
+      :show="showToast"
+      :message="toastMessage"
+      :type="toastType"
+      @update:show="showToast = $event"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
 import EditHoldingForm from './EditHoldingForm.vue'
+import ToastMessage from '@/components/common/ToastMessage.vue'
 import type { FundHolding } from '@/stores/dataStore'
 
 const router = useRouter()
 const dataStore = useDataStore()
 
+// 搜索相关状态
 const searchTerm = ref('')
 const isLoading = ref(false)
 const selectedHolding = ref<FundHolding | null>(null)
 const showEditForm = ref(false)
 
+// Toast相关状态
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
+
+// 搜索结果
+const searchResults = ref<FundHolding[]>([])
+
+// 显示Toast消息 - 修复：调用 dataStore.showToastMessage
+const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+  dataStore.showToastMessage(message) // 使用 dataStore 的 showToastMessage 方法
+  // 同时更新本地状态以便 ToastMessage 组件显示
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+  
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+  
+  // 记录到API日志
+  dataStore.addLog(`系统提示: ${message}`, type)
+}
+
 // 搜索监听
 const performSearch = () => {
   if (!searchTerm.value.trim()) {
+    searchResults.value = []
     return
   }
   
@@ -133,12 +167,6 @@ const performSearch = () => {
   
   setTimeout(() => {
     const term = searchTerm.value.toLowerCase().trim()
-    
-    if (!term) {
-      searchResults.value = []
-      isLoading.value = false
-      return
-    }
     
     // 从dataStore中搜索持仓
     searchResults.value = dataStore.holdings.filter(holding =>
@@ -152,8 +180,6 @@ const performSearch = () => {
     isLoading.value = false
   }, 300)
 }
-
-const searchResults = ref<FundHolding[]>([])
 
 // 格式化函数
 const formatCurrency = (value: number) => {
@@ -207,10 +233,8 @@ const handleSave = async (updatedHolding: any) => {
     if (fundHolding.id) {
       dataStore.updateHolding(fundHolding.id, fundHolding)
       
-      // 显示成功消息
-      dataStore.showToastMessage('持仓更新成功')
-      
-      // 关闭表单
+      // 修复：不再重复调用 showNotification，因为 dataStore.updateHolding 内部已经调用 showToastMessage
+      // 只需关闭表单和重置状态
       showEditForm.value = false
       selectedHolding.value = null
       
@@ -221,7 +245,7 @@ const handleSave = async (updatedHolding: any) => {
   } catch (error) {
     console.error('保存失败:', error)
     dataStore.addLog(`编辑持仓失败: ${error}`, 'error')
-    dataStore.showToastMessage('持仓更新失败，请重试', 'error')
+    showNotification('持仓更新失败，请重试', 'error')
   }
 }
 
@@ -236,9 +260,52 @@ const goBack = () => {
   router.push('/holdings/manage')
 }
 
-// 初始化
+// 初始化 - 添加防缩放功能
 onMounted(() => {
   dataStore.addLog('打开编辑持仓页面', 'info')
+  
+  // 禁止缩放 - 增强版
+  const disableZoom = () => {
+    // 添加 viewport meta 标签
+    let metaViewport = document.querySelector('meta[name="viewport"]')
+    if (!metaViewport) {
+      metaViewport = document.createElement('meta')
+      metaViewport.setAttribute('name', 'viewport')
+      document.head.appendChild(metaViewport)
+    }
+    metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover')
+    
+    // 禁用双击缩放
+    let lastTouchEnd = 0
+    document.addEventListener('touchstart', (event) => {
+      if (event.touches.length > 1) {
+        event.preventDefault()
+      }
+    }, { passive: false })
+    
+    document.addEventListener('touchend', (event) => {
+      const now = Date.now()
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault()
+      }
+      lastTouchEnd = now
+    }, false)
+    
+    // 禁用双指缩放
+    document.addEventListener('gesturestart', (event) => {
+      event.preventDefault()
+    })
+    
+    // 禁用键盘缩放 (Ctrl + +/-)
+    document.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey === true || event.metaKey === true) &&
+          (event.keyCode === 107 || event.keyCode === 109 || event.keyCode === 187 || event.keyCode === 189)) {
+        event.preventDefault()
+      }
+    })
+  }
+  
+  disableZoom()
 })
 </script>
 
@@ -250,6 +317,9 @@ onMounted(() => {
   flex-direction: column;
   background: var(--bg-primary);
   overflow: hidden;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .custom-navbar {
@@ -277,6 +347,7 @@ onMounted(() => {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .back-button:hover {
@@ -308,6 +379,12 @@ onMounted(() => {
   overflow-y: auto;
   padding: 20px;
   max-height: calc(100vh - 120px);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.content::-webkit-scrollbar {
+  display: none;
 }
 
 .search-section {
@@ -354,6 +431,9 @@ onMounted(() => {
   color: var(--text-primary);
   background: var(--bg-card);
   transition: all 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .search-input:focus {
@@ -373,6 +453,7 @@ onMounted(() => {
   padding: 4px;
   border-radius: 4px;
   transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .clear-search:hover {
@@ -398,6 +479,7 @@ onMounted(() => {
   max-height: 400px;
   overflow-y: auto;
   padding-right: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .results-list::-webkit-scrollbar {
@@ -424,6 +506,8 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 80px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .result-item:hover {
@@ -453,14 +537,6 @@ onMounted(() => {
   color: var(--text-primary);
 }
 
-.client-id {
-  font-size: 13px;
-  color: var(--text-secondary);
-  background: var(--bg-hover);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
 .holding-info {
   display: flex;
   flex-direction: column;
@@ -478,6 +554,9 @@ onMounted(() => {
   font-size: 14px;
   color: var(--text-primary);
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fund-code {
@@ -487,6 +566,7 @@ onMounted(() => {
   background: rgba(var(--accent-color-rgb), 0.1);
   padding: 1px 6px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .holding-details {
@@ -692,6 +772,37 @@ onMounted(() => {
   
   .results-list {
     max-height: 250px;
+  }
+}
+
+/* PWA全屏适配 */
+@media (display-mode: standalone) {
+  .content {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+  
+  .custom-navbar {
+    padding-top: calc(12px + env(safe-area-inset-top));
+  }
+}
+
+/* 移动端触摸优化 */
+@media (hover: none) and (pointer: coarse) {
+  .result-item:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+  
+  .back-button:active {
+    transform: scale(0.95);
+  }
+  
+  .edit-icon:active {
+    transform: scale(0.9);
+  }
+  
+  .clear-search:active {
+    transform: scale(0.9);
   }
 }
 </style>
