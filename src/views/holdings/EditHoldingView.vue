@@ -1,16 +1,40 @@
 <template>
   <div class="edit-holding-view">
-    <NavBar title="编辑持仓" back-route="/holdings/manage" />
+    <!-- 导航栏 -->
+    <div class="custom-navbar">
+      <button class="back-button" @click="goBack">
+        <span class="back-icon">←</span>
+        返回
+      </button>
+      <h1 class="page-title">编辑持仓</h1>
+      <div class="nav-spacer"></div>
+    </div>
     
     <div class="content">
       <div class="search-section">
         <h2 class="section-title">搜索客户持仓</h2>
         <p class="section-subtitle">输入客户编号、姓名或基金代码搜索持仓记录</p>
         
-        <GlobalSearchBar
-          v-model:searchTerm="searchTerm"
-          @clear="handleClearSearch"
-        />
+        <!-- 搜索框 -->
+        <div class="search-box">
+          <div class="search-input-container">
+            <span class="search-icon">🔍</span>
+            <input
+              v-model="searchTerm"
+              type="text"
+              placeholder="输入客户姓名、客户号或基金代码..."
+              class="search-input"
+              @input="performSearch"
+            />
+            <button
+              v-if="searchTerm"
+              class="clear-search"
+              @click="handleClearSearch"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
         
         <!-- 搜索结果列表 -->
         <div v-if="searchResults.length > 0" class="results-section">
@@ -24,22 +48,22 @@
             >
               <div class="result-info">
                 <div class="client-info">
-                  <span class="client-name">{{ holding.client_name }}</span>
-                  <span class="client-id" v-if="holding.client_id">({{ holding.client_id }})</span>
+                  <span class="client-name">{{ dataStore.getClientDisplayName(holding.clientName) }}</span>
+                  <span class="client-id" v-if="holding.clientID">({{ holding.clientID }})</span>
                 </div>
                 <div class="holding-info">
                   <div class="fund-info">
-                    <span class="fund-name">{{ holding.fund_name || '加载中...' }}</span>
-                    <span class="fund-code">[{{ holding.fund_code }}]</span>
+                    <span class="fund-name">{{ holding.fundName || '加载中...' }}</span>
+                    <span class="fund-code">[{{ holding.fundCode }}]</span>
                   </div>
                   <div class="holding-details">
                     <div class="detail-item">
                       <span class="label">金额:</span>
-                      <span class="value">{{ formatCurrency(holding.purchase_amount) }}</span>
+                      <span class="value">{{ formatCurrency(holding.purchaseAmount) }}</span>
                     </div>
                     <div class="detail-item">
                       <span class="label">份额:</span>
-                      <span class="value">{{ formatShares(holding.purchase_shares) }}</span>
+                      <span class="value">{{ formatShares(holding.purchaseShares) }}</span>
                     </div>
                   </div>
                 </div>
@@ -50,12 +74,21 @@
         </div>
         
         <div v-else-if="searchTerm && !isLoading" class="no-results">
-          <p>未找到匹配的持仓记录</p>
+          <div class="no-results-icon">😕</div>
+          <p class="no-results-text">未找到匹配的持仓记录</p>
+          <p class="no-results-hint">请检查搜索关键词是否正确</p>
         </div>
         
         <div v-else-if="!searchTerm" class="empty-state">
           <div class="empty-icon">🔍</div>
           <p class="empty-text">输入关键词搜索持仓记录</p>
+          <p class="empty-hint">可以搜索客户姓名、客户号或基金代码</p>
+        </div>
+        
+        <!-- 加载中 -->
+        <div v-if="isLoading" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p class="loading-text">搜索中...</p>
         </div>
       </div>
     </div>
@@ -76,86 +109,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import NavBar from '@/components/layout/NavBar.vue'
-import GlobalSearchBar from '@/components/common/GlobalSearchBar.vue'
+import { useDataStore } from '@/stores/dataStore'
 import EditHoldingForm from './EditHoldingForm.vue'
-import type { Holding } from '@/types/data'
-import { convertHoldingToFundHolding } from '@/types/data'
+import type { FundHolding } from '@/stores/dataStore'
 
 const router = useRouter()
+const dataStore = useDataStore()
 
 const searchTerm = ref('')
 const isLoading = ref(false)
-const selectedHolding = ref<Holding | null>(null)
+const selectedHolding = ref<FundHolding | null>(null)
 const showEditForm = ref(false)
 
-// 模拟数据 - 实际应从API获取
-const mockHoldings: Holding[] = [
-  {
-    id: '1',
-    client_name: '张三',
-    client_id: 'C001',
-    fund_code: '005827',
-    fund_name: '易方达蓝筹精选混合',
-    purchase_date: '2024-01-15',
-    purchase_amount: 100000.00,
-    purchase_shares: 40000.0000,
-    current_nav: 2.5000,
-    nav_date: '2024-03-15',
-    is_pinned: false,
-    pinned_timestamp: null,
-    remarks: '首次购买',
-    created_at: '2024-01-15 10:30:00',
-    updated_at: '2024-03-15 15:45:00'
-  },
-  {
-    id: '2',
-    client_name: '李四',
-    client_id: 'C002',
-    fund_code: '000001',
-    fund_name: '华夏成长混合',
-    purchase_date: '2024-02-20',
-    purchase_amount: 50000.00,
-    purchase_shares: 27777.7778,
-    current_nav: 1.8000,
-    nav_date: '2024-03-15',
-    is_pinned: true,
-    pinned_timestamp: '2024-03-10 09:15:00',
-    remarks: '追加投资',
-    created_at: '2024-02-20 14:20:00',
-    updated_at: '2024-03-15 16:30:00'
-  },
-  {
-    id: '3',
-    client_name: '王五',
-    client_id: 'C003',
-    fund_code: '001856',
-    fund_name: '嘉实新兴产业股票',
-    purchase_date: '2024-03-01',
-    purchase_amount: 80000.00,
-    purchase_shares: 25000.0000,
-    current_nav: 3.2000,
-    nav_date: '2024-03-15',
-    is_pinned: false,
-    pinned_timestamp: null,
-    remarks: '',
-    created_at: '2024-03-01 11:45:00',
-    updated_at: '2024-03-15 14:20:00'
-  }
-]
-
-const searchResults = ref<Holding[]>([])
-
 // 搜索监听
-watch(searchTerm, (newTerm) => {
-  if (newTerm.trim()) {
-    performSearch(newTerm)
-  } else {
-    searchResults.value = []
+const performSearch = () => {
+  if (!searchTerm.value.trim()) {
+    return
   }
-})
+  
+  isLoading.value = true
+  
+  setTimeout(() => {
+    const term = searchTerm.value.toLowerCase().trim()
+    
+    if (!term) {
+      searchResults.value = []
+      isLoading.value = false
+      return
+    }
+    
+    // 从dataStore中搜索持仓
+    searchResults.value = dataStore.holdings.filter(holding =>
+      holding.clientName.toLowerCase().includes(term) ||
+      (holding.clientID && holding.clientID.toLowerCase().includes(term)) ||
+      holding.fundName.toLowerCase().includes(term) ||
+      holding.fundCode.includes(term) ||
+      (holding.remarks && holding.remarks.toLowerCase().includes(term))
+    )
+    
+    isLoading.value = false
+  }, 300)
+}
+
+const searchResults = ref<FundHolding[]>([])
 
 // 格式化函数
 const formatCurrency = (value: number) => {
@@ -166,58 +164,150 @@ const formatShares = (value: number) => {
   return `${value.toLocaleString('zh-CN', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}份`
 }
 
-// 搜索函数
-const performSearch = (term: string) => {
-  isLoading.value = true
-  setTimeout(() => {
-    const searchTermLower = term.toLowerCase()
-    searchResults.value = mockHoldings.filter(holding => 
-      holding.client_name.toLowerCase().includes(searchTermLower) || 
-      holding.client_id.toLowerCase().includes(searchTermLower) ||
-      holding.fund_name.toLowerCase().includes(searchTermLower) ||
-      holding.fund_code.includes(searchTermLower) ||
-      holding.remarks.toLowerCase().includes(searchTermLower)
-    )
-    isLoading.value = false
-  }, 300)
-}
-
 const handleClearSearch = () => {
   searchTerm.value = ''
   searchResults.value = []
   selectedHolding.value = null
 }
 
-const selectHolding = (holding: Holding) => {
+const selectHolding = (holding: FundHolding) => {
   selectedHolding.value = holding
   showEditForm.value = true
+  console.log('选择持仓:', holding)
 }
 
-const handleSave = (updatedHolding: any) => {
-  console.log('保存持仓:', updatedHolding)
-  // 这里应该调用API保存数据
-  showEditForm.value = false
-  selectedHolding.value = null
+const handleSave = async (updatedHolding: any) => {
+  try {
+    console.log('保存持仓:', updatedHolding)
+    
+    // 转换为dataStore格式
+    const fundHolding: Partial<FundHolding> = {
+      id: updatedHolding.id,
+      clientName: updatedHolding.client_name || updatedHolding.clientName,
+      clientID: updatedHolding.client_id || updatedHolding.clientID || '',
+      fundCode: updatedHolding.fund_code || updatedHolding.fundCode,
+      fundName: updatedHolding.fund_name || updatedHolding.fundName,
+      purchaseAmount: updatedHolding.purchase_amount || updatedHolding.purchaseAmount,
+      purchaseShares: updatedHolding.purchase_shares || updatedHolding.purchaseShares,
+      purchaseDate: new Date(updatedHolding.purchase_date || updatedHolding.purchaseDate),
+      currentNav: updatedHolding.current_nav || updatedHolding.currentNav || 0,
+      navDate: new Date(updatedHolding.nav_date || updatedHolding.navDate || new Date()),
+      isPinned: updatedHolding.is_pinned || updatedHolding.isPinned || false,
+      pinnedTimestamp: updatedHolding.pinned_timestamp
+        ? new Date(updatedHolding.pinned_timestamp)
+        : (updatedHolding.is_pinned ? new Date() : undefined),
+      remarks: updatedHolding.remarks || '',
+      navReturn1m: updatedHolding.nav_return_1m || updatedHolding.navReturn1m,
+      navReturn3m: updatedHolding.nav_return_3m || updatedHolding.navReturn3m,
+      navReturn6m: updatedHolding.nav_return_6m || updatedHolding.navReturn6m,
+      navReturn1y: updatedHolding.nav_return_1y || updatedHolding.navReturn1y
+    }
+    
+    // 通过dataStore更新持仓
+    if (fundHolding.id) {
+      dataStore.updateHolding(fundHolding.id, fundHolding)
+      
+      // 显示成功消息
+      dataStore.showToastMessage('持仓更新成功')
+      
+      // 关闭表单
+      showEditForm.value = false
+      selectedHolding.value = null
+      
+      // 重新搜索以显示更新后的数据
+      performSearch()
+    }
+    
+  } catch (error) {
+    console.error('保存失败:', error)
+    dataStore.addLog(`编辑持仓失败: ${error}`, 'error')
+    dataStore.showToastMessage('持仓更新失败，请重试', 'error')
+  }
 }
 
 const closeEditForm = () => {
-  showEditForm.value = false
-  selectedHolding.value = null
+  if (confirm('确定要取消编辑吗？未保存的修改将会丢失。')) {
+    showEditForm.value = false
+    selectedHolding.value = null
+  }
 }
+
+const goBack = () => {
+  router.push('/holdings/manage')
+}
+
+// 初始化
+onMounted(() => {
+  dataStore.addLog('打开编辑持仓页面', 'info')
+})
 </script>
 
 <style scoped>
 .edit-holding-view {
   height: 100vh;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.custom-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.back-icon {
+  font-size: 18px;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+.nav-spacer {
+  width: 80px;
+  visibility: hidden;
 }
 
 .content {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  max-height: calc(100vh - 120px);
 }
 
 .search-section {
@@ -238,6 +328,58 @@ const closeEditForm = () => {
   margin-bottom: 20px;
 }
 
+.search-box {
+  margin-bottom: 24px;
+}
+
+.search-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 16px;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.1);
+}
+
+.clear-search {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.clear-search:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .results-section {
   margin-top: 24px;
 }
@@ -253,6 +395,22 @@ const closeEditForm = () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.results-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.results-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.results-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
 }
 
 .result-item {
@@ -265,6 +423,7 @@ const closeEditForm = () => {
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-height: 80px;
 }
 
 .result-item:hover {
@@ -279,6 +438,7 @@ const closeEditForm = () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .client-info {
@@ -362,6 +522,8 @@ const closeEditForm = () => {
   border-radius: 8px;
   font-size: 18px;
   transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 
 .result-item:hover .edit-icon {
@@ -371,13 +533,29 @@ const closeEditForm = () => {
 
 .no-results {
   text-align: center;
-  padding: 40px 0;
+  padding: 60px 0;
+}
+
+.no-results-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.no-results-text {
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.no-results-hint {
+  font-size: 14px;
   color: var(--text-secondary);
 }
 
 .empty-state {
   text-align: center;
-  padding: 60px 0;
+  padding: 80px 0;
 }
 
 .empty-icon {
@@ -387,6 +565,38 @@ const closeEditForm = () => {
 }
 
 .empty-text {
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-hint {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.loading-state {
+  text-align: center;
+  padding: 60px 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(var(--accent-color-rgb), 0.1);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
   font-size: 14px;
   color: var(--text-secondary);
 }
@@ -402,6 +612,7 @@ const closeEditForm = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
 }
 
 .modal-overlay {
@@ -424,6 +635,8 @@ const closeEditForm = () => {
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideUp {
@@ -440,17 +653,20 @@ const closeEditForm = () => {
 @media (max-width: 768px) {
   .content {
     padding: 16px;
+    max-height: calc(100vh - 100px);
   }
   
   .result-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+    min-height: auto;
   }
   
   .edit-icon {
     align-self: flex-end;
     margin-top: -40px;
+    margin-left: 0;
   }
   
   .holding-details {
@@ -461,6 +677,21 @@ const closeEditForm = () => {
   .modal-content {
     width: 95%;
     max-height: 95vh;
+  }
+  
+  .results-list {
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-content {
+    width: 98%;
+    max-height: 90vh;
+  }
+  
+  .results-list {
+    max-height: 250px;
   }
 }
 </style>

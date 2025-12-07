@@ -1,18 +1,18 @@
 <template>
-  <div id="app" :class="themeClass">
+  <div id="app">
     <!-- 登录状态下显示主布局 -->
     <template v-if="authStore.isLoggedIn">
       <div class="app-container">
         <div class="main-content">
           <router-view v-slot="{ Component, route }">
-            <transition 
-              :name="getTransitionName(route)" 
+            <transition
+              :name="getTransitionName(route)"
               mode="out-in"
               @before-enter="beforeEnter"
               @after-enter="afterEnter"
             >
-              <component 
-                :is="Component" 
+              <component
+                :is="Component"
                 :key="route.fullPath"
               />
             </transition>
@@ -37,11 +37,6 @@
         </router-view>
       </div>
     </template>
-    
-    <!-- 全局Toast消息 -->
-    <div v-if="toastMessage" class="toast-message" :class="toastType">
-      {{ toastMessage }}
-    </div>
   </div>
 </template>
 
@@ -58,8 +53,6 @@ const route = useRoute()
 
 // 响应式状态
 const isLoading = ref(false)
-const toastMessage = ref('')
-const toastType = ref('info')
 const isTabBarHidden = ref(false)
 
 // 获取过渡动画名称
@@ -67,32 +60,10 @@ const getTransitionName = (route: RouteLocationNormalized) => {
   return (route.meta?.transition as string) || 'fade'
 }
 
-// 主题类名计算 - 监听localStorage变化
-const themeClass = computed(() => {
-  const theme = localStorage.getItem('themeMode') || 'system'
-  return `theme-${theme}`
-})
-
-// 监听主题变化，立即应用到页面
-watch(themeClass, (newTheme) => {
-  console.log('主题变化:', newTheme)
-  applyThemeToDOM(newTheme)
-})
-
 // 是否显示底部导航栏
 const showTabBar = computed(() => {
   return route.meta?.showTabBar !== false
 })
-
-// 显示Toast消息
-const showToast = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
-  toastMessage.value = message
-  toastType.value = type
-  
-  setTimeout(() => {
-    toastMessage.value = ''
-  }, 3000)
-}
 
 // 页面切换动画
 const beforeEnter = () => {
@@ -111,35 +82,6 @@ watch(() => route.path, (newPath) => {
   const hideTabBarRoutes = ['/edit-holding', '/logs', '/holdings', '/about']
   isTabBarHidden.value = hideTabBarRoutes.some(hideRoute => newPath.startsWith(hideRoute))
 })
-
-// 应用主题到DOM
-const applyThemeToDOM = (themeClass: string) => {
-  const root = document.documentElement
-  const app = document.getElementById('app')
-  
-  // 移除所有主题类
-  root.classList.remove('theme-light', 'theme-dark', 'theme-system', 'dark-mode')
-  if (app) {
-    app.classList.remove('theme-light', 'theme-dark', 'theme-system')
-  }
-  
-  // 应用新主题
-  if (themeClass === 'theme-dark') {
-    root.classList.add('theme-dark')
-    if (app) app.classList.add('theme-dark')
-  } else if (themeClass === 'theme-light') {
-    root.classList.add('theme-light')
-    if (app) app.classList.add('theme-light')
-  } else {
-    root.classList.add('theme-system')
-    if (app) app.classList.add('theme-system')
-    // 系统主题根据系统设置决定
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-    if (prefersDark) {
-      root.classList.add('dark-mode')
-    }
-  }
-}
 
 // 检查登录状态
 const checkAuthState = () => {
@@ -166,10 +108,6 @@ const checkAuthState = () => {
 onMounted(() => {
   console.log('CFMS PWA应用已启动')
   
-  // 初始化主题
-  const savedTheme = localStorage.getItem('themeMode') || 'system'
-  applyThemeToDOM(`theme-${savedTheme}`)
-  
   // 检查并同步登录状态
   setTimeout(() => {
     checkAuthState()
@@ -191,43 +129,25 @@ onMounted(() => {
   // 加载数据
   dataStore.loadData()
   
-  // 监听系统主题变化
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-  mediaQuery.addEventListener('change', (e) => {
-    const currentTheme = localStorage.getItem('themeMode') || 'system'
-    if (currentTheme === 'system') {
-      applyThemeToDOM('theme-system')
-    }
-  })
-  
-  // 监听全局事件
-  window.addEventListener('show-toast', (event: any) => {
-    const { message, type } = event.detail
-    showToast(message, type)
-  })
-  
   // 监听在线状态
   window.addEventListener('online', () => {
-    showToast('网络已连接', 'success')
+    // Toast消息现在由ToastMessage组件处理
   })
   
   window.addEventListener('offline', () => {
-    showToast('网络已断开', 'warning')
+    // Toast消息现在由ToastMessage组件处理
   })
   
-  // 监听localStorage变化（主题变化）
+  // 监听localStorage变化
   window.addEventListener('storage', (e) => {
-    if (e.key === 'themeMode') {
-      const newTheme = e.newValue || 'system'
-      applyThemeToDOM(`theme-${newTheme}`)
-    } else if (e.key === 'auth_token' || e.key === 'auth_user') {
+    if (e.key === 'auth_token' || e.key === 'auth_user') {
       // 登录状态变化时重新检查
       setTimeout(() => checkAuthState(), 100)
     }
   })
 })
 
-// 全局错误处理 - 改进错误处理逻辑
+// 全局错误处理
 onMounted(() => {
   const errorHandler = (event: ErrorEvent) => {
     console.error('全局错误:', event.error)
@@ -241,7 +161,6 @@ onMounted(() => {
       console.log('路由重复导航错误，忽略')
       return
     }
-    showToast('应用发生错误，请刷新页面', 'error')
   }
   
   const rejectionHandler = (event: PromiseRejectionEvent) => {
@@ -251,7 +170,6 @@ onMounted(() => {
       console.log('路由重复导航rejection，忽略')
       return
     }
-    showToast('操作失败，请重试', 'error')
   }
   
   window.addEventListener('error', errorHandler)
@@ -280,6 +198,8 @@ onMounted(() => {
   height: 100vh;
   overflow: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .app-container {
@@ -297,61 +217,6 @@ onMounted(() => {
 .auth-container-wrapper {
   width: 100%;
   height: 100vh;
-}
-
-/* 主题样式 - 确保主题变量正确应用到所有元素 */
-.theme-light {
-  --bg-primary: #f5f5f5;
-  --bg-card: #ffffff;
-  --bg-hover: #f0f0f0;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --accent-color: #2196f3;
-  --border-color: #e0e0e0;
-  --accent-color-rgb: 33, 150, 243;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.theme-dark {
-  --bg-primary: #121212;
-  --bg-card: #1e1e1e;
-  --bg-hover: #2d2d2d;
-  --text-primary: #ffffff;
-  --text-secondary: #b0b0b0;
-  --accent-color: #64b5f6;
-  --border-color: #333333;
-  --accent-color-rgb: 100, 181, 246;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.theme-system {
-  --bg-primary: #f5f5f5;
-  --bg-card: #ffffff;
-  --bg-hover: #f0f0f0;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --accent-color: #2196f3;
-  --border-color: #e0e0e0;
-  --accent-color-rgb: 33, 150, 243;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system {
-    --bg-primary: #121212;
-    --bg-card: #1e1e1e;
-    --bg-hover: #2d2d2d;
-    --text-primary: #ffffff;
-    --text-secondary: #b0b0b0;
-    --accent-color: #64b5f6;
-    --border-color: #333333;
-    --accent-color-rgb: 100, 181, 246;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-  }
 }
 
 /* 过渡动画 */
@@ -408,68 +273,10 @@ onMounted(() => {
   }
 }
 
-/* Toast消息 */
-.toast-message {
-  position: fixed;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 24px;
-  border-radius: 8px;
-  background-color: var(--bg-card);
-  color: var(--text-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  max-width: 80%;
-  text-align: center;
-  animation: toast-in 0.3s ease, toast-out 0.3s ease 2.7s;
-  animation-fill-mode: forwards;
-}
-
-.toast-message.info {
-  border-left: 4px solid #2196f3;
-}
-
-.toast-message.success {
-  border-left: 4px solid #4caf50;
-}
-
-.toast-message.error {
-  border-left: 4px solid #f44336;
-}
-
-.toast-message.warning {
-  border-left: 4px solid #ff9800;
-}
-
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 20px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-
-@keyframes toast-out {
-  to {
-    opacity: 0;
-    transform: translate(-50%, 20px);
-  }
-}
-
 /* 移动端优化 */
 @media (max-width: 768px) {
   .app-container {
     height: 100%;
-  }
-  
-  .toast-message {
-    bottom: 80px;
-    max-width: 90%;
-    font-size: 14px;
   }
 }
 

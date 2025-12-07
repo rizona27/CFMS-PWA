@@ -10,6 +10,7 @@ const dataStore = useDataStore()
 // 重新渲染键
 const refreshKey = ref(0)
 const privacyKey = ref(0)
+const themeKey = ref(0)
 
 // 状态
 const isSearchExpanded = ref(false)
@@ -21,14 +22,15 @@ const updatingTextTimer = ref<number | null>(null)
 const loadedGroupedClientCount = ref(10)
 const loadedSearchResultCount = ref(10)
 const refreshID = ref(0)
-const swipedHoldingStates = ref<Record<string, { isSwiped: boolean; dragOffset: number }>>({})
+
+// 移除手势相关状态
+// const swipedHoldingStates = ref<Record<string, { isSwiped: boolean; dragOffset: number }>>({})
 
 // 计算属性
 const holdings = computed(() => dataStore.holdings)
 const isPrivacyMode = computed(() => dataStore.isPrivacyMode)
 const showRefreshButton = computed(() => dataStore.showRefreshButton)
 const refreshProgress = computed(() => dataStore.refreshProgress)
-const pinnedHoldings = computed(() => dataStore.pinnedHoldings)
 const groupedByClient = computed(() => dataStore.groupedByClient)
 
 const previousWorkday = computed(() => {
@@ -104,16 +106,8 @@ const groupedHoldingsByClientName = computed(() => {
     const totalAUM = holdings.reduce((sum, holding) => sum + (holding.currentNav * holding.purchaseShares), 0)
     const representativeClientID = holdings[0]?.clientID || ''
     
+    // 移除置顶相关的排序逻辑
     const sortedHoldings = [...holdings].sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1
-      if (!a.isPinned && b.isPinned) return 1
-      
-      if (a.isPinned && b.isPinned) {
-        const timeA = a.pinnedTimestamp?.getTime() || 0
-        const timeB = b.pinnedTimestamp?.getTime() || 0
-        return timeB - timeA
-      }
-      
       return new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime()
     })
     
@@ -122,58 +116,13 @@ const groupedHoldingsByClientName = computed(() => {
       clientName,
       clientID: representativeClientID,
       totalAUM,
-      holdings: sortedHoldings,
-      isPinned: false,
-      pinnedTimestamp: null as Date | null
+      holdings: sortedHoldings
     }
   })
   
   clientGroups.sort((a, b) => a.clientName.localeCompare(b.clientName, 'zh-CN'))
   
   return clientGroups
-})
-
-const sectionedClientGroups = computed(() => {
-  const sections: Record<string, typeof groupedHoldingsByClientName.value> = {}
-  
-  if (pinnedHoldings.value.length > 0) {
-    const pinnedClientGroup = {
-      id: 'Pinned',
-      clientName: '置顶分栏',
-      clientID: '',
-      totalAUM: pinnedHoldings.value.reduce((sum, holding) => sum + (holding.currentNav * holding.purchaseShares), 0),
-      holdings: pinnedHoldings.value,
-      isPinned: true,
-      pinnedTimestamp: pinnedHoldings.value
-        .map(h => h.pinnedTimestamp)
-        .filter(Boolean)
-        .reduce((latest, timestamp) => {
-          const time = timestamp!.getTime()
-          return time > (latest?.getTime() || 0) ? timestamp! : latest!
-        }, null as Date | null)
-    }
-    sections['★'] = [pinnedClientGroup]
-  }
-  
-  groupedHoldingsByClientName.value.forEach(group => {
-    const firstChar = group.clientName.charAt(0).toUpperCase()
-    if (!sections[firstChar]) {
-      sections[firstChar] = []
-    }
-    sections[firstChar].push(group)
-  })
-  
-  return sections
-})
-
-const sortedSectionKeys = computed(() => {
-  return Object.keys(sectionedClientGroups.value).sort((char1, char2) => {
-    if (char1 === '★') return -1
-    if (char2 === '★') return 1
-    if (char1 === '#') return 1
-    if (char2 === '#') return -1
-    return char1.localeCompare(char2, 'zh-CN')
-  })
 })
 
 const areAnyCardsExpanded = computed(() => expandedClients.value.size > 0)
@@ -203,9 +152,6 @@ const toggleAllCards = () => {
     expandedClients.value.clear()
   } else {
     const allClientIds = new Set(groupedHoldingsByClientName.value.map(g => g.id))
-    if (pinnedHoldings.value.length > 0) {
-      allClientIds.add('Pinned')
-    }
     expandedClients.value = allClientIds
   }
   dataStore.addLog(`客户视图: ${areAnyCardsExpanded.value ? '折叠' : '展开'}所有客户卡片`, 'info')
@@ -245,17 +191,23 @@ const processClientName = (name: string): string => {
   }
 }
 
+const getDisplayName = (clientName: string, clientID: string): string => {
+  const processedName = processClientName(clientName)
+  return clientID ? `${processedName}(${clientID})` : processedName
+}
+
 const colorForHoldingCount = (count: number) => {
   if (count === 1) return '#eab308'
   if (count <= 3) return '#f97316'
   return '#ef4444'
 }
 
-const togglePin = (holdingId: string) => {
-  dataStore.togglePinStatus(holdingId)
-  refreshID.value++
-  dataStore.addLog(`客户视图: 切换持仓置顶状态 (ID: ${holdingId.substring(0, 8)})`, 'info')
-}
+// 移除置顶功能
+// const togglePin = (holdingId: string) => {
+//   dataStore.togglePinStatus(holdingId)
+//   refreshID.value++
+//   dataStore.addLog(`客户视图: 切换持仓置顶状态 (ID: ${holdingId.substring(0, 8)})`, 'info')
+// }
 
 const calculateHoldingDays = (holding: any) => {
   const endDate = new Date(holding.navDate)
@@ -275,7 +227,7 @@ const calculateProfit = (holding: any) => {
   // 年化收益率计算
   const holdingDays = calculateHoldingDays(holding)
   const absoluteReturnPercentage = (absoluteProfit / holding.purchaseAmount) * 100
-  const annualizedReturn = holdingDays > 0 ? 
+  const annualizedReturn = holdingDays > 0 ?
     (Math.pow(1 + absoluteReturnPercentage / 100, 365 / holdingDays) - 1) * 100 : 0
   
   return {
@@ -305,9 +257,9 @@ const formatPercentage = (value: number) => {
 }
 
 const getReturnColor = (value: number) => {
-  if (value > 0) return '#10b981'
-  if (value < 0) return '#ef4444'
-  return '#666'
+  if (value > 0) return '#ef4444'  // 正数：红色
+  if (value < 0) return '#10b981'  // 负数：绿色
+  return '#666'                    // 零：黑色/灰色
 }
 
 const isSameDay = (date1: Date, date2: Date) => {
@@ -429,6 +381,7 @@ const handlePrivacyModeChange = (event: any) => {
   // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
+  themeKey.value = Date.now()
   
   dataStore.addLog(`隐私模式变化: ${enabled ? '开启' : '关闭'}`, 'info')
 }
@@ -444,6 +397,7 @@ const handleGlobalPrivacyModeChange = (event: any) => {
   // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
+  themeKey.value = Date.now()
 }
 
 // 主题变化处理器
@@ -451,6 +405,7 @@ const handleThemeChange = (event: any) => {
   const { theme } = event.detail
   console.log(`ClientView: 主题变化到 ${theme}`)
   applyThemeToDocument(theme)
+  themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
 
@@ -514,6 +469,21 @@ const updateCSSVariables = (theme: 'light' | 'dark') => {
   }
 }
 
+// 强制同步处理器
+const handleForcePrivacySync = () => {
+  console.log('ClientView: 收到强制隐私同步事件')
+  privacyKey.value = Date.now()
+  refreshKey.value = Date.now()
+}
+
+const handleForceThemeSync = () => {
+  console.log('ClientView: 收到强制主题同步事件')
+  const savedTheme = localStorage.getItem('themeMode') || 'system'
+  applyThemeToDocument(savedTheme)
+  themeKey.value = Date.now()
+  refreshKey.value = Date.now()
+}
+
 // 响应式变量
 const autoHideTimer = ref<number | null>(null)
 
@@ -522,6 +492,7 @@ watch(() => dataStore.isPrivacyMode, (newValue) => {
   console.log(`ClientView: dataStore.isPrivacyMode变化到 ${newValue}`)
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
+  themeKey.value = Date.now()
 })
 
 // 监听持仓数据变化
@@ -539,6 +510,17 @@ onMounted(() => {
   const savedTheme = localStorage.getItem('themeMode') || 'system'
   applyThemeToDocument(savedTheme)
   
+  // 禁止缩放
+  const metaViewport = document.querySelector('meta[name="viewport"]')
+  if (metaViewport) {
+    metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
+  } else {
+    const meta = document.createElement('meta')
+    meta.name = 'viewport'
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+    document.head.appendChild(meta)
+  }
+  
   dataStore.addLog('用户访问客户视图页面', 'info')
   
   // 监听隐私模式变化事件
@@ -549,6 +531,10 @@ onMounted(() => {
   window.addEventListener('theme-changed', handleThemeChange)
   window.addEventListener('theme-changed-global', handleThemeChange)
   
+  // 监听强制同步事件
+  window.addEventListener('force-privacy-sync', handleForcePrivacySync)
+  window.addEventListener('force-theme-sync', handleForceThemeSync)
+  
   // 监听系统主题变化
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   const handleSystemThemeChange = (e: MediaQueryListEvent) => {
@@ -556,6 +542,7 @@ onMounted(() => {
     if (currentTheme === 'system') {
       applyThemeToDocument('system')
       refreshKey.value = Date.now()
+      themeKey.value = Date.now()
     }
   }
   mediaQuery.addEventListener('change', handleSystemThemeChange)
@@ -570,23 +557,20 @@ onMounted(() => {
     window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
     window.removeEventListener('theme-changed', handleThemeChange)
     window.removeEventListener('theme-changed-global', handleThemeChange)
+    window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
+    window.removeEventListener('force-theme-sync', handleForceThemeSync)
     mediaQuery.removeEventListener('change', handleSystemThemeChange)
   })
 })
 </script>
 
 <template>
-  <div class="client-view" :key="`${refreshKey}-${privacyKey}`">
-    <!-- 返回按钮 -->
-    <div class="back-button" @click="$router.back()">
-      <span class="back-icon">←</span>
-    </div>
-    
+  <div class="client-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
     <!-- 标题和状态栏 -->
     <div class="header-section">
       <div class="header-row">
         <div class="action-buttons">
-          <button 
+          <button
             class="action-btn"
             :class="{ active: areAnyCardsExpanded }"
             @click="toggleAllCards"
@@ -595,7 +579,7 @@ onMounted(() => {
             {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
           </button>
           
-          <button 
+          <button
             class="action-btn"
             :class="{ active: isSearchExpanded }"
             @click="toggleSearch"
@@ -610,7 +594,7 @@ onMounted(() => {
             {{ latestNavDateString }}
           </div>
           
-          <button 
+          <button
             v-if="showRefreshButton"
             class="refresh-btn"
             @click.stop="handleRefresh"
@@ -634,8 +618,8 @@ onMounted(() => {
             class="search-input"
             @input="performSearch(searchText)"
           />
-          <button 
-            v-if="searchText" 
+          <button
+            v-if="searchText"
             class="clear-search"
             @click="clearSearch"
           >
@@ -656,8 +640,8 @@ onMounted(() => {
         </div>
         
         <div v-else class="search-results-list">
-          <div 
-            v-for="holding in searchResults.slice(0, loadedSearchResultCount)" 
+          <div
+            v-for="holding in searchResults.slice(0, loadedSearchResultCount)"
             :key="holding.id"
             class="holding-card-detailed"
           >
@@ -666,11 +650,9 @@ onMounted(() => {
                 <div class="fund-name-row">
                   <h4 class="fund-name">{{ holding.fundName }}</h4>
                   <span class="fund-code">({{ holding.fundCode }})</span>
-                  <span v-if="holding.isPinned" class="pin-indicator">📌</span>
                 </div>
                 <div class="client-info-row">
-                  <span class="client-name">{{ processClientName(holding.clientName) }}</span>
-                  <span v-if="holding.clientID" class="client-id">({{ holding.clientID }})</span>
+                  <span class="client-name-id">{{ getDisplayName(holding.clientName, holding.clientID) }}</span>
                 </div>
               </div>
               <div class="nav-info">
@@ -735,24 +717,31 @@ onMounted(() => {
           <p>请导入数据开始使用</p>
         </div>
         
-        <div v-else class="sections-container">
-          <!-- 置顶分栏 -->
-          <div v-if="pinnedHoldings.length > 0" class="section">
-            <div 
-              class="section-header pinned-header"
-              @click="expandedClients.has('Pinned') ? expandedClients.delete('Pinned') : expandedClients.add('Pinned')"
+        <div v-else class="clients-container">
+          <!-- 客户卡片 - 移除字母分类，直接显示每个客户 -->
+          <div
+            v-for="clientGroup in groupedHoldingsByClientName"
+            :key="clientGroup.id"
+            class="client-group-single"
+          >
+            <div
+              class="group-header-single"
+              @click="expandedClients.has(clientGroup.id) ? expandedClients.delete(clientGroup.id) : expandedClients.add(clientGroup.id)"
             >
-              <div class="header-content">
-                <span class="pin-icon">📌</span>
-                <span class="section-title">置顶分栏</span>
-                <span class="holdings-count">{{ pinnedHoldings.length }}支</span>
+              <div class="header-content-single">
+                <div class="client-info-single">
+                  <span class="client-name-id-single">{{ getDisplayName(clientGroup.clientName, clientGroup.clientID) }}</span>
+                  <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
+                    {{ clientGroup.holdings.length }}支基金
+                  </span>
+                </div>
+                <span class="expand-icon-single">{{ expandedClients.has(clientGroup.id) ? '−' : '+' }}</span>
               </div>
-              <span class="expand-icon">{{ expandedClients.has('Pinned') ? '−' : '+' }}</span>
             </div>
             
-            <div v-if="expandedClients.has('Pinned')" class="section-content">
-              <div 
-                v-for="holding in pinnedHoldings" 
+            <div v-if="expandedClients.has(clientGroup.id)" class="group-content-single">
+              <div
+                v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
                 :key="holding.id"
                 class="holding-card-detailed"
               >
@@ -761,11 +750,9 @@ onMounted(() => {
                     <div class="fund-name-row">
                       <h4 class="fund-name">{{ holding.fundName }}</h4>
                       <span class="fund-code">({{ holding.fundCode }})</span>
-                      <span class="pin-indicator">📌</span>
                     </div>
-                    <div class="client-info-row">
-                      <span class="client-name">{{ processClientName(holding.clientName) }}</span>
-                      <span v-if="holding.clientID" class="client-id">({{ holding.clientID }})</span>
+                    <div v-if="!isPrivacyMode" class="client-info-row">
+                      <span class="purchase-date">购买日期: {{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN') }}</span>
                     </div>
                   </div>
                   <div class="nav-info">
@@ -815,106 +802,9 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-          
-          <!-- 客户分组 -->
-          <div 
-            v-for="sectionKey in sortedSectionKeys.filter(key => key !== '★')" 
-            :key="sectionKey"
-            class="section"
-          >
-            <div class="section-letter">{{ sectionKey }}</div>
-            
-            <div 
-              v-for="clientGroup in sectionedClientGroups[sectionKey]" 
-              :key="clientGroup.id"
-              class="client-group"
-            >
-              <div 
-                class="group-header"
-                @click="expandedClients.has(clientGroup.id) ? expandedClients.delete(clientGroup.id) : expandedClients.add(clientGroup.id)"
-              >
-                <div class="header-content">
-                  <div class="client-info">
-                    <span class="client-name">{{ processClientName(clientGroup.clientName) }}</span>
-                    <span v-if="clientGroup.clientID" class="client-id">({{ clientGroup.clientID }})</span>
-                  </div>
-                  <span class="holdings-count" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
-                    {{ clientGroup.holdings.length }}支
-                  </span>
-                </div>
-                <span class="expand-icon">{{ expandedClients.has(clientGroup.id) ? '−' : '+' }}</span>
-              </div>
               
-              <div v-if="expandedClients.has(clientGroup.id)" class="group-content">
-                <div 
-                  v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)" 
-                  :key="holding.id"
-                  class="holding-card-detailed"
-                >
-                  <div class="holding-header-detailed">
-                    <div class="holding-info-detailed">
-                      <div class="fund-name-row">
-                        <h4 class="fund-name">{{ holding.fundName }}</h4>
-                        <span class="fund-code">({{ holding.fundCode }})</span>
-                        <span v-if="holding.isPinned" class="pin-indicator">📌</span>
-                      </div>
-                      <div v-if="!isPrivacyMode" class="client-info-row">
-                        <span class="purchase-date">购买日期: {{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN') }}</span>
-                      </div>
-                    </div>
-                    <div class="nav-info">
-                      <span class="nav-value">{{ holding.currentNav.toFixed(4) }}</span>
-                      <span class="nav-date">({{ new Date(holding.navDate).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) }})</span>
-                    </div>
-                  </div>
-                  
-                  <div class="holding-details-detailed">
-                    <div class="detail-row">
-                      <span class="detail-label">购买金额:</span>
-                      <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                      <span class="detail-label" style="margin-left: 16px;">份额:</span>
-                      <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                      <span class="detail-label">收益:</span>
-                      <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
-                        {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
-                      </span>
-                    </div>
-                    
-                    <div class="detail-row">
-                      <span class="detail-label">收益率:</span>
-                      <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute / holding.purchaseAmount * 100) }">
-                        {{ formatPercentage(calculateProfit(holding).absolute / holding.purchaseAmount * 100) }}
-                      </span>
-                      <span class="detail-label-small">[绝对]</span>
-                      <span class="separator">|</span>
-                      <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
-                        {{ formatPercentage(calculateProfit(holding).annualized) }}
-                      </span>
-                      <span class="detail-label-small">[年化]</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                      <span class="detail-label">购买日期:</span>
-                      <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
-                      <span class="detail-label" style="margin-left: 16px;">持有天数:</span>
-                      <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
-                    </div>
-                    
-                    <div v-if="holding.remarks" class="detail-row">
-                      <span class="detail-label">备注:</span>
-                      <span class="detail-value">{{ holding.remarks }}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
-                  <button @click="loadedGroupedClientCount += 10">加载更多</button>
-                </div>
+              <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
+                <button @click="loadedGroupedClientCount += 10">加载更多</button>
               </div>
             </div>
           </div>
@@ -942,35 +832,12 @@ onMounted(() => {
   background: var(--bg-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   transition: background-color 0.3s ease;
-}
-
-.back-button {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  cursor: pointer;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease;
-}
-
-.back-button:hover {
-  background: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  overflow-x: hidden;
 }
 
 .header-section {
   background: var(--bg-primary);
-  padding: 80px 16px 16px;
+  padding: 20px 16px 16px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
@@ -1128,7 +995,7 @@ onMounted(() => {
 
 .content-area {
   padding: 16px;
-  min-height: calc(100vh - 200px);
+  min-height: calc(100vh - 150px);
   overflow-y: auto;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
@@ -1219,11 +1086,6 @@ onMounted(() => {
   font-family: 'Monaco', 'Courier New', monospace;
 }
 
-.pin-indicator {
-  font-size: 12px;
-  color: #f97316;
-}
-
 .client-info-row {
   display: flex;
   align-items: center;
@@ -1231,15 +1093,13 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.client-name {
+.client-name-id {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
-}
-
-.client-id {
-  font-size: 12px;
-  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .nav-info {
@@ -1314,13 +1174,13 @@ onMounted(() => {
   background: #2563eb;
 }
 
-.sections-container {
+.clients-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.section {
+.client-group-single {
   background: var(--bg-card);
   border-radius: 12px;
   overflow: hidden;
@@ -1328,63 +1188,54 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-.section-letter {
-  padding: 8px 16px;
-  background: var(--bg-hover);
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-}
-
-.pinned-header {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-}
-
-.section-header {
+.group-header-single {
   padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
   transition: background 0.2s ease;
+  border-bottom: 1px solid var(--bg-hover);
 }
 
-.section-header:hover {
-  background: rgba(0, 0, 0, 0.05);
+.group-header-single:hover {
+  background: var(--bg-hover);
 }
 
-.pinned-header:hover {
-  background: rgba(102, 126, 234, 0.9);
+.header-content-single {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
-.header-content {
+.client-info-single {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
 }
 
-.pin-icon {
-  font-size: 16px;
-}
-
-.section-title {
+.client-name-id-single {
   font-size: 16px;
   font-weight: 600;
+  color: var(--text-primary);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.holdings-count {
+.holdings-count-single {
   font-size: 12px;
   font-weight: 500;
   padding: 2px 8px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--accent-color-rgb), 0.1);
 }
 
-.expand-icon {
+.expand-icon-single {
   font-size: 18px;
   width: 24px;
   height: 24px;
@@ -1393,34 +1244,7 @@ onMounted(() => {
   justify-content: center;
 }
 
-.group-header {
-  padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  border-bottom: 1px solid var(--bg-hover);
-  transition: background 0.2s ease;
-}
-
-.group-header:hover {
-  background: var(--bg-hover);
-}
-
-.client-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.client-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  display: block;
-  margin-bottom: 2px;
-}
-
-.group-content {
+.group-content-single {
   padding: 12px;
   background: var(--bg-hover);
   border-top: 1px solid var(--border-color);
@@ -1468,20 +1292,13 @@ onMounted(() => {
 
 /* 响应式调整 */
 @media (max-width: 768px) {
-  .back-button {
-    top: 10px;
-    left: 10px;
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
-  }
-  
   .header-section {
-    padding: 60px 12px 12px;
+    padding: 15px 12px 12px;
   }
   
   .content-area {
     padding: 12px;
+    min-height: calc(100vh - 130px);
   }
   
   .holding-header-detailed {
@@ -1501,14 +1318,20 @@ onMounted(() => {
   .detail-label {
     min-width: 50px;
   }
+  
+  .client-info-single {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .client-name-id-single {
+    width: 100%;
+  }
 }
 
 /* 深色模式特定样式 */
 @media (prefers-color-scheme: dark) {
-  body.dark-mode .pinned-header {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-  }
-  
   body.dark-mode .refresh-btn {
     background: linear-gradient(135deg, #667eea, #764ba2);
   }

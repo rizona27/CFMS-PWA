@@ -240,8 +240,8 @@
           <button class="form-button cancel" @click="goBack">
             取消
           </button>
-          <button 
-            class="form-button submit" 
+          <button
+            class="form-button submit"
             :class="{ 'disabled': !isFormValid }"
             @click="saveHolding"
             :disabled="!isFormValid || isSaving"
@@ -298,7 +298,7 @@ const clientID = ref('')
 const fundCode = ref('')
 const purchaseAmount = ref('')
 const purchaseShares = ref('')
-const purchaseDate = ref(getTodayDate())  // 现在 getTodayDate 已经定义了
+const purchaseDate = ref(getTodayDate())
 const remarks = ref('')
 
 // 验证错误
@@ -334,8 +334,8 @@ const isFormValid = computed(() => {
          !purchaseSharesError.value &&
          clientName.value.trim() !== '' &&
          fundCode.value.trim() !== '' &&
-         purchaseAmount.value.trim() !== '' &&
-         purchaseShares.value.trim() !== '' &&
+         purchaseAmount.value !== '' &&
+         purchaseShares.value !== '' &&
          purchaseDate.value.trim() !== ''
 })
 
@@ -343,8 +343,8 @@ const validationErrors = computed(() => {
   const errors: string[] = []
   if (!clientName.value.trim()) errors.push('客户姓名')
   if (!fundCode.value.trim()) errors.push('基金代码')
-  if (!purchaseAmount.value.trim()) errors.push('购买金额')
-  if (!purchaseShares.value.trim()) errors.push('购买份额')
+  if (!purchaseAmount.value) errors.push('购买金额')
+  if (!purchaseShares.value) errors.push('购买份额')
   if (clientNameError.value) errors.push('客户姓名验证')
   if (fundCodeError.value) errors.push('基金代码验证')
   if (purchaseAmountError.value) errors.push('购买金额验证')
@@ -419,12 +419,14 @@ const validateFundCode = () => {
 }
 
 const validatePurchaseAmount = () => {
-  const amount = parseFloat(purchaseAmount.value)
+  const amountStr = purchaseAmount.value
   
-  if (!purchaseAmount.value.trim()) {
+  if (!amountStr) {
     purchaseAmountError.value = '购买金额不能为空'
     return false
   }
+  
+  const amount = parseFloat(amountStr)
   
   if (isNaN(amount) || amount <= 0) {
     purchaseAmountError.value = '请输入有效的正数金额'
@@ -443,12 +445,14 @@ const validatePurchaseAmount = () => {
 }
 
 const validatePurchaseShares = () => {
-  const shares = parseFloat(purchaseShares.value)
+  const sharesStr = purchaseShares.value
   
-  if (!purchaseShares.value.trim()) {
+  if (!sharesStr) {
     purchaseSharesError.value = '购买份额不能为空'
     return false
   }
+  
+  const shares = parseFloat(sharesStr)
   
   if (isNaN(shares) || shares <= 0) {
     purchaseSharesError.value = '请输入有效的正数份额'
@@ -571,8 +575,8 @@ const saveHolding = async () => {
     // 通过dataStore保存持仓（统一数据架构）
     dataStore.addHolding(newHolding)
     
-    logAction('持仓操作', 
-      `持仓添加成功: 客户 ${newHolding.clientName} - 基金 ${newHolding.fundCode} - 金额 ¥${newHolding.purchaseAmount.toFixed(2)} - 份额 ${newHolding.purchaseShares.toFixed(2)}`, 
+    logAction('持仓操作',
+      `持仓添加成功: 客户 ${newHolding.clientName} - 基金 ${newHolding.fundCode} - 金额 ¥${newHolding.purchaseAmount.toFixed(2)} - 份额 ${newHolding.purchaseShares.toFixed(2)}`,
       'success'
     )
     

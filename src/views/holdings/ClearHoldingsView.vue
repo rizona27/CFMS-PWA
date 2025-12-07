@@ -251,6 +251,17 @@ const goBack = () => {
 // 初始化
 onMounted(() => {
   calculateStats()
+  
+  // 禁止缩放
+  const metaViewport = document.querySelector('meta[name="viewport"]')
+  if (metaViewport) {
+    metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
+  } else {
+    const meta = document.createElement('meta')
+    meta.name = 'viewport'
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+    document.head.appendChild(meta)
+  }
 })
 </script>
 
@@ -260,6 +271,8 @@ onMounted(() => {
   background: var(--bg-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   position: relative;
+  overflow-y: auto; /* 添加滚动支持 */
+  height: 100vh;
 }
 
 .back-button {
@@ -290,6 +303,8 @@ onMounted(() => {
   padding: 80px 20px 40px;
   max-width: 600px;
   margin: 0 auto;
+  min-height: 100%;
+  overflow-y: auto;
 }
 
 .header {
@@ -704,6 +719,12 @@ onMounted(() => {
   
   .clear-button {
     padding: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-area {
+    padding: 60px 12px 24px;
   }
 }
 </style>

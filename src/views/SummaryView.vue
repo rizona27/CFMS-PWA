@@ -20,6 +20,7 @@ const updatingTextTimer = ref<number | null>(null)
 // 重新渲染键
 const refreshKey = ref(0)
 const privacyKey = ref(0)
+const themeKey = ref(0)
 
 // 计算属性
 const holdings = computed(() => dataStore.holdings)
@@ -64,7 +65,7 @@ const filteredHoldings = computed(() => {
   if (!searchText.value) return holdings.value
   
   const searchLower = searchText.value.toLowerCase()
-  return holdings.value.filter(holding => 
+  return holdings.value.filter(holding =>
     holding.clientName.toLowerCase().includes(searchLower) ||
     holding.fundCode.toLowerCase().includes(searchLower) ||
     holding.fundName.toLowerCase().includes(searchLower) ||
@@ -243,7 +244,7 @@ const formatReturn = (value: number | null | undefined) => {
 
 const getReturnColor = (value: number | null | undefined) => {
   if (value == null) return '#666'
-  return value >= 0 ? '#10b981' : '#ef4444'
+  return value > 0 ? '#ef4444' : value < 0 ? '#10b981' : '#666'  // 正红负绿零黑
 }
 
 const getHoldingReturn = (holding: any) => {
@@ -252,11 +253,16 @@ const getHoldingReturn = (holding: any) => {
   return ((currentValue - holding.purchaseAmount) / holding.purchaseAmount) * 100
 }
 
-const getPrivacyName = (name: string) => {
+const processClientName = (name: string) => {
   if (!dataStore.isPrivacyMode) return name
   if (name.length <= 1) return name
   if (name.length === 2) return name.charAt(0) + '*'
   return name.charAt(0) + '*'.repeat(name.length - 2) + name.charAt(name.length - 1)
+}
+
+const getDisplayName = (clientName: string, clientID: string): string => {
+  const processedName = processClientName(clientName)
+  return clientID ? `${processedName}(${clientID})` : processedName
 }
 
 const getFundDisplayName = (name: string) => {
@@ -408,6 +414,7 @@ const handlePrivacyModeChange = (event: any) => {
   // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
+  themeKey.value = Date.now()
   
   dataStore.addLog(`隐私模式变化: ${enabled ? '开启' : '关闭'}`, 'info')
 }
@@ -417,6 +424,7 @@ const handleThemeChange = (event: any) => {
   const { theme } = event.detail
   console.log(`SummaryView: 主题变化到 ${theme}`)
   applyThemeToDocument(theme)
+  themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
 
@@ -431,6 +439,7 @@ const handleGlobalPrivacyModeChange = (event: any) => {
   // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
+  themeKey.value = Date.now()
 }
 
 // 应用主题到文档
@@ -493,6 +502,21 @@ const updateCSSVariables = (theme: 'light' | 'dark') => {
   }
 }
 
+// 强制同步处理器
+const handleForcePrivacySync = () => {
+  console.log('SummaryView: 收到强制隐私同步事件')
+  privacyKey.value = Date.now()
+  refreshKey.value = Date.now()
+}
+
+const handleForceThemeSync = () => {
+  console.log('SummaryView: 收到强制主题同步事件')
+  const savedTheme = localStorage.getItem('themeMode') || 'system'
+  applyThemeToDocument(savedTheme)
+  themeKey.value = Date.now()
+  refreshKey.value = Date.now()
+}
+
 // 响应式变量
 const showOutdatedToast = ref(false)
 const autoHideTimer = ref<number | null>(null)
@@ -501,6 +525,8 @@ const autoHideTimer = ref<number | null>(null)
 watch(() => dataStore.isPrivacyMode, (newValue) => {
   console.log(`SummaryView: dataStore.isPrivacyMode变化到 ${newValue}`)
   privacyKey.value = Date.now()
+  refreshKey.value = Date.now()
+  themeKey.value = Date.now()
 })
 
 // 生命周期
@@ -511,6 +537,17 @@ onMounted(() => {
   // 初始化主题
   const savedTheme = localStorage.getItem('themeMode') || 'system'
   applyThemeToDocument(savedTheme)
+  
+  // 禁止缩放
+  const metaViewport = document.querySelector('meta[name="viewport"]')
+  if (metaViewport) {
+    metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
+  } else {
+    const meta = document.createElement('meta')
+    meta.name = 'viewport'
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+    document.head.appendChild(meta)
+  }
   
   dataStore.addLog('用户访问概览视图页面', 'info')
   
@@ -527,6 +564,10 @@ onMounted(() => {
   window.addEventListener('theme-changed', handleThemeChange)
   window.addEventListener('theme-changed-global', handleThemeChange)
   
+  // 监听强制同步事件
+  window.addEventListener('force-privacy-sync', handleForcePrivacySync)
+  window.addEventListener('force-theme-sync', handleForceThemeSync)
+  
   // 监听系统主题变化
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   const handleSystemThemeChange = (e: MediaQueryListEvent) => {
@@ -534,6 +575,7 @@ onMounted(() => {
     if (currentTheme === 'system') {
       applyThemeToDocument('system')
       refreshKey.value = Date.now()
+      themeKey.value = Date.now()
     }
   }
   mediaQuery.addEventListener('change', handleSystemThemeChange)
@@ -548,23 +590,20 @@ onMounted(() => {
     window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
     window.removeEventListener('theme-changed', handleThemeChange)
     window.removeEventListener('theme-changed-global', handleThemeChange)
+    window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
+    window.removeEventListener('force-theme-sync', handleForceThemeSync)
     mediaQuery.removeEventListener('change', handleSystemThemeChange)
   })
 })
 </script>
 
 <template>
-  <div class="summary-view" :key="`${refreshKey}-${privacyKey}`">
-    <!-- 返回按钮 -->
-    <div class="back-button" @click="$router.back()">
-      <span class="back-icon">←</span>
-    </div>
-    
+  <div class="summary-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
     <!-- 标题和状态栏 -->
     <div class="header-section">
       <div class="header-row">
         <div class="action-buttons">
-          <button 
+          <button
             class="action-btn"
             :class="{ active: areAnyCardsExpanded }"
             @click="toggleAllCards"
@@ -573,7 +612,7 @@ onMounted(() => {
             {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
           </button>
           
-          <button 
+          <button
             class="action-btn"
             :class="{ active: isSearchExpanded }"
             @click="toggleSearch"
@@ -581,26 +620,24 @@ onMounted(() => {
           >
             🔍
           </button>
-        </div>
-        
-        <div class="sort-controls">
-          <button 
-            class="sort-btn"
+          
+          <!-- 近期收益排序按钮 -->
+          <button
+            class="action-btn"
             :class="{ active: selectedSortKey !== 'none' }"
             @click="cycleSortKey"
             :style="{ color: selectedSortKey !== 'none' ? sortKeyColor : '' }"
+            :title="selectedSortKey !== 'none' ? `${sortKeyDisplay}排序` : '选择排序方式'"
           >
-            <span class="sort-icon">{{ sortButtonIcon }}</span>
-            <span v-if="selectedSortKey !== 'none'" class="sort-label">
-              {{ sortKeyDisplay }}
-            </span>
+            {{ sortButtonIcon }}
           </button>
           
-          <button 
+          <button
             v-if="selectedSortKey !== 'none'"
-            class="order-btn"
+            class="action-btn"
             @click="toggleSortOrder"
             :style="{ background: sortKeyColor }"
+            :title="`${sortOrder === 'ascending' ? '升序' : '降序'}`"
           >
             {{ sortOrder === 'ascending' ? '↑' : '↓' }}
           </button>
@@ -611,7 +648,7 @@ onMounted(() => {
             {{ statusText }}
           </div>
           
-          <button 
+          <button
             v-if="showRefreshButton"
             class="refresh-btn"
             @click.stop="handleRefresh"
@@ -635,8 +672,8 @@ onMounted(() => {
             class="search-input"
             @input="performSearch(searchText)"
           />
-          <button 
-            v-if="searchText" 
+          <button
+            v-if="searchText"
             class="clear-search"
             @click="clearSearch"
           >
@@ -661,25 +698,25 @@ onMounted(() => {
       </div>
       
       <div v-else class="funds-container">
-        <div 
-          v-for="fundCode in sortedFundCodes" 
+        <div
+          v-for="fundCode in sortedFundCodes"
           :key="fundCode"
           class="fund-card-wrapper"
         >
-          <div 
+          <div
             class="fund-card"
             :class="{ expanded: expandedFundCodes.has(fundCode) }"
             @click="toggleFundCard(fundCode)"
           >
             <div class="fund-header">
-              <div class="fund-info">
+              <div class="fund-info-single-line">
                 <h3 class="fund-name">{{ getFundName(fundCode) }}</h3>
-                <span class="fund-code">[{{ fundCode }}]</span>
+                <span class="fund-code-text">[{{ fundCode }}]</span>
               </div>
               
               <div v-if="!isPrivacyMode" class="client-count">
                 <span class="count-label">持有人数:</span>
-                <span 
+                <span
                   class="count-value"
                   :style="{ color: getClientCountColor(groupedByFund[fundCode].length) }"
                 >
@@ -701,7 +738,7 @@ onMounted(() => {
                 <div class="returns-grid">
                   <div class="return-item">
                     <span class="return-label">近1月:</span>
-                    <span 
+                    <span
                       class="return-value"
                       :style="{ color: getReturnColor(getFundReturn(fundCode, '1m')) }"
                     >
@@ -710,7 +747,7 @@ onMounted(() => {
                   </div>
                   <div class="return-item">
                     <span class="return-label">近3月:</span>
-                    <span 
+                    <span
                       class="return-value"
                       :style="{ color: getReturnColor(getFundReturn(fundCode, '3m')) }"
                     >
@@ -719,7 +756,7 @@ onMounted(() => {
                   </div>
                   <div class="return-item">
                     <span class="return-label">近6月:</span>
-                    <span 
+                    <span
                       class="return-value"
                       :style="{ color: getReturnColor(getFundReturn(fundCode, '6m')) }"
                     >
@@ -728,7 +765,7 @@ onMounted(() => {
                   </div>
                   <div class="return-item">
                     <span class="return-label">近1年:</span>
-                    <span 
+                    <span
                       class="return-value"
                       :style="{ color: getReturnColor(getFundReturn(fundCode, '1y')) }"
                     >
@@ -737,21 +774,21 @@ onMounted(() => {
                   </div>
                 </div>
                 
-                <!-- 客户信息显示 - 参考Swift实现 -->
-                <div v-if="expandedFundCodes.has(fundCode)" class="clients-section">
+                <!-- 客户信息显示 - 仅在隐私模式关闭时显示 -->
+                <div v-if="expandedFundCodes.has(fundCode) && !isPrivacyMode" class="clients-section">
                   <div class="clients-header">
                     <span class="clients-label">持有客户:</span>
                   </div>
                   <div class="clients-list">
-                    <span 
-                      v-for="(holding, index) in groupedByFund[fundCode]" 
+                    <span
+                      v-for="(holding, index) in groupedByFund[fundCode]"
                       :key="holding.id"
                       class="client-item"
                     >
-                      <span class="client-name">
-                        {{ getPrivacyName(holding.clientName) }}
+                      <span class="client-name-id">
+                        {{ getDisplayName(holding.clientName, holding.clientID) }}
                       </span>
-                      <span 
+                      <span
                         v-if="getHoldingReturn(holding) !== null"
                         class="client-return"
                         :style="{ color: getReturnColor(getHoldingReturn(holding)) }"
@@ -786,13 +823,13 @@ onMounted(() => {
     <div v-if="showOutdatedToast" class="outdated-toast">
       <div class="toast-content">
         <div class="toast-header">
-          非最新日期净值: 
+          非最新日期净值:
           <span class="outdated-count">{{ outdatedFundCodes.length }}</span>
           支
         </div>
         <div v-if="outdatedFundCodes.length > 0" class="toast-list">
-          <div 
-            v-for="[fundCode, fundName] in getSortedUniqueOutdatedFunds().slice(0, 5)" 
+          <div
+            v-for="[fundCode, fundName] in getSortedUniqueOutdatedFunds().slice(0, 5)"
             :key="fundCode"
             class="toast-item"
           >
@@ -813,35 +850,12 @@ onMounted(() => {
   background: var(--bg-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   transition: background-color 0.3s ease;
-}
-
-.back-button {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  cursor: pointer;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease;
-}
-
-.back-button:hover {
-  background: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  overflow-x: hidden;
 }
 
 .header-section {
   background: var(--bg-primary);
-  padding: 80px 16px 16px;
+  padding: 20px 16px 16px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
@@ -883,60 +897,6 @@ onMounted(() => {
   border-color: var(--accent-color);
   background: var(--accent-color);
   color: white;
-}
-
-.sort-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.sort-btn {
-  padding: 6px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
-  background: var(--bg-card);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 12px;
-  color: var(--text-primary);
-}
-
-.sort-btn:hover {
-  border-color: var(--accent-color);
-  background: var(--bg-hover);
-}
-
-.sort-btn.active {
-  border-color: currentColor;
-  background: rgba(var(--accent-color-rgb), 0.1);
-}
-
-.sort-icon {
-  font-size: 16px;
-}
-
-.sort-label {
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.order-btn {
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 50%;
-  background: var(--accent-color);
-  color: white;
-  font-size: 14px;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .status-indicator {
@@ -1049,7 +1009,7 @@ onMounted(() => {
 
 .content-area {
   padding: 16px;
-  min-height: calc(100vh - 200px);
+  min-height: calc(100vh - 150px);
   overflow-y: auto;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
@@ -1139,28 +1099,35 @@ onMounted(() => {
   gap: 8px;
 }
 
-.fund-info {
+.fund-info-single-line {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .fund-name {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 4px 0;
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
-.fund-code {
+.fund-code-text {
   font-size: 13px;
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
   background: var(--bg-hover);
   padding: 2px 6px;
   border-radius: 4px;
+  white-space: nowrap;
 }
 
 .client-count {
@@ -1170,6 +1137,7 @@ onMounted(() => {
   font-size: 12px;
   color: var(--text-secondary);
   margin-right: 8px;
+  white-space: nowrap;
 }
 
 .count-label {
@@ -1179,6 +1147,10 @@ onMounted(() => {
 .count-value {
   font-weight: 600;
   font-style: italic;
+}
+
+.client-count-placeholder {
+  width: 80px; /* 占位，保持对齐 */
 }
 
 .expand-icon {
@@ -1266,7 +1238,7 @@ onMounted(() => {
   gap: 2px;
 }
 
-.client-name {
+.client-name-id {
   font-size: 13px;
   color: var(--text-primary);
 }
@@ -1377,25 +1349,28 @@ onMounted(() => {
 
 /* 响应式调整 */
 @media (max-width: 768px) {
-  .back-button {
-    top: 10px;
-    left: 10px;
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
-  }
-  
   .header-section {
-    padding: 60px 12px 12px;
+    padding: 15px 12px 12px;
   }
   
   .content-area {
     padding: 12px;
+    min-height: calc(100vh - 130px);
   }
   
   .returns-grid {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+  
+  .fund-info-single-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .fund-name, .fund-code-text {
+    width: 100%;
   }
 }
 

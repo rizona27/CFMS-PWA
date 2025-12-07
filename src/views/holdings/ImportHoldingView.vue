@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import NavBar from '@/components/layout/NavBar.vue'
 import ToastMessage from '@/components/common/ToastMessage.vue'
 import { useDataStore } from '@/stores/dataStore'
 import { fundService } from '@/services/fundService'
@@ -12,11 +11,11 @@ interface ImportResult {
   failed: number
   skipped: number
   total: number
-  errors: Array<{ 
-    line: number; 
-    field: string; 
-    message: string; 
-    value: string 
+  errors: Array<{
+    line: number;
+    field: string;
+    message: string;
+    value: string
   }>
   successItems: Array<{
     client_name: string
@@ -37,11 +36,8 @@ const importProgress = ref({ current: 0, total: 0 })
 const progressPercentage = ref(0)
 const currentProcessingLine = ref('')
 
-const settings = ref({
-  overwrite: false,
-  skipDuplicates: true,
-  autoFetchFundInfo: true
-})
+// 使用dataStore中的导入设置
+const settings = computed(() => dataStore.userPreferences.importSettings)
 
 const showToast = ref(false)
 const toastMessage = ref('')
@@ -90,25 +86,25 @@ const validateCSVRow = (row: any, lineIndex: number) => {
   
   // 验证客户姓名
   if (!row.client_name || row.client_name.trim() === '') {
-    errors.push({ 
-      field: '客户姓名', 
-      message: '不能为空', 
-      value: row.client_name || '' 
+    errors.push({
+      field: '客户姓名',
+      message: '不能为空',
+      value: row.client_name || ''
     })
   } else {
     const name = row.client_name.trim()
     const hasChinese = /[\u4e00-\u9fa5]/.test(name)
     if (hasChinese && name.length > 5) {
-      errors.push({ 
-        field: '客户姓名', 
-        message: '包含汉字时长度不能超过5个字符', 
-        value: name 
+      errors.push({
+        field: '客户姓名',
+        message: '包含汉字时长度不能超过5个字符',
+        value: name
       })
     } else if (!hasChinese && name.length > 15) {
-      errors.push({ 
-        field: '客户姓名', 
-        message: '英文姓名不超过15个字母', 
-        value: name 
+      errors.push({
+        field: '客户姓名',
+        message: '英文姓名不超过15个字母',
+        value: name
       })
     }
   }
@@ -117,103 +113,103 @@ const validateCSVRow = (row: any, lineIndex: number) => {
   if (row.client_id && row.client_id.trim() !== '') {
     const clientId = row.client_id.trim()
     if (!/^\d*$/.test(clientId)) {
-      errors.push({ 
-        field: '客户号', 
-        message: '只能包含数字', 
-        value: clientId 
+      errors.push({
+        field: '客户号',
+        message: '只能包含数字',
+        value: clientId
       })
     }
     if (clientId.length > 20) {
-      errors.push({ 
-        field: '客户号', 
-        message: '不能超过20个字符', 
-        value: clientId 
+      errors.push({
+        field: '客户号',
+        message: '不能超过20个字符',
+        value: clientId
       })
     }
   }
   
   // 验证基金代码
   if (!row.fund_code || !/^\d{6}$/.test(row.fund_code)) {
-    errors.push({ 
-      field: '基金代码', 
-      message: '必须是6位数字', 
-      value: row.fund_code || '' 
+    errors.push({
+      field: '基金代码',
+      message: '必须是6位数字',
+      value: row.fund_code || ''
     })
   }
   
   // 验证购买金额
   if (!row.purchase_amount || isNaN(parseFloat(row.purchase_amount))) {
-    errors.push({ 
-      field: '购买金额', 
-      message: '必须是有效数字', 
-      value: row.purchase_amount || '' 
+    errors.push({
+      field: '购买金额',
+      message: '必须是有效数字',
+      value: row.purchase_amount || ''
     })
   } else {
     const amount = parseFloat(row.purchase_amount)
     if (amount <= 0) {
-      errors.push({ 
-        field: '购买金额', 
-        message: '必须大于0', 
-        value: amount.toString() 
+      errors.push({
+        field: '购买金额',
+        message: '必须大于0',
+        value: amount.toString()
       })
     }
     if (amount > 999999999.99) {
-      errors.push({ 
-        field: '购买金额', 
-        message: '不能超过999,999,999.99', 
-        value: amount.toString() 
+      errors.push({
+        field: '购买金额',
+        message: '不能超过999,999,999.99',
+        value: amount.toString()
       })
     }
   }
   
   // 验证购买份额
   if (!row.purchase_shares || isNaN(parseFloat(row.purchase_shares))) {
-    errors.push({ 
-      field: '购买份额', 
-      message: '必须是有效数字', 
-      value: row.purchase_shares || '' 
+    errors.push({
+      field: '购买份额',
+      message: '必须是有效数字',
+      value: row.purchase_shares || ''
     })
   } else {
     const shares = parseFloat(row.purchase_shares)
     if (shares <= 0) {
-      errors.push({ 
-        field: '购买份额', 
-        message: '必须大于0', 
-        value: shares.toString() 
+      errors.push({
+        field: '购买份额',
+        message: '必须大于0',
+        value: shares.toString()
       })
     }
     if (shares > 999999.9999) {
-      errors.push({ 
-        field: '购买份额', 
-        message: '不能超过999,999.9999', 
-        value: shares.toString() 
+      errors.push({
+        field: '购买份额',
+        message: '不能超过999,999.9999',
+        value: shares.toString()
       })
     }
   }
   
   // 验证购买日期
   if (!row.purchase_date) {
-    errors.push({ 
-      field: '购买日期', 
-      message: '不能为空', 
-      value: row.purchase_date || '' 
+    errors.push({
+      field: '购买日期',
+      message: '不能为空',
+      value: row.purchase_date || ''
     })
   } else {
     const date = new Date(row.purchase_date)
     if (isNaN(date.getTime())) {
-      errors.push({ 
-        field: '购买日期', 
-        message: '日期格式无效', 
-        value: row.purchase_date 
+      errors.push({
+        field: '购买日期',
+        message: '日期格式无效',
+        value: row.purchase_date
       })
     } else {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       if (date > today) {
-        errors.push({ 
-          field: '购买日期', 
-          message: '不能晚于今天', 
-          value: row.purchase_date 
+        errors.push({
+          field: '购买日期',
+          message: '不能晚于今天',
+          value: row.purchase_date
         })
       }
     }
@@ -432,6 +428,10 @@ const showNotification = (message: string, type: 'info' | 'success' | 'error' | 
   toastMessage.value = message
   toastType.value = type
   showToast.value = true
+  
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
 }
 
 const goBack = () => {

@@ -105,8 +105,13 @@
                 v-model="formData.fund_name"
                 type="text"
                 class="form-input"
-                placeholder="自动获取或手动输入"
+                :readonly="true"
+                placeholder="自动获取基金名称"
+                style="background-color: var(--bg-hover); cursor: not-allowed;"
               />
+              <div class="hint-message">
+                基金名称根据基金代码自动获取，不可编辑
+              </div>
             </div>
           </div>
         </div>
@@ -293,10 +298,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useDataStore } from '@/stores/dataStore'
-import type { Holding } from '@/types/data'
 
 interface Props {
-  holding?: Holding | null
+  holding?: any | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -313,7 +317,7 @@ const dataStore = useDataStore()
 // 组件状态
 const isSubmitting = ref(false)
 
-// 表单数据 - 使用 Holding 类型
+// 表单数据 - 使用兼容格式
 const formData = ref({
   id: '',
   client_name: '',
@@ -346,59 +350,51 @@ const errors = ref({
   purchase_date: ''
 })
 
-// 计算属性
-const maxDate = computed(() => {
-  return new Date().toISOString().split('T')[0]
-})
-
-const isFormValid = computed(() => {
-  return (
-    formData.value.client_name.trim() !== '' &&
-    formData.value.fund_code.trim() !== '' &&
-    formData.value.purchase_amount > 0 &&
-    formData.value.purchase_shares > 0 &&
-    formData.value.purchase_date !== '' &&
-    Object.values(errors.value).every(error => error === '')
-  )
-})
-
-// 监听props变化，初始化表单数据
-watch(() => props.holding, (newHolding) => {
-  if (newHolding) {
-    loadFormData(newHolding)
-  } else {
-    resetForm()
-  }
-}, { immediate: true })
-
+// ========== 辅助函数 ==========
 // 加载表单数据
-const loadFormData = (holding: Holding) => {
-  formData.value = {
-    id: holding.id,
-    client_name: holding.client_name,
-    client_id: holding.client_id,
-    fund_code: holding.fund_code,
-    fund_name: holding.fund_name,
-    purchase_amount: holding.purchase_amount,
-    purchase_shares: holding.purchase_shares,
-    purchase_date: holding.purchase_date,
-    current_nav: holding.current_nav,
-    nav_date: holding.nav_date,
-    is_pinned: holding.is_pinned,
-    pinned_timestamp: holding.pinned_timestamp,
-    remarks: holding.remarks || '',
-    created_at: holding.created_at || new Date().toISOString(),
-    updated_at: holding.updated_at || new Date().toISOString(),
-    nav_return_1m: (holding as any).nav_return_1m,
-    nav_return_3m: (holding as any).nav_return_3m,
-    nav_return_6m: (holding as any).nav_return_6m,
-    nav_return_1y: (holding as any).nav_return_1y
+const loadFormData = (holding: any) => {
+  // 处理从dataStore来的数据格式
+  if (holding) {
+    formData.value = {
+      id: holding.id || crypto.randomUUID(),
+      client_name: holding.clientName || holding.client_name || '',
+      client_id: holding.clientID || holding.client_id || '',
+      fund_code: holding.fundCode || holding.fund_code || '',
+      fund_name: holding.fundName || holding.fund_name || '',
+      purchase_amount: holding.purchaseAmount || holding.purchase_amount || 0,
+      purchase_shares: holding.purchaseShares || holding.purchase_shares || 0,
+      purchase_date: holding.purchaseDate
+        ? (holding.purchaseDate instanceof Date
+          ? holding.purchaseDate.toISOString().split('T')[0]
+          : holding.purchaseDate.split('T')[0])
+        : getTodayDate(),
+      current_nav: holding.currentNav || holding.current_nav || 0,
+      nav_date: holding.navDate
+        ? (holding.navDate instanceof Date
+          ? holding.navDate.toISOString().split('T')[0]
+          : holding.navDate.split('T')[0])
+        : getTodayDate(),
+      is_pinned: holding.isPinned || holding.is_pinned || false,
+      pinned_timestamp: holding.pinnedTimestamp || holding.pinned_timestamp || null,
+      remarks: holding.remarks || '',
+      created_at: holding.created_at || new Date().toISOString().replace('T', ' ').substring(0, 19),
+      updated_at: holding.updated_at || new Date().toISOString().replace('T', ' ').substring(0, 19),
+      nav_return_1m: holding.navReturn1m || holding.nav_return_1m,
+      nav_return_3m: holding.navReturn3m || holding.nav_return_3m,
+      nav_return_6m: holding.navReturn6m || holding.nav_return_6m,
+      nav_return_1y: holding.navReturn1y || holding.nav_return_1y
+    }
   }
+}
+
+// 获取今日日期字符串
+const getTodayDate = (): string => {
+  return new Date().toISOString().split('T')[0]
 }
 
 // 重置表单
 const resetForm = () => {
-  const now = new Date().toISOString().split('T')[0]
+  const now = getTodayDate()
   
   formData.value = {
     id: crypto.randomUUID(),
@@ -414,8 +410,8 @@ const resetForm = () => {
     is_pinned: false,
     pinned_timestamp: null,
     remarks: '',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+    updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
     nav_return_1m: undefined,
     nav_return_3m: undefined,
     nav_return_6m: undefined,
@@ -428,7 +424,23 @@ const resetForm = () => {
   })
 }
 
-// 验证函数（移植自Swift代码）
+// ========== 计算属性 ==========
+const maxDate = computed(() => {
+  return getTodayDate()
+})
+
+const isFormValid = computed(() => {
+  return (
+    formData.value.client_name.trim() !== '' &&
+    formData.value.fund_code.trim() !== '' &&
+    formData.value.purchase_amount > 0 &&
+    formData.value.purchase_shares > 0 &&
+    formData.value.purchase_date !== '' &&
+    Object.values(errors.value).every(error => error === '')
+  )
+})
+
+// ========== 验证函数 ==========
 const validateClientName = () => {
   const name = formData.value.client_name.trim()
   
@@ -539,6 +551,7 @@ const validateDate = () => {
   errors.value.purchase_date = ''
 }
 
+// ========== 表单处理函数 ==========
 // 提交表单
 const handleSubmit = async () => {
   if (!isFormValid.value) {
@@ -582,6 +595,16 @@ const handleCancel = () => {
   }
 }
 
+// ========== 生命周期 ==========
+// 监听props变化，初始化表单数据
+watch(() => props.holding, (newHolding) => {
+  if (newHolding) {
+    loadFormData(newHolding)
+  } else {
+    resetForm()
+  }
+}, { immediate: true })
+
 // 初始化
 onMounted(() => {
   if (!props.holding) {
@@ -595,6 +618,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-height: 90vh;
   background: var(--bg-card);
   border-radius: 16px;
   overflow: hidden;
@@ -608,6 +632,7 @@ onMounted(() => {
   background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
   color: white;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .header-content {
@@ -651,6 +676,7 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  max-height: calc(90vh - 200px);
 }
 
 .holding-form {
@@ -862,7 +888,37 @@ onMounted(() => {
   background: var(--border-color);
 }
 
+/* 提示信息样式 */
+.hint-message {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* 滚动条样式 */
+.form-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.form-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.form-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.form-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
 @media (max-width: 768px) {
+  .edit-holding-form {
+    max-height: 85vh;
+  }
+  
   .form-header {
     padding: 16px;
   }
@@ -873,6 +929,7 @@ onMounted(() => {
   
   .form-scroll {
     padding: 16px;
+    max-height: calc(85vh - 140px);
   }
   
   .form-section {

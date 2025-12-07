@@ -1,6 +1,6 @@
 <template>
   <transition name="toast">
-    <div v-if="show" class="toast-message" :class="[type, position]" :style="styleObject">
+    <div v-if="show" class="toast-message" :class="[type]" :style="styleObject">
       <div class="toast-icon" v-if="icon">{{ icon }}</div>
       <span class="toast-text">{{ message }}</span>
     </div>
@@ -14,49 +14,40 @@ interface Props {
   show: boolean
   message: string
   type?: 'info' | 'success' | 'error' | 'warning'
-  position?: 'top' | 'middle' | 'bottom'
   duration?: number
   icon?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   type: 'info',
-  position: 'bottom',
   duration: 3000,
   icon: ''
 })
 
 const styleObject = computed(() => {
-  const styles: any = {}
-  
-  if (props.position === 'top') {
-    styles.top = '20px'
-    styles.bottom = 'auto'
-  } else if (props.position === 'middle') {
-    styles.top = '50%'
-    styles.transform = 'translate(-50%, -50%)'
-    styles.bottom = 'auto'
-  } else {
-    styles.bottom = '100px'
+  return {
+    top: '20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    maxWidth: '90%',
+    width: 'auto',
+    minWidth: '120px',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
   }
-  
-  return styles
 })
 </script>
 
 <style scoped>
 .toast-message {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 24px;
-  border-radius: 12px;
+  z-index: 9999;
+  padding: 12px 20px;
+  border-radius: 10px;
   background: var(--bg-card);
   color: var(--text-primary);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  z-index: 9999;
-  max-width: 80%;
-  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -66,20 +57,7 @@ const styleObject = computed(() => {
   animation-fill-mode: forwards;
   font-size: 14px;
   font-weight: 500;
-}
-
-.toast-message.top {
-  top: 20px;
-  bottom: auto;
-}
-
-.toast-message.middle {
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.toast-message.bottom {
-  bottom: 100px;
+  line-height: 1.4;
 }
 
 .toast-icon {
@@ -89,6 +67,8 @@ const styleObject = computed(() => {
 
 .toast-text {
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 类型样式 */
@@ -116,7 +96,7 @@ const styleObject = computed(() => {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translate(-50%, 20px);
+    transform: translate(-50%, -20px);
   }
   to {
     opacity: 1;
@@ -127,20 +107,30 @@ const styleObject = computed(() => {
 @keyframes toast-out {
   to {
     opacity: 0;
-    transform: translate(-50%, 20px);
+    transform: translate(-50%, -20px);
   }
 }
 
 /* 响应式 */
 @media (max-width: 768px) {
   .toast-message {
-    max-width: 90%;
     padding: 10px 16px;
     font-size: 13px;
+    max-width: 92%;
+    top: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .toast-message {
+    padding: 8px 14px;
+    font-size: 12px;
+    max-width: 95%;
+    top: 12px;
   }
   
-  .toast-message.bottom {
-    bottom: 80px;
+  .toast-icon {
+    font-size: 14px;
   }
 }
 </style>

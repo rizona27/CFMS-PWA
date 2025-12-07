@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// 添加正确的导入
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
@@ -10,6 +9,7 @@ const dataStore = useDataStore()
 // 重新渲染键
 const refreshKey = ref(0)
 const privacyKey = ref(0)
+const themeKey = ref(0)
 
 // 状态
 const isFilterExpanded = ref(false)
@@ -293,10 +293,10 @@ const formatAmountInTenThousands = (amount: number) => {
   return tenThousand.toFixed(2)
 }
 
-// 修复：负数显示红色，正数显示绿色，零显示灰色
+// 修复：负数显示绿色，正数显示红色，零显示灰色
 const getValueColor = (value: number) => {
-  if (value > 0) return '#10b981'  // 正数：绿色
-  if (value < 0) return '#ef4444'  // 负数：红色
+  if (value > 0) return '#ef4444'  // 正数：红色
+  if (value < 0) return '#10b981'  // 负数：绿色
   return '#666'                    // 零：灰色
 }
 
@@ -318,6 +318,7 @@ const handlePrivacyModeChange = (event: any) => {
   // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
+  themeKey.value = Date.now()
   
   dataStore.addLog(`隐私模式变化: ${enabled ? '开启' : '关闭'}`, 'info')
 }
@@ -333,6 +334,7 @@ const handleGlobalPrivacyModeChange = (event: any) => {
   // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
+  themeKey.value = Date.now()
 }
 
 // 主题变化处理器
@@ -340,6 +342,7 @@ const handleThemeChange = (event: any) => {
   const { theme } = event.detail
   console.log(`TopPerformersView: 主题变化到 ${theme}`)
   applyThemeToDocument(theme)
+  themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
 
@@ -398,11 +401,27 @@ const updateCSSVariables = (theme: 'light' | 'dark') => {
   }
 }
 
+// 强制同步处理器
+const handleForcePrivacySync = () => {
+  console.log('TopPerformersView: 收到强制隐私同步事件')
+  privacyKey.value = Date.now()
+  refreshKey.value = Date.now()
+}
+
+const handleForceThemeSync = () => {
+  console.log('TopPerformersView: 收到强制主题同步事件')
+  const savedTheme = localStorage.getItem('themeMode') || 'system'
+  applyThemeToDocument(savedTheme)
+  themeKey.value = Date.now()
+  refreshKey.value = Date.now()
+}
+
 // 监听隐私模式变化
 watch(() => dataStore.isPrivacyMode, (newValue) => {
   console.log(`TopPerformersView: dataStore.isPrivacyMode变化到 ${newValue}`)
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
+  themeKey.value = Date.now()
 })
 
 // 监听持仓数据变化
@@ -415,6 +434,17 @@ onMounted(() => {
   refreshData()
   dataStore.addLog('用户访问收益排行页面', 'info')
   
+  // 禁止缩放
+  const metaViewport = document.querySelector('meta[name="viewport"]')
+  if (metaViewport) {
+    metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
+  } else {
+    const meta = document.createElement('meta')
+    meta.name = 'viewport'
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+    document.head.appendChild(meta)
+  }
+  
   // 监听隐私模式变化
   window.addEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.addEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
@@ -422,6 +452,10 @@ onMounted(() => {
   // 监听主题变化
   window.addEventListener('theme-changed', handleThemeChange)
   window.addEventListener('theme-changed-global', handleThemeChange)
+  
+  // 监听强制同步事件
+  window.addEventListener('force-privacy-sync', handleForcePrivacySync)
+  window.addEventListener('force-theme-sync', handleForceThemeSync)
   
   // 初始化主题
   const savedTheme = localStorage.getItem('themeMode') || 'system'
@@ -434,21 +468,18 @@ onUnmounted(() => {
   window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
   window.removeEventListener('theme-changed', handleThemeChange)
   window.removeEventListener('theme-changed-global', handleThemeChange)
+  window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
+  window.removeEventListener('force-theme-sync', handleForceThemeSync)
 })
 </script>
 
 <template>
-  <div class="top-performers-view" :key="`${refreshKey}-${privacyKey}`">
-    <!-- 返回按钮 -->
-    <div class="back-button" @click="$router.back()">
-      <span class="back-icon">←</span>
-    </div>
-    
+  <div class="top-performers-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
     <!-- 标题和状态栏 -->
     <div class="header-section">
       <div class="header-row">
         <div class="action-buttons">
-          <button 
+          <button
             class="action-btn"
             :class="{ active: isFilterExpanded }"
             @click="toggleFilter"
@@ -458,8 +489,8 @@ onUnmounted(() => {
           </button>
         </div>
         
-        <div class="sort-controls">
-          <button 
+        <div class="sort-controls" :class="{ 'with-filter': isFilterExpanded }">
+          <button
             class="sort-btn"
             :class="{ active: selectedSortKey !== 'none' }"
             @click="cycleSortKey"
@@ -471,7 +502,7 @@ onUnmounted(() => {
             </span>
           </button>
           
-          <button 
+          <button
             v-if="selectedSortKey !== 'none'"
             class="order-btn"
             @click="toggleSortOrder"
@@ -591,8 +622,8 @@ onUnmounted(() => {
         
         <!-- 表格内容 -->
         <div class="table-body">
-          <div 
-            v-for="(item, index) in filteredAndSortedHoldings" 
+          <div
+            v-for="(item, index) in filteredAndSortedHoldings"
             :key="item.holding.id"
             class="table-row"
             :class="{ 'zero-profit-divider': zeroProfitIndex === index }"
@@ -637,33 +668,9 @@ onUnmounted(() => {
   transition: background-color 0.3s ease;
 }
 
-.back-button {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  cursor: pointer;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease;
-}
-
-.back-button:hover {
-  background: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
 .header-section {
   background: var(--bg-primary);
-  padding: 80px 16px 16px;
+  padding: 20px 16px 16px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
@@ -711,6 +718,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.sort-controls.with-filter {
+  flex: 0;
 }
 
 .sort-btn {
@@ -863,7 +876,7 @@ onUnmounted(() => {
 
 .content-area {
   padding: 16px;
-  min-height: calc(100vh - 200px);
+  min-height: calc(100vh - 150px);
   overflow-y: auto;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
@@ -1078,20 +1091,13 @@ onUnmounted(() => {
 
 /* 响应式调整 */
 @media (max-width: 768px) {
-  .back-button {
-    top: 10px;
-    left: 10px;
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
-  }
-  
   .header-section {
-    padding: 60px 12px 12px;
+    padding: 15px 12px 12px;
   }
   
   .content-area {
     padding: 12px;
+    min-height: calc(100vh - 130px);
   }
   
   .table-header {
