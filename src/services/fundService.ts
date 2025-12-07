@@ -27,7 +27,7 @@ export interface FundReturns {
 
 // 定义代理列表，按优先级排序
 const PROXY_SERVICES = [
-  // 直接访问（如果CORS允许）
+  // 直接访问（通常会在浏览器环境失败，但保留作为第一尝试）
   (url: string) => url,
   // CORS代理服务
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -65,10 +65,7 @@ const FUND_API_CONFIG = {
 
 class FundService {
   private dataStore: any
-  private currentProxyIndex = 0
-  private retryCount = 0
-  private readonly MAX_RETRIES = 3
-
+  
   constructor() {
     this.dataStore = useDataStore()
   }
@@ -81,14 +78,18 @@ class FundService {
   // 尝试使用代理获取数据
   private async fetchWithProxy(url: string, options?: RequestInit): Promise<Response> {
     const proxiesToTry = [...PROXY_SERVICES]
+    let lastError: any = null;
     
-    for (const proxy of proxiesToTry) {
+    for (let i = 0; i < proxiesToTry.length; i++) {
+      const proxy = proxiesToTry[i];
+      const isDirect = i === 0;
+      
       try {
         const proxyUrl = proxy(url)
+        const proxyName = isDirect ? '直接访问' : `代理服务(${i})`
         
-        // 记录代理尝试
-        const proxyName = proxy === PROXY_SERVICES[0] ? '直接访问' : '代理服务'
-        console.log(`尝试使用${proxyName}: ${proxyUrl.substring(0, 100)}...`)
+        // 仅在控制台记录尝试，不写入UI日志以免造成干扰
+        console.debug(`尝试请求: ${proxyName} -> ${url}`)
         
         const response = await fetch(proxyUrl, {
           ...options,
@@ -105,20 +106,30 @@ class FundService {
         })
 
         if (response.ok) {
-          console.log(`代理成功: ${proxyName}`)
-          this.dataStore.addLog(`基金数据请求成功 (使用${proxyName})`, 'network')
+          if (!isDirect) {
+             console.log(`代理成功: ${proxyName}`)
+          }
+          // 只有非直连成功才记录一条网络日志，或者完全不记录以保持清爽
+          if (!isDirect) {
+            this.dataStore.addLog(`数据请求成功 (使用${proxyName})`, 'network')
+          }
           return response
         }
         
-        console.warn(`代理响应失败: ${response.status} ${response.statusText}`)
-        this.dataStore.addLog(`基金数据请求失败: ${response.status} ${response.statusText} (使用${proxyName})`, 'warning')
+        // 如果失败，仅在控制台警告，继续下一次循环
+        console.warn(`节点响应非200: ${response.status} ${response.statusText} (使用${proxyName})`)
+        
       } catch (error) {
-        console.warn(`代理请求失败:`, error)
-        this.dataStore.addLog(`基金数据请求失败: ${(error as Error).message}`, 'error')
+        lastError = error;
+        // 仅控制台记录，不打扰用户
+        // console.debug(`节点请求异常:`, error)
       }
     }
     
-    throw new Error('所有代理尝试失败')
+    // 如果循环结束仍未返回，说明所有尝试都失败了
+    console.error(`所有代理尝试均失败:`, lastError)
+    this.dataStore.addLog(`基金数据请求最终失败: 无法连接到数据源`, 'error')
+    throw new Error('网络请求失败：所有代理节点均无法访问')
   }
 
   // 获取基金实时净值
@@ -126,7 +137,8 @@ class FundService {
     const apiType = this.getSelectedAPI()
     
     try {
-      this.dataStore.addLog(`获取基金 ${fundCode} 实时净值 (API: ${apiType})`, 'network')
+      // 减少日志噪音，不记录每次开始
+      // this.dataStore.addLog(`获取基金 ${fundCode} 实时净值 (API: ${apiType})`, 'network')
       
       switch (apiType) {
         case 'eastmoney':
@@ -159,11 +171,11 @@ class FundService {
       const cached = this.dataStore.getFundFromCache(fundCode)
       if (cached) {
         console.log(`从缓存获取基金信息: ${fundCode}`)
-        this.dataStore.addLog(`从缓存获取基金 ${fundCode} 信息`, 'cache')
+        // 降低缓存日志级别或不显示
         return cached
       }
 
-      this.dataStore.addLog(`开始获取基金 ${fundCode} 信息 (API: ${apiType})`, 'network')
+      this.dataStore.addLog(`正在更新基金 ${fundCode} 信息...`, 'network')
       
       let fundInfo: FundInfo
       
@@ -217,10 +229,8 @@ class FundService {
       let returns: FundReturns = {}
       try {
         returns = await this.fetchReturnsFromEastmoney(fundCode)
-        this.dataStore.addLog(`成功获取基金 ${fundCode} 收益率数据`, 'success')
       } catch (error) {
         console.warn(`获取基金 ${fundCode} 收益率失败:`, error)
-        this.dataStore.addLog(`获取基金 ${fundCode} 收益率失败: ${(error as Error).message}`, 'warning')
       }
 
       return {
@@ -232,7 +242,7 @@ class FundService {
       }
     } catch (error) {
       // 如果实时API失败，尝试备用API
-      this.dataStore.addLog(`天天基金实时API失败，尝试备用方案`, 'warning')
+      console.warn(`天天基金实时API失败，尝试备用方案`)
       return await this.fetchFromEastMoneyFallback(fundCode)
     }
   }
@@ -257,7 +267,7 @@ class FundService {
       
       throw new Error('无效的响应格式')
     } catch (error) {
-      console.warn(`天天基金实时API失败，尝试备用方案:`, error)
+      // 这里不抛出，由上层处理fallback
       throw error
     }
   }
@@ -296,7 +306,7 @@ class FundService {
       
       const returns: FundReturns = {}
       
-      // 使用更精确的正则表达式匹配（模仿 Swift 版本）
+      // 使用更精确的正则表达式匹配
       const patterns = [
         { key: 'navReturn1m' as const, regex: /syl_1y\s*=\s*"([^"]*)"/ },
         { key: 'navReturn3m' as const, regex: /syl_3y\s*=\s*"([^"]*)"/ },
@@ -314,7 +324,6 @@ class FundService {
         }
       }
       
-      // 如果还是没找到，尝试另一种模式（Swift 版本中的模式）
       if (Object.values(returns).filter(v => v !== undefined).length === 0) {
         const alternativePattern = /syl_(1y|3y|6y|1n)\s*=\s*"([^"]*)"/
         let match
@@ -336,7 +345,6 @@ class FundService {
       return returns
     } catch (error) {
       console.warn(`获取收益率数据失败，使用模拟数据:`, error)
-      this.dataStore.addLog(`获取基金 ${fundCode} 收益率数据失败，使用模拟数据`, 'warning')
       return this.generateMockReturns()
     }
   }
@@ -362,7 +370,6 @@ class FundService {
       }
     } catch (error) {
       console.error(`同花顺API失败:`, error)
-      this.dataStore.addLog(`同花顺API失败，回退到天天基金`, 'warning')
       // 回退到天天基金
       return await this.fetchFromEastMoney(fundCode)
     }
@@ -390,7 +397,6 @@ class FundService {
       throw new Error('无效的响应格式')
     } catch (error) {
       console.error(`腾讯财经API失败:`, error)
-      this.dataStore.addLog(`腾讯财经API失败，回退到天天基金`, 'warning')
       // 回退到天天基金
       return await this.fetchFromEastMoney(fundCode)
     }
@@ -413,7 +419,6 @@ class FundService {
       }
     } catch (error) {
       console.error(`蚂蚁基金API失败:`, error)
-      this.dataStore.addLog(`蚂蚁基金API失败，回退到天天基金`, 'warning')
       // 回退到天天基金
       return await this.fetchFromEastMoney(fundCode)
     }
@@ -456,9 +461,7 @@ class FundService {
       }
     }
     
-    this.dataStore.addLog(`批量获取基金信息完成，成功 ${results.filter(r => r.name !== '获取失败').length}/${fundCodes.length}`, 
-      results.filter(r => r.name !== '获取失败').length === fundCodes.length ? 'success' : 'warning')
-    
+    this.dataStore.addLog(`批量获取基金信息完成`, 'success')
     return results
   }
 }

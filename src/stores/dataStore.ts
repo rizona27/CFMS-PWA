@@ -318,8 +318,10 @@ export const useDataStore = defineStore('data', () => {
       if (savedPreferences) {
         const data = JSON.parse(savedPreferences)
         userPreferences.value = { ...userPreferences.value, ...data }
-        isPrivacyMode.value = data.isPrivacyMode || true
-        showRefreshButton.value = data.showRefreshButton || false
+        
+        // 关键修复：确保 isPrivacyMode 状态同步
+        isPrivacyMode.value = userPreferences.value.isPrivacyMode ?? true
+        showRefreshButton.value = userPreferences.value.showRefreshButton || false
       }
       
       const savedLogs = localStorage.getItem('fundLogs')
@@ -368,6 +370,8 @@ export const useDataStore = defineStore('data', () => {
       }))
       localStorage.setItem('fundHoldings', JSON.stringify(holdingsData))
       
+      // 保存偏好设置 - 确保 isPrivacyMode 被保存到 userPreferences
+      userPreferences.value.isPrivacyMode = isPrivacyMode.value
       localStorage.setItem('userPreferences', JSON.stringify(userPreferences.value))
       
       const logsToSave = logMessages.value.slice(-500).map(log => ({
@@ -389,6 +393,7 @@ export const useDataStore = defineStore('data', () => {
     
     userPreferences.value = { ...userPreferences.value, ...preferences }
     
+    // 显式同步 isPrivacyMode
     if (preferences.isPrivacyMode !== undefined) {
       isPrivacyMode.value = preferences.isPrivacyMode
       

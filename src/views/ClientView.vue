@@ -8,7 +8,7 @@ const router = useRouter()
 const dataStore = useDataStore()
 
 const refreshKey = ref(0)
-const privacyKey = ref(0)
+const privacyKey = ref(0) // 用于强制重新渲染受隐私模式影响的组件
 const themeKey = ref(0)
 
 const isSearchExpanded = ref(false)
@@ -19,31 +19,32 @@ const updatingTextState = ref(0)
 const updatingTextTimer = ref<number | null>(null)
 const loadedGroupedClientCount = ref(10)
 const loadedSearchResultCount = ref(10)
-const refreshID = ref(0)
 
 const holdings = computed(() => dataStore.holdings)
+// 直接使用 store 的状态
 const isPrivacyMode = computed(() => dataStore.isPrivacyMode)
 const showRefreshButton = computed(() => dataStore.showRefreshButton)
 const refreshProgress = computed(() => dataStore.refreshProgress)
-const groupedByClient = computed(() => dataStore.groupedByClient)
+
+// 监听隐私模式变化，触发重绘
+watch(isPrivacyMode, (newValue) => {
+  console.log(`ClientView 检测到隐私模式变更: ${newValue}`)
+  privacyKey.value = Date.now()
+})
 
 const previousWorkday = computed(() => {
   const today = new Date()
   const date = new Date(today)
-  
   while (true) {
     date.setDate(date.getDate() - 1)
     const weekday = date.getDay()
-    if (weekday >= 1 && weekday <= 5) {
-      return date
-    }
+    if (weekday >= 1 && weekday <= 5) return date
   }
 })
 
 const latestNavDate = computed(() => {
   const validHoldings = holdings.value.filter(h => h.isValid && h.navDate <= new Date())
   if (validHoldings.length === 0) return null
-  
   return validHoldings.reduce((latest, holding) => {
     const date = new Date(holding.navDate)
     return date > latest ? date : latest
@@ -51,34 +52,17 @@ const latestNavDate = computed(() => {
 })
 
 const hasLatestNavDate = computed(() => {
-  if (holdings.value.length === 0 || holdings.value.every(h => !h.isValid)) {
-    return false
-  }
-  
-  const previousWorkdayStart = previousWorkday.value
-  return holdings.value.some(holding => {
-    return holding.isValid && isSameDay(new Date(holding.navDate), previousWorkdayStart)
-  })
-})
-
-const outdatedClients = computed(() => {
-  const previousWorkdayStart = previousWorkday.value
-  const outdatedHoldings = holdings.value.filter(holding => {
-    return holding.isValid && !isSameDay(new Date(holding.navDate), previousWorkdayStart)
-  })
-  return Array.from(new Set(outdatedHoldings.map(h => h.clientName)))
+  if (holdings.value.length === 0 || holdings.value.every(h => !h.isValid)) return false
+  return holdings.value.some(holding => holding.isValid && isSameDay(new Date(holding.navDate), previousWorkday.value))
 })
 
 const latestNavDateString = computed(() => {
   const latestDate = latestNavDate.value
   if (!latestDate) return '暂无数据'
-  
   const formatter = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' })
   const dateString = formatter.format(latestDate)
-  
-  if (hasLatestNavDate.value) {
-    return `最新日期: ${dateString}`
-  } else {
+  if (hasLatestNavDate.value) return `最新日期: ${dateString}`
+  else {
     const prevDateString = formatter.format(previousWorkday.value)
     return `待更新: ${prevDateString}`
   }
@@ -86,24 +70,17 @@ const latestNavDateString = computed(() => {
 
 const groupedHoldingsByClientName = computed(() => {
   const allHoldings = holdings.value
-  
   const groupedDictionary: Record<string, typeof allHoldings> = {}
   allHoldings.forEach(holding => {
     const key = holding.clientName
-    if (!groupedDictionary[key]) {
-      groupedDictionary[key] = []
-    }
+    if (!groupedDictionary[key]) groupedDictionary[key] = []
     groupedDictionary[key].push(holding)
   })
   
   const clientGroups = Object.entries(groupedDictionary).map(([clientName, holdings]) => {
     const totalAUM = holdings.reduce((sum, holding) => sum + (holding.currentNav * holding.purchaseShares), 0)
     const representativeClientID = holdings[0]?.clientID || ''
-    
-    const sortedHoldings = [...holdings].sort((a, b) => {
-      return new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime()
-    })
-    
+    const sortedHoldings = [...holdings].sort((a, b) => new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime())
     return {
       id: clientName,
       clientName,
@@ -114,7 +91,6 @@ const groupedHoldingsByClientName = computed(() => {
   })
   
   clientGroups.sort((a, b) => a.clientName.localeCompare(b.clientName, 'zh-CN'))
-  
   return clientGroups
 })
 
@@ -122,7 +98,6 @@ const areAnyCardsExpanded = computed(() => expandedClients.value.size > 0)
 
 const searchResults = computed(() => {
   if (!searchText.value) return []
-  
   const searchLower = searchText.value.toLowerCase()
   return holdings.value.filter(holding =>
     holding.clientName.toLowerCase().includes(searchLower) ||
@@ -139,6 +114,7 @@ const updatingText = computed(() => {
   return baseText + dots
 })
 
+// 关键修复：直接调用 store 的方法，无需额外逻辑
 const getClientDisplayName = (clientName: string, clientID: string): string => {
   return dataStore.getClientDisplayName(clientName, clientID)
 }
@@ -157,42 +133,25 @@ const calculateHoldingDays = (holding: any) => {
 }
 
 const calculateProfit = (holding: any) => {
-  if (!holding.isValid || holding.purchaseAmount <= 0) {
-    return { absolute: 0, annualized: 0 }
-  }
-  
+  if (!holding.isValid || holding.purchaseAmount <= 0) return { absolute: 0, annualized: 0 }
   const currentValue = holding.currentNav * holding.purchaseShares
   const absoluteProfit = currentValue - holding.purchaseAmount
-  
   const holdingDays = calculateHoldingDays(holding)
   const absoluteReturnPercentage = (absoluteProfit / holding.purchaseAmount) * 100
-  const annualizedReturn = holdingDays > 0 ?
-    (Math.pow(1 + absoluteReturnPercentage / 100, 365 / holdingDays) - 1) * 100 : 0
-  
-  return {
-    absolute: absoluteProfit,
-    annualized: annualizedReturn
-  }
+  const annualizedReturn = holdingDays > 0 ? (Math.pow(1 + absoluteReturnPercentage / 100, 365 / holdingDays) - 1) * 100 : 0
+  return { absolute: absoluteProfit, annualized: annualizedReturn }
 }
 
 const formatCurrency = (amount: number) => {
-  if (amount >= 10000 && amount % 10000 === 0) {
-    return `${(amount / 10000).toFixed(0)}万`
-  } else if (amount >= 10000) {
-    return `${(amount / 10000).toFixed(2)}万`
-  } else {
-    return `${amount.toFixed(2)}元`
-  }
+  if (amount >= 10000 && amount % 10000 === 0) return `${(amount / 10000).toFixed(0)}万`
+  else if (amount >= 10000) return `${(amount / 10000).toFixed(2)}万`
+  else return `${amount.toFixed(2)}元`
 }
 
 const formatPercentage = (value: number) => {
-  if (value > 0) {
-    return `+${value.toFixed(2)}%`
-  } else if (value < 0) {
-    return `${value.toFixed(2)}%`
-  } else {
-    return '0.00%'
-  }
+  if (value > 0) return `+${value.toFixed(2)}%`
+  else if (value < 0) return `${value.toFixed(2)}%`
+  else return '0.00%'
 }
 
 const getReturnColor = (value: number) => {
@@ -215,19 +174,13 @@ const isSameDay = (date1: Date, date2: Date) => {
 
 const onStatusTextTap = () => {
   if (holdings.value.length === 0) return
-  
   showStatusText.value = false
-  
   setTimeout(() => {
     dataStore.updateUserPreferences({ showRefreshButton: true })
-    
     autoHideTimer.value = setTimeout(() => {
       if (!isRefreshing.value) {
         dataStore.updateUserPreferences({ showRefreshButton: false })
-        
-        setTimeout(() => {
-          showStatusText.value = true
-        }, 500)
+        setTimeout(() => { showStatusText.value = true }, 500)
       }
     }, 5000) as unknown as number
   }, 500)
@@ -235,22 +188,17 @@ const onStatusTextTap = () => {
 
 const handleRefresh = async () => {
   if (isRefreshing.value) return
-  
   isRefreshing.value = true
   startUpdatingTextAnimation()
   dataStore.startRefresh()
   dataStore.addLog('开始刷新基金数据', 'info')
   
   const total = holdings.value.length
-  
   try {
     for (let i = 0; i < total; i++) {
       const holding = holdings.value[i]
-      
       try {
-        dataStore.addLog(`正在刷新基金 ${holding.fundCode} 数据...`, 'network')
         const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
-        
         if (fundInfo.name && fundInfo.nav > 0) {
           await dataStore.updateHolding(holding.id, {
             fundName: fundInfo.name,
@@ -262,13 +210,10 @@ const handleRefresh = async () => {
             navReturn6m: fundInfo.returns?.navReturn6m,
             navReturn1y: fundInfo.returns?.navReturn1y
           })
-          dataStore.addLog(`基金 ${holding.fundCode} 数据更新成功`, 'success')
         }
       } catch (error) {
-        console.error(`刷新基金 ${holding.fundCode} 失败:`, error)
-        dataStore.addLog(`基金 ${holding.fundCode} 数据更新失败: ${(error as Error).message}`, 'error')
+        // fundService 已经记录了错误
       }
-      
       dataStore.updateRefreshProgress(i + 1)
       await new Promise(resolve => setTimeout(resolve, 100))
     }
@@ -277,15 +222,10 @@ const handleRefresh = async () => {
     isRefreshing.value = false
     stopUpdatingTextAnimation()
     dataStore.addLog('基金数据刷新完成', 'success')
-    
     refreshKey.value = Date.now()
-    
     setTimeout(() => {
       dataStore.updateUserPreferences({ showRefreshButton: false })
-      
-      setTimeout(() => {
-        showStatusText.value = true
-      }, 500)
+      setTimeout(() => { showStatusText.value = true }, 500)
     }, 1000)
   }
 }
@@ -307,48 +247,20 @@ const stopUpdatingTextAnimation = () => {
 const showStatusText = computed({
   get: () => !dataStore.showRefreshButton,
   set: (value) => {
-    if (!value) {
-      dataStore.updateUserPreferences({ showRefreshButton: true })
-    }
+    if (!value) dataStore.updateUserPreferences({ showRefreshButton: true })
   }
 })
 
-const handlePrivacyModeChange = (event: any) => {
-  const { enabled } = event.detail
-  console.log(`ClientView: 隐私模式变化到 ${enabled}`)
-  
-  dataStore.isPrivacyMode = enabled
-  
-  privacyKey.value = Date.now()
-  refreshKey.value = Date.now()
-  themeKey.value = Date.now()
-  
-  dataStore.addLog(`隐私模式变化: ${enabled ? '开启' : '关闭'}`, 'info')
-}
-
-const handleGlobalPrivacyModeChange = (event: any) => {
-  const { enabled } = event.detail
-  console.log(`ClientView: 收到全局隐私模式变化事件: ${enabled}`)
-  
-  dataStore.isPrivacyMode = enabled
-  
-  privacyKey.value = Date.now()
-  refreshKey.value = Date.now()
-  themeKey.value = Date.now()
-}
-
+// 主题相关逻辑
 const handleThemeChange = (event: any) => {
   const { theme } = event.detail
-  console.log(`ClientView: 主题变化到 ${theme}`)
   applyThemeToDocument(theme)
   themeKey.value = Date.now()
-  refreshKey.value = Date.now()
 }
 
 const applyThemeToDocument = (mode: string) => {
   const root = document.documentElement
   const body = document.body
-  
   root.classList.remove('theme-light', 'theme-dark', 'theme-system')
   body.classList.remove('light-mode', 'dark-mode')
   
@@ -371,15 +283,10 @@ const applyThemeToDocument = (mode: string) => {
       updateCSSVariables('light')
     }
   }
-  
-  nextTick(() => {
-    void body.offsetHeight
-  })
 }
 
 const updateCSSVariables = (theme: 'light' | 'dark') => {
   const root = document.documentElement
-  
   if (theme === 'dark') {
     root.style.setProperty('--bg-primary', '#000000')
     root.style.setProperty('--bg-card', '#1c1c1e')
@@ -401,28 +308,7 @@ const updateCSSVariables = (theme: 'light' | 'dark') => {
   }
 }
 
-const handleForcePrivacySync = () => {
-  console.log('ClientView: 收到强制隐私同步事件')
-  privacyKey.value = Date.now()
-  refreshKey.value = Date.now()
-}
-
-const handleForceThemeSync = () => {
-  console.log('ClientView: 收到强制主题同步事件')
-  const savedTheme = localStorage.getItem('themeMode') || 'system'
-  applyThemeToDocument(savedTheme)
-  themeKey.value = Date.now()
-  refreshKey.value = Date.now()
-}
-
 const autoHideTimer = ref<number | null>(null)
-
-watch(() => dataStore.isPrivacyMode, (newValue) => {
-  console.log(`ClientView: dataStore.isPrivacyMode变化到 ${newValue}`)
-  privacyKey.value = Date.now()
-  refreshKey.value = Date.now()
-  themeKey.value = Date.now()
-})
 
 watch(holdings, () => {
   refreshKey.value = Date.now()
@@ -430,37 +316,17 @@ watch(holdings, () => {
 
 onMounted(() => {
   dataStore.init()
-  
   const savedTheme = localStorage.getItem('themeMode') || 'system'
   applyThemeToDocument(savedTheme)
   
-  const metaViewport = document.querySelector('meta[name="viewport"]')
-  if (metaViewport) {
-    metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
-  } else {
-    const meta = document.createElement('meta')
-    meta.name = 'viewport'
-    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
-    document.head.appendChild(meta)
-  }
-  
-  dataStore.addLog('用户访问客户视图页面', 'info')
-  
-  window.addEventListener('privacy-mode-changed', handlePrivacyModeChange)
-  window.addEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
-  
   window.addEventListener('theme-changed', handleThemeChange)
   window.addEventListener('theme-changed-global', handleThemeChange)
-  
-  window.addEventListener('force-privacy-sync', handleForcePrivacySync)
-  window.addEventListener('force-theme-sync', handleForceThemeSync)
   
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   const handleSystemThemeChange = (e: MediaQueryListEvent) => {
     const currentTheme = localStorage.getItem('themeMode') || 'system'
     if (currentTheme === 'system') {
       applyThemeToDocument('system')
-      refreshKey.value = Date.now()
       themeKey.value = Date.now()
     }
   }
@@ -470,12 +336,9 @@ onMounted(() => {
     updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
     autoHideTimer.value !== null && clearTimeout(autoHideTimer.value)
     
-    window.removeEventListener('privacy-mode-changed', handlePrivacyModeChange)
-    window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
+    // 移除了隐私模式相关的 window 事件监听
     window.removeEventListener('theme-changed', handleThemeChange)
     window.removeEventListener('theme-changed-global', handleThemeChange)
-    window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
-    window.removeEventListener('force-theme-sync', handleForceThemeSync)
     mediaQuery.removeEventListener('change', handleSystemThemeChange)
   })
 })
@@ -709,6 +572,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 样式保持不变 */
 .client-view {
   min-height: 100vh;
   background: var(--bg-primary);
@@ -716,7 +580,7 @@ onMounted(() => {
   transition: background-color 0.3s ease;
   overflow-x: hidden;
 }
-
+/* ... 剩余样式 ... */
 .header-section {
   background: var(--bg-primary);
   padding: 16px 16px 12px;
