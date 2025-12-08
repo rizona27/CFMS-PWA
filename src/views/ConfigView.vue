@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useDataStore } from '../stores/dataStore'
 import CustomCard from '@/components/common/CustomCard.vue'
-import ToastMessage from '@/components/common/ToastMessage.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -33,10 +32,6 @@ const showNotification = (message: string, type: 'info' | 'success' | 'error' | 
 
 watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
   console.log(`隐私模式变化: ${oldValue} -> ${newValue}`)
-  
-  // 移除这里的 key 更新，防止触发根组件重新渲染导致跳回顶部
-  // privacyKey.value = Date.now()
-  // refreshKey.value = Date.now()
   
   if (isPrivacyInitialized && oldValue !== newValue) {
     showNotification(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')
@@ -118,6 +113,15 @@ const fundAPIs = [
 ]
 const selectedAPI = ref(dataStore.userPreferences.selectedFundAPI || 'eastmoney')
 
+// 主题模式选项
+const themeModes = [
+  { name: '跟随系统', value: 'system', icon: 'system', color: '#6b7280' },
+  { name: '浅色模式', value: 'light', icon: 'light', color: '#f59e0b' },
+  { name: '深色模式', value: 'dark', icon: 'dark', color: '#3b82f6' }
+]
+
+const selectedTheme = ref(dataStore.userPreferences.themeMode || 'system')
+
 const handleAPIChange = () => {
   const oldAPI = dataStore.userPreferences.selectedFundAPI
   dataStore.updateUserPreferences({ selectedFundAPI: selectedAPI.value })
@@ -125,6 +129,30 @@ const handleAPIChange = () => {
   dataStore.addLog(`数据接口已从${oldAPI}切换至: ${selectedAPI.value}`, 'info')
   
   showNotification(`数据接口已切换至: ${fundAPIs.find(a => a.value === selectedAPI.value)?.name || selectedAPI.value}`, 'success')
+}
+
+// 处理主题切换
+const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
+  const oldMode = dataStore.userPreferences.themeMode
+  if (oldMode === mode) return
+  
+  dataStore.updateThemeMode(mode)
+  selectedTheme.value = mode
+  
+  const modeName = mode === 'system' ? '跟随系统' : mode === 'light' ? '浅色模式' : '深色模式'
+  showNotification(`主题已切换为: ${modeName}`, 'success')
+  
+  // 触发全局主题更新事件
+  const event = new CustomEvent('theme-changed', {
+    detail: {
+      mode,
+      oldMode,
+      timestamp: Date.now()
+    },
+    bubbles: true,
+    composed: true
+  })
+  window.dispatchEvent(event)
 }
 
 const handleFeature = (featureName: string) => {
@@ -205,6 +233,9 @@ const togglePrivacyMode = (value: boolean) => {
 onMounted(() => {
   dataStore.loadData()
   
+  // 初始化主题模式
+  selectedTheme.value = dataStore.userPreferences.themeMode
+  
   const disableZoom = () => {
     let metaViewport = document.querySelector('meta[name="viewport"]')
     if (!metaViewport) {
@@ -269,7 +300,6 @@ onMounted(() => {
 const handleForcePrivacySync = () => {
   const privacyMode = dataStore.isPrivacyMode
   console.log('强制同步隐私模式:', privacyMode)
-  // 这里保留 key 更新以应对强制同步的情况，但常规 toggle 不需要
   privacyKey.value = Date.now()
 }
 
@@ -474,6 +504,7 @@ onUnmounted(() => {
             </div>
           </div>
 
+          <!-- 新增：主题设置卡片 -->
           <div class="settings-section">
             <div class="settings-grid">
               <div class="setting-card">
@@ -519,6 +550,50 @@ onUnmounted(() => {
                 </div>
               </div>
               
+              <!-- 新增：主题模式卡片 -->
+              <div class="setting-card">
+                <div class="card-content">
+                  <div class="card-header">
+                    <div class="card-icon" style="background: rgba(139, 92, 246, 0.1);">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- 系统图标 -->
+                        <path v-if="selectedTheme === 'system'" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" stroke="#8B5CF6" stroke-width="2"/>
+                        <path v-if="selectedTheme === 'system'" d="M12 16v4" stroke="#8B5CF6" stroke-width="2"/>
+                        <!-- 浅色图标 -->
+                        <circle v-if="selectedTheme === 'light'" cx="12" cy="12" r="5" stroke="#8B5CF6" stroke-width="2"/>
+                        <path v-if="selectedTheme === 'light'" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round"/>
+                        <!-- 深色图标 -->
+                        <path v-if="selectedTheme === 'dark'" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <h4 class="card-title">主题设置</h4>
+                  </div>
+                  <p class="card-desc">选择显示主题</p>
+                  <div class="theme-toggle">
+                    <div class="theme-options">
+                      <button
+                        v-for="mode in themeModes"
+                        :key="mode.value"
+                        class="theme-option"
+                        :class="{ 'active': selectedTheme === mode.value }"
+                        @click="handleThemeChange(mode.value as any)"
+                        :style="{
+                          borderColor: mode.color,
+                          color: selectedTheme === mode.value ? '#fff' : mode.color,
+                          backgroundColor: selectedTheme === mode.value ? mode.color : 'transparent'
+                        }"
+                      >
+                        {{ mode.name }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="other-settings-section">
+            <div class="settings-grid">
               <div class="setting-card" @click="handleFeature('About')">
                 <div class="card-content">
                   <div class="card-header">
@@ -547,12 +622,10 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <ToastMessage
-      :show="showToast"
-      :message="toastMessage"
-      :type="toastType"
-      @update:show="showToast = $event"
-    />
+    <!-- Toast消息 -->
+    <div v-if="showToast" class="global-toast" :class="toastType">
+      {{ toastMessage }}
+    </div>
   </div>
 </template>
 
@@ -564,6 +637,11 @@ onUnmounted(() => {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
+}
+
+/* 深色模式适配 */
+:root.dark .config-view {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
 .config-scroll-area {
@@ -600,6 +678,12 @@ onUnmounted(() => {
   box-shadow: 0 8px 24px rgba(31, 38, 135, 0.1);
   overflow: hidden;
   transition: all 0.3s ease;
+}
+
+:root.dark .user-info-card {
+  background: rgba(30, 30, 46, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .user-type-ribbon {
@@ -651,6 +735,11 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+:root.dark .avatar-icon {
+  background: rgba(45, 45, 65, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 .user-details {
   flex: 1;
   min-width: 0;
@@ -668,12 +757,20 @@ onUnmounted(() => {
   line-height: 1.2;
 }
 
+:root.dark .user-name {
+  color: #e5e7eb;
+}
+
 .user-email {
   font-size: 13px;
   color: #666;
   margin: 0 0 8px 0;
   opacity: 0.8;
   line-height: 1.3;
+}
+
+:root.dark .user-email {
+  color: #9ca3af;
 }
 
 .user-info-footer {
@@ -711,6 +808,11 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+:root.dark .logout-btn {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
 .logout-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
@@ -726,6 +828,10 @@ onUnmounted(() => {
   align-items: center;
   padding-top: 12px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+:root.dark .user-actions {
+  border-top-color: rgba(255, 255, 255, 0.1);
 }
 
 .upgrade-btn {
@@ -775,9 +881,18 @@ onUnmounted(() => {
   min-height: 90px;
 }
 
+:root.dark .function-card {
+  background: rgba(30, 30, 46, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 .function-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+:root.dark .function-card:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
 .function-card.disabled {
@@ -823,6 +938,10 @@ onUnmounted(() => {
   gap: 6px;
 }
 
+:root.dark .card-title {
+  color: #e5e7eb;
+}
+
 .vip-badge {
   background: linear-gradient(135deg, #FFD700, #FFA500);
   color: white;
@@ -841,6 +960,10 @@ onUnmounted(() => {
   opacity: 0.8;
   text-align: right;
   margin-top: auto;
+}
+
+:root.dark .card-desc {
+  color: #9ca3af;
 }
 
 .api-selector {
@@ -874,6 +997,10 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+:root.dark .api-option:hover:not(.disabled):not(.active) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 .api-option.active {
   cursor: default;
 }
@@ -904,9 +1031,18 @@ onUnmounted(() => {
   min-height: 90px;
 }
 
+:root.dark .setting-card {
+  background: rgba(30, 30, 46, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 .setting-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+:root.dark .setting-card:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
 .privacy-toggle {
@@ -939,8 +1075,58 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+:root.dark .privacy-option:hover:not(.active) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 .privacy-option.active {
   cursor: default;
+}
+
+/* 新增：主题切换样式 */
+.theme-toggle {
+  margin-top: 8px;
+}
+
+.theme-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.theme-option {
+  flex: 1;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  min-width: 80px;
+}
+
+.theme-option:hover:not(.active) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+:root.dark .theme-option:hover:not(.active) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.theme-option.active {
+  cursor: default;
+}
+
+/* 其他设置区 */
+.other-settings-section {
+  margin-top: 20px;
 }
 
 /* 底部样式 */
@@ -970,37 +1156,6 @@ onUnmounted(() => {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
-}
-
-/* 暗色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .config-view {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  }
-  
-  .user-info-card,
-  .function-card,
-  .setting-card {
-    background: rgba(30, 30, 46, 0.8);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  .card-title {
-    color: #e5e7eb;
-  }
-  
-  .card-desc,
-  .user-email {
-    color: #9ca3af;
-  }
-  
-  .avatar-icon {
-    background: rgba(45, 45, 65, 0.9);
-  }
-  
-  .user-actions {
-    border-top-color: rgba(255, 255, 255, 0.1);
-  }
 }
 
 /* 移动端优化 */
@@ -1093,12 +1248,14 @@ onUnmounted(() => {
   }
   
   .api-options,
-  .privacy-options {
+  .privacy-options,
+  .theme-options {
     flex-direction: column;
   }
   
   .api-option,
-  .privacy-option {
+  .privacy-option,
+  .theme-option {
     width: 100%;
   }
   
@@ -1199,7 +1356,8 @@ onUnmounted(() => {
   }
   
   .api-option:active:not(.disabled):not(.active),
-  .privacy-option:active:not(.active) {
+  .privacy-option:active:not(.active),
+  .theme-option:active:not(.active) {
     transform: scale(0.95);
   }
   

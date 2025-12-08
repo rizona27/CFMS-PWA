@@ -68,10 +68,10 @@ const clearSearch = () => {
   border-radius: 999px; /* 药丸形状 */
   
   /* 确保磨玻璃效果 */
-  background: var(--glass-bg);
+  background: var(--glass-bg, rgba(255, 255, 255, 0.8));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 
   transition: all 0.3s ease;
@@ -79,7 +79,7 @@ const clearSearch = () => {
 
 .search-icon {
   font-size: 16px;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #64748b);
   margin-right: 10px;
 }
 
@@ -89,7 +89,7 @@ const clearSearch = () => {
   outline: none;
   background: transparent;
   font-size: 16px;
-  color: var(--text-primary);
+  color: var(--text-primary, #1e293b);
   padding: 0;
   
   /* 保证输入框背景与磨玻璃背景融合 */
@@ -97,13 +97,13 @@ const clearSearch = () => {
 
 /* 占位符样式 */
 .search-input::placeholder {
-  color: var(--text-secondary);
+  color: var(--text-secondary, #64748b);
   opacity: 0.6;
 }
 
 .clear-button {
-  background: var(--text-secondary);
-  color: var(--bg-primary);
+  background: var(--text-secondary, #64748b);
+  color: var(--bg-primary, #f5f7fa);
   border: none;
   width: 20px;
   height: 20px;
@@ -120,15 +120,34 @@ const clearSearch = () => {
 }
 
 .clear-button:hover {
-  background: var(--text-primary);
+  background: var(--text-primary, #1e293b);
 }
 
-/* 适配深色模式 */
-.dark-mode .search-input {
-  background: transparent;
+/* 深色模式适配 */
+:root.dark .search-bar {
+  background: var(--glass-bg, rgba(30, 30, 46, 0.8));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
-.dark-mode .clear-button {
-  background: var(--text-secondary);
-  color: var(--bg-primary);
+
+:root.dark .search-icon {
+  color: var(--text-secondary, #cbd5e1);
+}
+
+:root.dark .search-input {
+  color: var(--text-primary, #f1f5f9);
+}
+
+:root.dark .search-input::placeholder {
+  color: var(--text-secondary, #cbd5e1);
+}
+
+:root.dark .clear-button {
+  background: var(--text-secondary, #cbd5e1);
+  color: var(--bg-primary, #1a1a2e);
+}
+
+:root.dark .clear-button:hover {
+  background: var(--text-primary, #f1f5f9);
 }
 </style>

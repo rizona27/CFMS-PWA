@@ -66,14 +66,14 @@ watch(showRef, (newVal) => {
   z-index: 9999;
   padding: 12px 20px;
   border-radius: 10px;
-  background: var(--bg-card);
-  color: var(--text-primary);
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary, #1e293b);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
   gap: 8px;
   backdrop-filter: blur(10px);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-color, #e2e8f0);
   animation: toast-in 0.3s ease, toast-out 0.3s ease 2.7s;
   animation-fill-mode: forwards;
   font-size: 14px;
@@ -92,25 +92,25 @@ watch(showRef, (newVal) => {
   text-overflow: ellipsis;
 }
 
-/* 类型样式 */
+/* 类型样式 - 使用CSS变量定义颜色 */
 .toast-message.info {
-  border-left: 4px solid #2196f3;
-  background: linear-gradient(135deg, var(--bg-card), rgba(33, 150, 243, 0.05));
+  border-left: 4px solid var(--info-color, #2196f3);
+  background: linear-gradient(135deg, var(--bg-card, #ffffff), rgba(33, 150, 243, 0.05));
 }
 
 .toast-message.success {
-  border-left: 4px solid #4caf50;
-  background: linear-gradient(135deg, var(--bg-card), rgba(76, 175, 80, 0.05));
+  border-left: 4px solid var(--success-color, #4caf50);
+  background: linear-gradient(135deg, var(--bg-card, #ffffff), rgba(76, 175, 80, 0.05));
 }
 
 .toast-message.error {
-  border-left: 4px solid #f44336;
-  background: linear-gradient(135deg, var(--bg-card), rgba(244, 67, 54, 0.05));
+  border-left: 4px solid var(--error-color, #f44336);
+  background: linear-gradient(135deg, var(--bg-card, #ffffff), rgba(244, 67, 54, 0.05));
 }
 
 .toast-message.warning {
-  border-left: 4px solid #ff9800;
-  background: linear-gradient(135deg, var(--bg-card), rgba(255, 152, 0, 0.05));
+  border-left: 4px solid var(--warning-color, #ff9800);
+  background: linear-gradient(135deg, var(--bg-card, #ffffff), rgba(255, 152, 0, 0.05));
 }
 
 /* 动画 - 从底部弹出 */
@@ -157,5 +157,29 @@ watch(showRef, (newVal) => {
   .toast-icon {
     font-size: 13px;
   }
+}
+
+/* 深色模式适配 */
+:root.dark .toast-message {
+  background: var(--bg-card, #16213e);
+  color: var(--text-primary, #f1f5f9);
+  border-color: var(--border-color, #334155);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark .toast-message.info {
+  background: linear-gradient(135deg, var(--bg-card, #16213e), rgba(33, 150, 243, 0.1));
+}
+
+:root.dark .toast-message.success {
+  background: linear-gradient(135deg, var(--bg-card, #16213e), rgba(76, 175, 80, 0.1));
+}
+
+:root.dark .toast-message.error {
+  background: linear-gradient(135deg, var(--bg-card, #16213e), rgba(244, 67, 54, 0.1));
+}
+
+:root.dark .toast-message.warning {
+  background: linear-gradient(135deg, var(--bg-card, #16213e), rgba(255, 152, 0, 0.1));
 }
 </style>

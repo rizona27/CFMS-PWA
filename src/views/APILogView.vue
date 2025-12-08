@@ -14,13 +14,13 @@
       <div class="log-filter-section">
         <div class="filter-title">筛选日志类型</div>
         <div class="filter-buttons">
-          <button 
-            v-for="type in allLogTypes" 
+          <button
+            v-for="type in allLogTypes"
             :key="type"
             class="filter-button"
-            :class="{ 
+            :class="{
               'selected': selectedLogTypes.includes(type),
-              [type]: true 
+              [type]: true
             }"
             @click="toggleLogType(type)"
           >
@@ -63,8 +63,8 @@
         
         <div v-else class="log-list">
           <!-- 按类型分组的日志 -->
-          <div 
-            v-for="type in filteredLogTypes" 
+          <div
+            v-for="type in filteredLogTypes"
             :key="type"
             class="log-type-group"
           >
@@ -80,8 +80,8 @@
             </div>
             
             <div class="log-items" v-if="isTypeExpanded(type)">
-              <div 
-                v-for="log in getLogsByType(type)" 
+              <div
+                v-for="log in getLogsByType(type)"
                 :key="log.id"
                 class="log-item"
                 :class="log.type"
@@ -621,6 +621,10 @@ onMounted(() => {
   border: 1px solid var(--border-color);
 }
 
+:root.dark .log-type-group {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 .log-type-header {
   display: flex;
   align-items: center;
@@ -774,51 +778,69 @@ onMounted(() => {
   position: fixed;
   bottom: 100px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(20px);
   padding: 12px 24px;
-  border-radius: 8px;
-  background: var(--bg-card);
-  color: var(--text-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
   z-index: 1000;
-  max-width: 80%;
+  max-width: 320px;
+  width: auto;
   text-align: center;
-  animation: toast-in 0.3s ease, toast-out 0.3s ease 2.7s;
-  animation-fill-mode: forwards;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toast-message.info {
-  border-left: 4px solid #2196f3;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(30, 64, 175, 0.9));
+  color: white;
+  border-color: rgba(59, 130, 246, 0.3);
 }
 
 .toast-message.success {
-  border-left: 4px solid #4caf50;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(21, 128, 61, 0.9));
+  color: white;
+  border-color: rgba(34, 197, 94, 0.3);
 }
 
 .toast-message.error {
-  border-left: 4px solid #f44336;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(185, 28, 28, 0.9));
+  color: white;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .toast-message.warning {
-  border-left: 4px solid #ff9800;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(180, 83, 9, 0.9));
+  color: white;
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 20px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
+:root.dark .toast-message {
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
-@keyframes toast-out {
-  to {
-    opacity: 0;
-    transform: translate(-50%, 20px);
-  }
+:root.dark .toast-message.info {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.9), rgba(59, 130, 246, 0.9));
+}
+
+:root.dark .toast-message.success {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.9), rgba(34, 197, 94, 0.9));
+}
+
+:root.dark .toast-message.error {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.9), rgba(239, 68, 68, 0.9));
+}
+
+:root.dark .toast-message.warning {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.9));
 }
 
 /* 移动端优化 */
@@ -837,8 +859,8 @@ onMounted(() => {
   
   .toast-message {
     bottom: 80px;
-    max-width: 90%;
-    font-size: 14px;
+    max-width: 280px;
+    font-size: 13px;
   }
 }
 

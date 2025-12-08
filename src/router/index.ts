@@ -8,7 +8,6 @@ const ConfigView = () => import('../views/ConfigView.vue')
 const AuthView = () => import('../views/AuthView.vue')
 const AboutView = () => import('../views/AboutView.vue')
 const APILogView = () => import('../views/APILogView.vue')
-const DebugView = () => import('../views/DebugView.vue')
 
 // 持仓管理相关路由
 const ManageHoldingsView = () => import('../views/holdings/ManageHoldingsView.vue')
@@ -48,16 +47,6 @@ const routes: RouteRecordRaw[] = [
     component: AuthView,
     meta: { 
       title: '用户登录',
-      requiresAuth: false,
-      showTabBar: false
-    }
-  },
-  {
-    path: '/debug',
-    name: 'debug',
-    component: DebugView,
-    meta: { 
-      title: '调试信息',
       requiresAuth: false,
       showTabBar: false
     }

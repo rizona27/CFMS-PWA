@@ -271,7 +271,7 @@ onMounted(() => {
   background: var(--bg-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   position: relative;
-  overflow-y: auto; /* 添加滚动支持 */
+  overflow-y: auto;
   height: 100vh;
 }
 
@@ -281,7 +281,7 @@ onMounted(() => {
   left: 20px;
   width: 40px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -289,14 +289,15 @@ onMounted(() => {
   font-size: 20px;
   cursor: pointer;
   z-index: 100;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--card-shadow);
   transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
 }
 
 .back-button:hover {
-  background: white;
+  background: var(--bg-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--hover-shadow);
 }
 
 .content-area {
@@ -331,7 +332,7 @@ onMounted(() => {
   padding: 24px;
   margin-bottom: 24px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
 }
 
 .section-title {
@@ -354,11 +355,12 @@ onMounted(() => {
   background: var(--bg-hover);
   border-radius: 12px;
   transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--hover-shadow);
 }
 
 .stat-value {
@@ -374,8 +376,8 @@ onMounted(() => {
 }
 
 .warning-section {
-  background: #fff3cd;
-  border: 1px solid #ffc107;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 24px;
@@ -390,7 +392,7 @@ onMounted(() => {
 .warning-title {
   font-size: 18px;
   font-weight: 600;
-  color: #856404;
+  color: #ffc107;
   margin-bottom: 16px;
   text-align: center;
 }
@@ -403,7 +405,7 @@ onMounted(() => {
 
 .warning-list li {
   padding: 8px 0;
-  color: #856404;
+  color: #ffc107;
   position: relative;
   padding-left: 24px;
 }
@@ -420,7 +422,7 @@ onMounted(() => {
   border-radius: 16px;
   padding: 24px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
 }
 
 .confirmation-item {
@@ -431,6 +433,7 @@ onMounted(() => {
   padding: 12px;
   background: var(--bg-hover);
   border-radius: 12px;
+  border: 1px solid var(--border-color);
 }
 
 .confirmation-checkbox {
@@ -438,6 +441,7 @@ onMounted(() => {
   height: 20px;
   border-radius: 4px;
   cursor: pointer;
+  accent-color: var(--accent-color);
 }
 
 .confirmation-label {
@@ -459,22 +463,23 @@ onMounted(() => {
   font-size: 16px;
   margin-top: 12px;
   transition: all 0.3s ease;
-  background: var(--bg-hover);
+  background: var(--bg-card);
   color: var(--text-primary);
 }
 
 .confirmation-input:focus {
   outline: none;
   border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.1);
 }
 
 .confirmation-input.input-error {
-  border-color: #ef4444;
+  border-color: var(--error-color);
   background: rgba(239, 68, 68, 0.05);
 }
 
 .error-message {
-  color: #ef4444;
+  color: var(--error-color);
   font-size: 14px;
   margin-top: 8px;
   margin-left: 4px;
@@ -483,12 +488,12 @@ onMounted(() => {
 .clear-button {
   width: 100%;
   padding: 20px;
-  background: #f5f5f7;
-  border: none;
+  background: var(--bg-hover);
+  border: 2px solid var(--border-color);
   border-radius: 12px;
   font-size: 18px;
   font-weight: 600;
-  color: #999;
+  color: var(--text-secondary);
   cursor: not-allowed;
   transition: all 0.3s ease;
   margin-bottom: 16px;
@@ -496,7 +501,8 @@ onMounted(() => {
 }
 
 .clear-button.enabled {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: var(--error-color);
+  border-color: var(--error-color);
   color: white;
   cursor: pointer;
 }
@@ -568,8 +574,9 @@ onMounted(() => {
   padding: 24px;
   max-width: 400px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--hover-shadow);
   animation: slideUp 0.3s ease;
+  border: 1px solid var(--border-color);
 }
 
 @keyframes slideUp {
@@ -592,8 +599,8 @@ onMounted(() => {
 }
 
 .modal-close {
-  background: none;
-  border: none;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
   font-size: 24px;
   color: var(--text-secondary);
   cursor: pointer;
@@ -608,7 +615,7 @@ onMounted(() => {
 }
 
 .modal-close:hover {
-  background: var(--bg-hover);
+  background: var(--border-color);
   color: var(--text-primary);
 }
 
@@ -652,6 +659,7 @@ onMounted(() => {
 .modal-button.cancel {
   background: var(--bg-hover);
   color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .modal-button.cancel:hover {
@@ -659,8 +667,9 @@ onMounted(() => {
 }
 
 .modal-button.confirm {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: var(--error-color);
   color: white;
+  border: 1px solid var(--error-color);
 }
 
 .modal-button.confirm:hover {
@@ -669,28 +678,14 @@ onMounted(() => {
 }
 
 /* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .clear-button {
-    background: #2c2c2e;
-  }
-  
-  .warning-section {
-    background: #332701;
-    border-color: #665800;
-  }
-  
-  .warning-list li,
-  .warning-title {
-    color: #ffd54f;
-  }
-  
-  .confirmation-input {
-    background: #2c2c2e;
-  }
-  
-  .modal-button.cancel {
-    background: #2c2c2e;
-  }
+:root.dark .warning-section {
+  background: rgba(255, 193, 7, 0.15);
+  border-color: rgba(255, 193, 7, 0.4);
+}
+
+:root.dark .warning-list li,
+:root.dark .warning-title {
+  color: #ffd54f;
 }
 
 @media (max-width: 768px) {

@@ -65,7 +65,7 @@ const handleClick = () => {
 .custom-card {
   background: var(--bg);
   color: var(--fg);
-  border-radius: var(--card-radius);
+  border-radius: var(--card-radius, 12px);
   padding: 18px;
   cursor: pointer;
   transition: all 0.25s ease;
@@ -73,13 +73,13 @@ const handleClick = () => {
 }
 
 .custom-card:not(.glass-effect) {
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 10px var(--shadow-color);
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: 0 2px 10px var(--shadow-color, rgba(0, 0, 0, 0.1));
 }
 
 .custom-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--hover-shadow);
+  box-shadow: var(--hover-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05));
 }
 
 .card-inner {
@@ -126,7 +126,7 @@ const handleClick = () => {
   font-weight: 500;
   margin: 0;
   line-height: 1.3;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #64748b);
   opacity: 0.8;
 }
 
@@ -136,6 +136,6 @@ const handleClick = () => {
 
 .card-content :deep(select),
 .card-content :deep(button) {
-  color: var(--text-primary);
+  color: var(--text-primary, #1e293b);
 }
 </style>

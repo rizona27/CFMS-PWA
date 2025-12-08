@@ -445,9 +445,9 @@ onMounted(() => {
 .clear-search {
   position: absolute;
   right: 12px;
-  background: none;
+  background: var(--text-secondary);
+  color: var(--bg-primary);
   border: none;
-  color: var(--text-secondary);
   font-size: 18px;
   cursor: pointer;
   padding: 4px;
@@ -457,8 +457,7 @@ onMounted(() => {
 }
 
 .clear-search:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: var(--text-primary);
 }
 
 .results-section {
@@ -514,7 +513,7 @@ onMounted(() => {
   background: var(--bg-hover);
   transform: translateX(2px);
   border-color: var(--accent-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
 }
 
 .result-info {
@@ -607,7 +606,7 @@ onMounted(() => {
 }
 
 .result-item:hover .edit-icon {
-  background: var(--accent-dark);
+  background: #2563eb;
   transform: scale(1.1);
 }
 
@@ -713,7 +712,7 @@ onMounted(() => {
   background: var(--bg-card);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--hover-shadow);
   animation: slideUp 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -804,5 +803,23 @@ onMounted(() => {
   .clear-search:active {
     transform: scale(0.9);
   }
+}
+
+/* 深色模式适配 */
+:root.dark .clear-search {
+  color: var(--bg-primary);
+}
+
+:root.dark .clear-search:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+:root.dark .edit-icon {
+  background: var(--accent-color);
+}
+
+:root.dark .result-item:hover .edit-icon {
+  background: #3b82f6;
 }
 </style>

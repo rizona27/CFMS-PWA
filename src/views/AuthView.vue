@@ -1,5 +1,5 @@
 <template>
-  <div class="auth-view" :class="themeClass">
+  <div class="auth-view">
     <div class="auth-scroll-container">
       <div class="auth-container">
         <div class="auth-card">
@@ -13,16 +13,16 @@
           
           <!-- 模式切换标签 -->
           <div class="mode-tabs">
-            <button 
-              class="mode-tab" 
-              :class="{ active: !isRegistering }" 
+            <button
+              class="mode-tab"
+              :class="{ active: !isRegistering }"
               @click="switchToLogin"
             >
               登录
             </button>
-            <button 
-              class="mode-tab" 
-              :class="{ active: isRegistering }" 
+            <button
+              class="mode-tab"
+              :class="{ active: isRegistering }"
               @click="switchToRegister"
             >
               注册
@@ -288,14 +288,14 @@ onUnmounted(() => {
 
 // 初始化主题
 const initTheme = () => {
-  const savedTheme = localStorage.getItem('themeMode') || 'system'
+  const savedTheme = localStorage.getItem('theme_mode') || 'system'
   themeMode.value = savedTheme
   applyTheme(savedTheme)
 }
 
 // 处理主题变化
 const handleThemeChange = (e: StorageEvent) => {
-  if (e.key === 'themeMode') {
+  if (e.key === 'theme_mode') {
     const newTheme = e.newValue || 'system'
     themeMode.value = newTheme
     applyTheme(newTheme)
@@ -540,6 +540,7 @@ const handleRegister = async () => {
   justify-content: center;
   overflow: auto;
   transition: background-color 0.3s ease;
+  background-color: var(--bg-primary);
 }
 
 /* 开发环境横幅 */
@@ -550,7 +551,7 @@ const handleRegister = async () => {
   gap: 8px;
   padding: 8px 12px;
   margin-bottom: 15px;
-  background: linear-gradient(135deg, #ff9800, #ff5722);
+  background: linear-gradient(135deg, var(--warning-color), #ff5722);
   color: white;
   border-radius: 10px;
   font-size: 12px;
@@ -582,22 +583,22 @@ const handleRegister = async () => {
 .dev-accounts {
   margin: 10px 0 15px;
   padding: 12px;
-  background: rgba(76, 175, 80, 0.1);
+  background: rgba(var(--success-color), 0.1);
   border-radius: 8px;
-  border: 1px solid rgba(76, 175, 80, 0.3);
+  border: 1px solid rgba(var(--success-color), 0.3);
 }
 
 .dev-accounts-title {
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: #4caf50;
+  color: var(--success-color);
 }
 
 .dev-account {
   font-size: 12px;
   margin: 3px 0;
-  color: #666;
+  color: var(--text-secondary);
   padding-left: 8px;
   position: relative;
 }
@@ -606,12 +607,12 @@ const handleRegister = async () => {
   content: "•";
   position: absolute;
   left: 0;
-  color: #4caf50;
+  color: var(--success-color);
 }
 
 /* 主题相关样式 */
 .auth-view.theme-light {
-  background: linear-gradient(135deg, #e0f7fa 0%, #bbdefb 100%);
+  background: linear-gradient(135deg, var(--bg-hover) 0%, var(--bg-secondary) 100%);
 }
 
 .auth-view.theme-dark {
@@ -619,7 +620,7 @@ const handleRegister = async () => {
 }
 
 .auth-view.theme-system {
-  background: linear-gradient(135deg, #e0f7fa 0%, #bbdefb 100%);
+  background: linear-gradient(135deg, var(--bg-hover) 0%, var(--bg-secondary) 100%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -647,7 +648,7 @@ const handleRegister = async () => {
 .auth-card {
   border-radius: 20px;
   padding: 40px 35px;
-  box-shadow: 
+  box-shadow:
     0 15px 35px rgba(0, 0, 0, 0.1),
     0 5px 15px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(10px);
@@ -655,7 +656,8 @@ const handleRegister = async () => {
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
-  min-height: 520px; /* 基础最小高度，自适应内容 */
+  min-height: 520px;
+  background-color: var(--bg-card);
 }
 
 .theme-light .auth-card {
@@ -666,16 +668,6 @@ const handleRegister = async () => {
   background: linear-gradient(135deg, rgba(30, 30, 46, 0.95) 0%, rgba(25, 25, 40, 0.95) 100%);
 }
 
-.theme-system .auth-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 248, 255, 0.95) 100%);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .auth-card {
-    background: linear-gradient(135deg, rgba(30, 30, 46, 0.95) 0%, rgba(25, 25, 40, 0.95) 100%);
-  }
-}
-
 .auth-title {
   text-align: center;
   margin-bottom: 35px;
@@ -684,6 +676,7 @@ const handleRegister = async () => {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   letter-spacing: 1px;
   transition: color 0.3s ease;
+  color: var(--text-primary);
 }
 
 .theme-light .auth-title {
@@ -691,25 +684,10 @@ const handleRegister = async () => {
 }
 
 .theme-dark .auth-title {
-  color: #e3f2fd;
   background: linear-gradient(135deg, #64b5f6, #2196f3);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-}
-
-.theme-system .auth-title {
-  color: #1a237e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .auth-title {
-    color: #e3f2fd;
-    background: linear-gradient(135deg, #64b5f6, #2196f3);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
 }
 
 /* 模式切换标签 */
@@ -718,24 +696,7 @@ const handleRegister = async () => {
   margin-bottom: 35px;
   border-radius: 0;
   transition: all 0.3s ease;
-}
-
-.theme-light .mode-tabs {
-  border-bottom: 2px solid rgba(52, 152, 219, 0.2);
-}
-
-.theme-dark .mode-tabs {
-  border-bottom: 2px solid rgba(66, 165, 245, 0.3);
-}
-
-.theme-system .mode-tabs {
-  border-bottom: 2px solid rgba(52, 152, 219, 0.2);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .mode-tabs {
-    border-bottom: 2px solid rgba(66, 165, 245, 0.3);
-  }
+  border-bottom: 2px solid rgba(var(--accent-color-rgb), 0.2);
 }
 
 .mode-tab {
@@ -750,68 +711,17 @@ const handleRegister = async () => {
   position: relative;
   border-radius: 8px 8px 0 0;
   transition: all 0.3s ease;
-}
-
-.theme-light .mode-tab {
-  color: #5d697a;
-}
-
-.theme-dark .mode-tab {
-  color: #b0bec5;
-}
-
-.theme-system .mode-tab {
-  color: #5d697a;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .mode-tab {
-    color: #b0bec5;
-  }
+  color: var(--text-secondary);
 }
 
 .mode-tab:hover {
-  background: rgba(52, 152, 219, 0.05);
-}
-
-.theme-light .mode-tab:hover {
-  color: #1a237e;
-}
-
-.theme-dark .mode-tab:hover {
-  color: #64b5f6;
-}
-
-.theme-system .mode-tab:hover {
-  color: #1a237e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .mode-tab:hover {
-    color: #64b5f6;
-  }
+  background: rgba(var(--accent-color-rgb), 0.05);
+  color: var(--text-primary);
 }
 
 .mode-tab.active {
   font-weight: 700;
-}
-
-.theme-light .mode-tab.active {
-  color: #1a237e;
-}
-
-.theme-dark .mode-tab.active {
-  color: #42a5f5;
-}
-
-.theme-system .mode-tab.active {
-  color: #1a237e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .mode-tab.active {
-    color: #42a5f5;
-  }
+  color: var(--text-primary);
 }
 
 .mode-tab.active::after {
@@ -823,24 +733,7 @@ const handleRegister = async () => {
   height: 3px;
   border-radius: 3px;
   transition: all 0.3s ease;
-}
-
-.theme-light .mode-tab.active::after {
-  background: linear-gradient(90deg, #1a237e, #283593);
-}
-
-.theme-dark .mode-tab.active::after {
-  background: linear-gradient(90deg, #42a5f5, #2196f3);
-}
-
-.theme-system .mode-tab.active::after {
-  background: linear-gradient(90deg, #1a237e, #283593);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .mode-tab.active::after {
-    background: linear-gradient(90deg, #42a5f5, #2196f3);
-  }
+  background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
 }
 
 /* 表单样式 */
@@ -862,53 +755,16 @@ const handleRegister = async () => {
   padding: 0 15px;
   transition: all 0.3s;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-}
-
-.theme-light .form-group.with-icon {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #dfe6e9;
-}
-
-.theme-dark .form-group.with-icon {
-  background: rgba(40, 40, 60, 0.9);
-  border: 1px solid #424242;
-}
-
-.theme-system .form-group.with-icon {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #dfe6e9;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .form-group.with-icon {
-    background: rgba(40, 40, 60, 0.9);
-    border: 1px solid #424242;
-  }
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .form-group.with-icon:focus-within {
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     0 4px 10px rgba(0, 0, 0, 0.05),
-    0 0 0 2px rgba(26, 35, 126, 0.2);
-}
-
-.theme-light .form-group.with-icon:focus-within {
-  border-color: #1a237e;
-}
-
-.theme-dark .form-group.with-icon:focus-within {
-  border-color: #42a5f5;
-}
-
-.theme-system .form-group.with-icon:focus-within {
-  border-color: #1a237e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .form-group.with-icon:focus-within {
-    border-color: #42a5f5;
-  }
+    0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
+  border-color: var(--accent-color);
 }
 
 .icon-container {
@@ -919,28 +775,7 @@ const handleRegister = async () => {
   margin-right: 12px;
   font-size: 18px;
   transition: color 0.3s ease;
-}
-
-.theme-light .icon-container {
-  color: #1a237e;
-}
-
-.theme-dark .icon-container {
-  color: #90a4ae;
-}
-
-.theme-system .icon-container {
-  color: #1a237e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .icon-container {
-    color: #90a4ae;
-  }
-}
-
-.input-icon {
-  opacity: 0.8;
+  color: var(--text-tertiary);
 }
 
 .icon-input {
@@ -952,50 +787,16 @@ const handleRegister = async () => {
   outline: none;
   font-weight: 500;
   transition: color 0.3s ease;
-}
-
-.theme-light .icon-input {
-  color: #1a237e;
-}
-
-.theme-dark .icon-input {
-  color: #e0e0e0;
-}
-
-.theme-system .icon-input {
-  color: #1a237e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .icon-input {
-    color: #e0e0e0;
-  }
+  color: var(--text-primary);
 }
 
 .icon-input::placeholder {
   font-weight: 400;
   transition: color 0.3s ease;
+  color: var(--text-tertiary);
 }
 
-.theme-light .icon-input::placeholder {
-  color: #5d697a;
-}
-
-.theme-dark .icon-input::placeholder {
-  color: #90a4ae;
-}
-
-.theme-system .icon-input::placeholder {
-  color: #5d697a;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .icon-input::placeholder {
-    color: #90a4ae;
-  }
-}
-
-/* 验证码容器 - 修复布局问题 */
+/* 验证码容器 */
 .captcha-group {
   margin-top: 10px;
   width: 100%;
@@ -1018,53 +819,16 @@ const handleRegister = async () => {
   transition: all 0.3s;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
   min-height: 54px;
-  min-width: 0; /* 防止flex项目溢出 */
-}
-
-.theme-light .captcha-input-group {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #dfe6e9;
-}
-
-.theme-dark .captcha-input-group {
-  background: rgba(40, 40, 60, 0.9);
-  border: 1px solid #424242;
-}
-
-.theme-system .captcha-input-group {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #dfe6e9;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .captcha-input-group {
-    background: rgba(40, 40, 60, 0.9);
-    border: 1px solid #424242;
-  }
+  min-width: 0;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .captcha-input-group:focus-within {
-  box-shadow: 
-    0 0 0 2px rgba(26, 35, 126, 0.2),
+  box-shadow:
+    0 0 0 2px rgba(var(--accent-color-rgb), 0.2),
     0 4px 10px rgba(0, 0, 0, 0.05);
-}
-
-.theme-light .captcha-input-group:focus-within {
-  border-color: #1a237e;
-}
-
-.theme-dark .captcha-input-group:focus-within {
-  border-color: #42a5f5;
-}
-
-.theme-system .captcha-input-group:focus-within {
-  border-color: #1a237e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .captcha-input-group:focus-within {
-    border-color: #42a5f5;
-  }
+  border-color: var(--accent-color);
 }
 
 .captcha-image-container {
@@ -1085,84 +849,24 @@ const handleRegister = async () => {
   justify-content: center;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   transition: all 0.3s;
-}
-
-.theme-light .captcha-image {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #dfe6e9;
-}
-
-.theme-dark .captcha-image {
-  background: rgba(40, 40, 60, 0.9);
-  border: 1px solid #424242;
-}
-
-.theme-system .captcha-image {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #dfe6e9;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .captcha-image {
-    background: rgba(40, 40, 60, 0.9);
-    border: 1px solid #424242;
-  }
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .captcha-image:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.theme-light .captcha-image:hover {
-  border-color: #1a237e;
-}
-
-.theme-dark .captcha-image:hover {
-  border-color: #42a5f5;
-}
-
-.theme-system .captcha-image:hover {
-  border-color: #1a237e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .captcha-image:hover {
-    border-color: #42a5f5;
-  }
-}
-
-.captcha-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  border-color: var(--accent-color);
 }
 
 .captcha-placeholder {
   font-size: 14px;
   font-weight: 500;
   transition: color 0.3s ease;
+  color: var(--text-tertiary);
 }
 
-.theme-light .captcha-placeholder {
-  color: #5d697a;
-}
-
-.theme-dark .captcha-placeholder {
-  color: #90a4ae;
-}
-
-.theme-system .captcha-placeholder {
-  color: #5d697a;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .captcha-placeholder {
-    color: #90a4ae;
-  }
-}
-
-/* 渐变按钮 - 活泼颜色 */
+/* 渐变按钮 */
 .gradient-button {
   width: 100%;
   padding: 16px;
@@ -1177,45 +881,20 @@ const handleRegister = async () => {
   letter-spacing: 1px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(90deg, #C2E9FB 0%, #A1C4FD 100%);
+  background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
   color: white;
-  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+  box-shadow: 0 4px 15px rgba(var(--accent-color-rgb), 0.4);
   border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.gradient-button::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(90deg, #BAC8E0 0%, #6A85B6 100%);
-  opacity: 0;
-  transition: opacity 0.3s;
-  z-index: 1;
-}
-
-.gradient-button .button-text {
-  position: relative;
-  z-index: 2;
-  display: block;
-  font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .gradient-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
-}
-
-.gradient-button:hover:not(:disabled)::after {
-  opacity: 1;
+  box-shadow: 0 6px 20px rgba(var(--accent-color-rgb), 0.6);
 }
 
 .gradient-button:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(79, 172, 254, 0.4);
+  box-shadow: 0 2px 10px rgba(var(--accent-color-rgb), 0.4);
 }
 
 .gradient-button:disabled {
@@ -1235,32 +914,9 @@ const handleRegister = async () => {
   border: 1px solid;
   font-weight: 500;
   transition: all 0.3s ease;
-}
-
-.theme-light .error-message {
-  background: rgba(231, 76, 60, 0.1);
-  color: #e74c3c;
-  border-color: rgba(231, 76, 60, 0.2);
-}
-
-.theme-dark .error-message {
-  background: rgba(239, 83, 80, 0.1);
-  color: #ef5350;
-  border-color: rgba(239, 83, 80, 0.2);
-}
-
-.theme-system .error-message {
-  background: rgba(231, 76, 60, 0.1);
-  color: #e74c3c;
-  border-color: rgba(231, 76, 60, 0.2);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .error-message {
-    background: rgba(239, 83, 80, 0.1);
-    color: #ef5350;
-    border-color: rgba(239, 83, 80, 0.2);
-  }
+  background: rgba(var(--error-color), 0.1);
+  color: var(--error-color);
+  border-color: rgba(var(--error-color), 0.2);
 }
 
 .success-message {
@@ -1272,32 +928,9 @@ const handleRegister = async () => {
   border: 1px solid;
   font-weight: 500;
   transition: all 0.3s ease;
-}
-
-.theme-light .success-message {
-  background: rgba(46, 204, 113, 0.1);
-  color: #27ae60;
-  border-color: rgba(46, 204, 113, 0.2);
-}
-
-.theme-dark .success-message {
-  background: rgba(102, 187, 106, 0.1);
-  color: #66bb6a;
-  border-color: rgba(102, 187, 106, 0.2);
-}
-
-.theme-system .success-message {
-  background: rgba(46, 204, 113, 0.1);
-  color: #27ae60;
-  border-color: rgba(46, 204, 113, 0.2);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .success-message {
-    background: rgba(102, 187, 106, 0.1);
-    color: #66bb6a;
-    border-color: rgba(102, 187, 106, 0.2);
-  }
+  background: rgba(var(--success-color), 0.1);
+  color: var(--success-color);
+  border-color: rgba(var(--success-color), 0.2);
 }
 
 /* 模式切换链接 */
@@ -1308,28 +941,8 @@ const handleRegister = async () => {
   padding-top: 20px;
   border-top: 1px solid;
   transition: all 0.3s ease;
-}
-
-.theme-light .mode-switch {
-  color: #5d697a;
-  border-top-color: rgba(93, 105, 122, 0.3);
-}
-
-.theme-dark .mode-switch {
-  color: #b0bec5;
-  border-top-color: rgba(176, 190, 197, 0.3);
-}
-
-.theme-system .mode-switch {
-  color: #5d697a;
-  border-top-color: rgba(93, 105, 122, 0.3);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .mode-switch {
-    color: #b0bec5;
-    border-top-color: rgba(176, 190, 197, 0.3);
-  }
+  color: var(--text-secondary);
+  border-top-color: var(--border-color);
 }
 
 .mode-switch a {
@@ -1339,46 +952,12 @@ const handleRegister = async () => {
   padding: 4px 8px;
   border-radius: 6px;
   transition: all 0.3s;
-}
-
-.theme-light .mode-switch a {
-  color: #1a237e;
-}
-
-.theme-dark .mode-switch a {
-  color: #64b5f6;
-}
-
-.theme-system .mode-switch a {
-  color: #1a237e;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .mode-switch a {
-    color: #64b5f6;
-  }
+  color: var(--accent-color);
 }
 
 .mode-switch a:hover {
   text-decoration: none;
-}
-
-.theme-light .mode-switch a:hover {
-  background: rgba(26, 35, 126, 0.1);
-}
-
-.theme-dark .mode-switch a:hover {
-  background: rgba(66, 165, 245, 0.1);
-}
-
-.theme-system .mode-switch a:hover {
-  background: rgba(26, 35, 126, 0.1);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .mode-switch a:hover {
-    background: rgba(66, 165, 245, 0.1);
-  }
+  background: rgba(var(--accent-color-rgb), 0.1);
 }
 
 /* 尝试次数提示 */
@@ -1391,30 +970,9 @@ const handleRegister = async () => {
   align-items: center;
   gap: 8px;
   transition: all 0.3s ease;
-}
-
-.theme-light .attempt-hint {
-  background: rgba(255, 193, 7, 0.1);
-  color: #f57c00;
-  border: 1px solid rgba(255, 193, 7, 0.2);
-}
-
-.theme-dark .attempt-hint {
-  background: rgba(255, 193, 7, 0.1);
-  color: #ffb74d;
-  border: 1px solid rgba(255, 193, 7, 0.2);
-}
-
-.theme-system .attempt-hint {
-  background: rgba(255, 193, 7, 0.1);
-  color: #f57c00;
-  border: 1px solid rgba(255, 193, 7, 0.2);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .attempt-hint {
-    color: #ffb74d;
-  }
+  background: rgba(var(--warning-color), 0.1);
+  color: var(--warning-color);
+  border: 1px solid rgba(var(--warning-color), 0.2);
 }
 
 .hint-icon {
@@ -1432,28 +990,8 @@ const handleRegister = async () => {
   padding-top: 20px;
   border-top: 1px solid;
   transition: all 0.3s ease;
-}
-
-.theme-light .auth-footer {
-  color: #5d697a;
-  border-top-color: rgba(93, 105, 122, 0.3);
-}
-
-.theme-dark .auth-footer {
-  color: #90a4ae;
-  border-top-color: rgba(144, 164, 174, 0.3);
-}
-
-.theme-system .auth-footer {
-  color: #5d697a;
-  border-top-color: rgba(93, 105, 122, 0.3);
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-system .auth-footer {
-    color: #90a4ae;
-    border-top-color: rgba(144, 164, 174, 0.3)
-  }
+  color: var(--text-secondary);
+  border-top-color: var(--border-color);
 }
 
 /* 响应式设计 - 手机端优化 */
@@ -1524,7 +1062,7 @@ const handleRegister = async () => {
   }
 }
 
-/* 适配小屏幕宽度 - 手机端优化 */
+/* 适配小屏幕宽度 */
 @media (max-width: 480px) {
   .auth-container {
     padding: 15px;
@@ -1545,7 +1083,6 @@ const handleRegister = async () => {
     padding: 12px 10px;
   }
   
-  /* 验证码在手机端保持同一行 */
   .captcha-row {
     flex-direction: row;
     gap: 10px;
@@ -1566,18 +1103,8 @@ const handleRegister = async () => {
     min-height: 50px;
   }
   
-  .captcha-placeholder {
-    font-size: 12px;
-  }
-  
-  /* 按钮在手机端优化 */
   .gradient-button {
     padding: 15px;
-    font-size: 16px;
-  }
-  
-  .button-text {
-    font-weight: 700;
     font-size: 16px;
   }
   

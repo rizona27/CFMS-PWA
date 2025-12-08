@@ -1,4 +1,5 @@
 <template>
+  <!-- 模板部分保持不变 -->
   <div id="app">
     <!-- 登录状态下显示主布局 -->
     <template v-if="authStore.isLoggedIn">
@@ -41,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute, type RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from './stores/authStore'
 import { useDataStore } from './stores/dataStore'
@@ -83,6 +84,80 @@ watch(() => route.path, (newPath) => {
   isTabBarHidden.value = hideTabBarRoutes.some(hideRoute => newPath.startsWith(hideRoute))
 })
 
+// 核心逻辑：应用主题
+const applyTheme = () => {
+  const mode = dataStore.userPreferences.themeMode
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  
+  // 判断最终是否应该是深色
+  const shouldBeDark = mode === 'dark' || (mode === 'system' && systemDark)
+
+  if (shouldBeDark) {
+    document.documentElement.classList.add('dark')
+    // 兼容部分移动端浏览器状态栏颜色
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', '#1a1a2e')
+    }
+  } else {
+    document.documentElement.classList.remove('dark')
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', '#f5f7fa')
+    }
+  }
+  
+  console.log('主题应用:', {
+    mode,
+    systemDark,
+    shouldBeDark,
+    hasDarkClass: document.documentElement.classList.contains('dark')
+  })
+  
+  // 触发全局主题变化事件（使用统一的事件名称）
+  window.dispatchEvent(new CustomEvent('theme-mode-changed', {
+    detail: {
+      mode: mode,
+      isDark: shouldBeDark,
+      timestamp: Date.now()
+    }
+  }))
+}
+
+// 系统主题变化监听器
+let systemThemeListener: MediaQueryList | null = null
+
+// 初始化主题
+const initTheme = () => {
+  // 1. 从localStorage获取或使用默认值
+  const savedTheme = localStorage.getItem('theme_mode') as 'light' | 'dark' | 'system' | null
+  if (savedTheme) {
+    dataStore.userPreferences.themeMode = savedTheme
+  }
+  
+  // 2. 应用主题
+  applyTheme()
+  
+  // 3. 监听系统主题变化（针对"跟随系统"模式）
+  systemThemeListener = window.matchMedia('(prefers-color-scheme: dark)')
+  systemThemeListener.addEventListener('change', handleSystemThemeChange)
+  
+  console.log('主题初始化完成，当前模式:', dataStore.userPreferences.themeMode)
+}
+
+const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+  if (dataStore.userPreferences.themeMode === 'system') {
+    console.log('系统主题变化，重新应用主题')
+    applyTheme()
+  }
+}
+
+// 监听主题变更事件（统一事件名称）
+const handleThemeModeChanged = (event: any) => {
+  console.log('App.vue: 收到主题变更事件', event.detail)
+  applyTheme()
+}
+
 // 检查登录状态
 const checkAuthState = () => {
   const token = localStorage.getItem('auth_token')
@@ -107,6 +182,12 @@ const checkAuthState = () => {
 // 应用启动时的初始化
 onMounted(() => {
   console.log('CFMS PWA应用已启动')
+  
+  // 初始化主题
+  initTheme()
+  
+  // 监听主题变更事件
+  window.addEventListener('theme-mode-changed', handleThemeModeChanged)
   
   // 检查并同步登录状态
   setTimeout(() => {
@@ -147,6 +228,11 @@ onMounted(() => {
   })
 })
 
+// 监听store中的主题模式变化
+watch(() => dataStore.userPreferences.themeMode, () => {
+  applyTheme()
+})
+
 // 全局错误处理
 onMounted(() => {
   const errorHandler = (event: ErrorEvent) => {
@@ -179,11 +265,20 @@ onMounted(() => {
   return () => {
     window.removeEventListener('error', errorHandler)
     window.removeEventListener('unhandledrejection', rejectionHandler)
+    
+    // 移除系统主题监听
+    if (systemThemeListener) {
+      systemThemeListener.removeEventListener('change', handleSystemThemeChange)
+    }
+    
+    // 移除主题变更监听
+    window.removeEventListener('theme-mode-changed', handleThemeModeChanged)
   }
 })
 </script>
 
 <style>
+/* 样式部分保持不变 */
 * {
   margin: 0;
   padding: 0;
@@ -202,10 +297,56 @@ onMounted(() => {
   color: var(--text-primary);
 }
 
+/* 全局CSS变量定义 - 浅色模式 */
+:root {
+  --bg-primary: #f5f7fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f7ff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --border-color: #e2e8f0;
+  --accent-color: #3b82f6;
+  --accent-color-rgb: 59, 130, 246;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --primary-color: #3b82f6;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --info-color: #06b6d4;
+}
+
+/* 深色模式CSS变量 */
+:root.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #1a1a2e;
+  --bg-card: #1e293b;
+  --bg-hover: #2c3a5a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --border-color: #334155;
+  --accent-color: #60a5fa;
+  --accent-color-rgb: 96, 165, 250;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --primary-color: #60a5fa;
+  --success-color: #34d399;
+  --warning-color: #fbbf24;
+  --error-color: #f87171;
+  --info-color: #22d3ee;
+}
+
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .main-content {
@@ -263,7 +404,7 @@ onMounted(() => {
   height: 50px;
   border: 4px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: #2196f3;
+  border-top-color: var(--primary-color);
   animation: spin 1s ease-in-out infinite;
 }
 
@@ -273,10 +414,94 @@ onMounted(() => {
   }
 }
 
+/* 全局Toast样式 - 匹配ConfigView UI */
+.global-toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9998;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 320px;
+  width: auto;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.global-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.global-toast.info {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(30, 64, 175, 0.9));
+  color: white;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.global-toast.success {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(21, 128, 61, 0.9));
+  color: white;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.global-toast.error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(185, 28, 28, 0.9));
+  color: white;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.global-toast.warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(180, 83, 9, 0.9));
+  color: white;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* 深色模式Toast */
+:root.dark .global-toast {
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 4px 16px rgba(0, 0, 0, 0.2);
+  border-width: 1px;
+}
+
+:root.dark .global-toast.info {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.9), rgba(59, 130, 246, 0.9));
+}
+
+:root.dark .global-toast.success {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.9), rgba(34, 197, 94, 0.9));
+}
+
+:root.dark .global-toast.error {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.9), rgba(239, 68, 68, 0.9));
+}
+
+:root.dark .global-toast.warning {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.9));
+}
+
 /* 移动端优化 */
 @media (max-width: 768px) {
   .app-container {
     height: 100%;
+  }
+  
+  .global-toast {
+    max-width: 280px;
+    padding: 10px 20px;
+    font-size: 13px;
+    bottom: 80px;
   }
 }
 
@@ -297,5 +522,38 @@ onMounted(() => {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* 深色模式滚动条 */
+:root.dark ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+:root.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+:root.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 </style>

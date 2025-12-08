@@ -1,3 +1,230 @@
+<template>
+  <div class="client-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
+    <div class="header-section">
+      <div class="header-row">
+        <div class="action-buttons">
+          <button
+            class="action-btn"
+            :class="{ active: areAnyCardsExpanded }"
+            @click="expandedClients.size > 0 ? expandedClients.clear() : groupedHoldingsByClientName.forEach(g => expandedClients.add(g.id))"
+            :title="areAnyCardsExpanded ? '折叠所有' : '展开所有'"
+          >
+            {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
+          </button>
+          
+          <button
+            class="action-btn"
+            :class="{ active: isSearchExpanded }"
+            @click="isSearchExpanded = !isSearchExpanded"
+            :title="isSearchExpanded ? '隐藏搜索' : '显示搜索'"
+          >
+            🔍
+          </button>
+        </div>
+        
+        <div class="status-indicator" @click="onStatusTextTap">
+          <div v-if="showStatusText && !showRefreshButton" class="status-text">
+            {{ latestNavDateString }}
+          </div>
+          
+          <button
+            v-if="showRefreshButton"
+            class="refresh-btn"
+            @click.stop="handleRefresh"
+            :disabled="isRefreshing"
+            :title="isRefreshing ? '刷新中...' : '刷新数据'"
+          >
+            <span v-if="isRefreshing" class="spinner-small"></span>
+            <span v-else>⟳</span>
+          </button>
+        </div>
+      </div>
+      
+      <div v-if="isSearchExpanded" class="search-box">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input
+            v-model="searchText"
+            type="text"
+            placeholder="输入客户名、基金代码、基金名称..."
+            class="search-input"
+          />
+          <button
+            v-if="searchText"
+            class="clear-search"
+            @click="searchText = ''"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="content-area">
+      <div v-if="searchText" class="search-results">
+        <div v-if="searchResults.length === 0" class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>未找到匹配的内容</h3>
+          <p>请尝试其他搜索关键词</p>
+        </div>
+        
+        <div v-else class="search-results-list">
+          <div
+            v-for="holding in searchResults.slice(0, loadedSearchResultCount)"
+            :key="holding.id"
+            class="holding-card-compact"
+          >
+            <div class="holding-header-compact">
+              <div class="holding-info-compact">
+                <div class="fund-name-row">
+                  <h4 class="fund-name">{{ holding.fundName }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
+                </div>
+                <div class="client-info-row">
+                  <span class="client-name-id">{{ getClientDisplayName(holding.clientName, holding.clientID) }}</span>
+                </div>
+              </div>
+              <div class="nav-info-single-line">
+                <span class="nav-with-date">
+                  {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
+                </span>
+              </div>
+            </div>
+            
+            <div class="holding-details-compact">
+              <div class="detail-row">
+                <span class="detail-label">金额:</span>
+                <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
+                <span class="detail-label" style="margin-left: 8px;">份额:</span>
+                <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
+              </div>
+              
+              <div class="detail-row">
+                <span class="detail-label">收益:</span>
+                <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
+                  {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
+                </span>
+                <span class="detail-label" style="margin-left: 8px;">收益率:</span>
+                <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
+                  {{ formatPercentage(calculateProfit(holding).annualized) }}
+                </span>
+              </div>
+              
+              <div v-if="holding.remarks" class="detail-row">
+                <span class="detail-label">备注:</span>
+                <span class="detail-value">{{ holding.remarks }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="loadedSearchResultCount < searchResults.length" class="load-more">
+            <button @click="loadedSearchResultCount += 10">加载更多</button>
+          </div>
+        </div>
+      </div>
+      
+      <div v-else class="client-groups">
+        <div v-if="holdings.length === 0" class="empty-state">
+          <div class="empty-icon">📊</div>
+          <h3>当前没有数据</h3>
+          <p>请导入数据开始使用</p>
+        </div>
+        
+        <div v-else class="clients-container">
+          <div
+            v-for="clientGroup in groupedHoldingsByClientName"
+            :key="clientGroup.id"
+            class="client-group-single"
+          >
+            <div
+              class="group-header-single"
+              @click="expandedClients.has(clientGroup.id) ? expandedClients.delete(clientGroup.id) : expandedClients.add(clientGroup.id)"
+            >
+              <div class="header-content-single">
+                <div class="client-info-single">
+                  <span class="client-name-id-single">{{ getClientDisplayName(clientGroup.clientName, clientGroup.clientID) }}</span>
+                </div>
+                <div class="header-right-section">
+                  <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
+                    持仓数: <i>{{ clientGroup.holdings.length }}</i> 支
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div v-if="expandedClients.has(clientGroup.id)" class="group-content-single">
+              <div
+                v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
+                :key="holding.id"
+                class="holding-card-compact"
+              >
+                <div class="holding-header-compact">
+                  <div class="holding-info-compact">
+                    <div class="fund-name-row">
+                      <h4 class="fund-name">{{ holding.fundName }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
+                    </div>
+                  </div>
+                  <div class="nav-info-single-line">
+                    <span class="nav-with-date">
+                      {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="holding-details-compact">
+                  <div class="detail-row">
+                    <span class="detail-label">金额:</span>
+                    <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
+                    <span class="detail-label" style="margin-left: 8px;">份额:</span>
+                    <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <span class="detail-label">收益:</span>
+                    <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
+                      {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
+                    </span>
+                    <span class="detail-label" style="margin-left: 8px;">收益率:</span>
+                    <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
+                      {{ formatPercentage(calculateProfit(holding).annualized) }}
+                    </span>
+                  </div>
+                  
+                  <div class="detail-row">
+                    <span class="detail-label">购买日期:</span>
+                    <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
+                    <span class="detail-label" style="margin-left: 8px;">持有天数:</span>
+                    <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                  </div>
+                  
+                  <div v-if="holding.remarks" class="detail-row">
+                    <span class="detail-label">备注:</span>
+                    <span class="detail-value">{{ holding.remarks }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
+                <button @click="loadedGroupedClientCount += 10">加载更多</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div v-if="isRefreshing" class="refresh-overlay">
+      <div class="refresh-progress">
+        <div class="progress-text">
+          更新中{{ updatingText }}
+        </div>
+        <div class="progress-details">
+          [{{ refreshProgress.current }}/{{ refreshProgress.total }}]
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
@@ -251,61 +478,12 @@ const showStatusText = computed({
   }
 })
 
-// 主题相关逻辑
+// 主题相关逻辑 - 修复事件监听
 const handleThemeChange = (event: any) => {
-  const { theme } = event.detail
-  applyThemeToDocument(theme)
+  const { mode } = event.detail
+  console.log('ClientView: 收到主题变更事件', mode)
   themeKey.value = Date.now()
-}
-
-const applyThemeToDocument = (mode: string) => {
-  const root = document.documentElement
-  const body = document.body
-  root.classList.remove('theme-light', 'theme-dark', 'theme-system')
-  body.classList.remove('light-mode', 'dark-mode')
-  
-  if (mode === 'dark') {
-    root.classList.add('theme-dark')
-    body.classList.add('dark-mode')
-    updateCSSVariables('dark')
-  } else if (mode === 'light') {
-    root.classList.add('theme-light')
-    body.classList.add('light-mode')
-    updateCSSVariables('light')
-  } else {
-    root.classList.add('theme-system')
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-    if (prefersDark) {
-      body.classList.add('dark-mode')
-      updateCSSVariables('dark')
-    } else {
-      body.classList.add('light-mode')
-      updateCSSVariables('light')
-    }
-  }
-}
-
-const updateCSSVariables = (theme: 'light' | 'dark') => {
-  const root = document.documentElement
-  if (theme === 'dark') {
-    root.style.setProperty('--bg-primary', '#000000')
-    root.style.setProperty('--bg-card', '#1c1c1e')
-    root.style.setProperty('--bg-hover', '#2c2c2e')
-    root.style.setProperty('--text-primary', '#ffffff')
-    root.style.setProperty('--text-secondary', '#8e8e93')
-    root.style.setProperty('--border-color', '#3a3a3c')
-    root.style.setProperty('--accent-color', '#3b82f6')
-    root.style.setProperty('--accent-color-rgb', '59, 130, 246')
-  } else {
-    root.style.setProperty('--bg-primary', '#f5f5f7')
-    root.style.setProperty('--bg-card', '#ffffff')
-    root.style.setProperty('--bg-hover', '#f0f7ff')
-    root.style.setProperty('--text-primary', '#333333')
-    root.style.setProperty('--text-secondary', '#666666')
-    root.style.setProperty('--border-color', '#e5e5e7')
-    root.style.setProperty('--accent-color', '#3b82f6')
-    root.style.setProperty('--accent-color-rgb', '59, 130, 246')
-  }
+  refreshKey.value = Date.now()
 }
 
 const autoHideTimer = ref<number | null>(null)
@@ -316,18 +494,17 @@ watch(holdings, () => {
 
 onMounted(() => {
   dataStore.init()
-  const savedTheme = localStorage.getItem('themeMode') || 'system'
-  applyThemeToDocument(savedTheme)
   
-  window.addEventListener('theme-changed', handleThemeChange)
-  window.addEventListener('theme-changed-global', handleThemeChange)
+  // 监听主题变更事件（统一使用 theme-mode-changed）
+  window.addEventListener('theme-mode-changed', handleThemeChange)
   
+  // 监听系统主题变化
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-    const currentTheme = localStorage.getItem('themeMode') || 'system'
-    if (currentTheme === 'system') {
-      applyThemeToDocument('system')
+    if (dataStore.userPreferences.themeMode === 'system') {
+      console.log('系统主题变化，触发重新渲染')
       themeKey.value = Date.now()
+      refreshKey.value = Date.now()
     }
   }
   mediaQuery.addEventListener('change', handleSystemThemeChange)
@@ -336,243 +513,14 @@ onMounted(() => {
     updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
     autoHideTimer.value !== null && clearTimeout(autoHideTimer.value)
     
-    // 移除了隐私模式相关的 window 事件监听
-    window.removeEventListener('theme-changed', handleThemeChange)
-    window.removeEventListener('theme-changed-global', handleThemeChange)
+    // 移除事件监听
+    window.removeEventListener('theme-mode-changed', handleThemeChange)
     mediaQuery.removeEventListener('change', handleSystemThemeChange)
   })
 })
 </script>
 
-<template>
-  <div class="client-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <div class="header-section">
-      <div class="header-row">
-        <div class="action-buttons">
-          <button
-            class="action-btn"
-            :class="{ active: areAnyCardsExpanded }"
-            @click="expandedClients.size > 0 ? expandedClients.clear() : groupedHoldingsByClientName.forEach(g => expandedClients.add(g.id))"
-            :title="areAnyCardsExpanded ? '折叠所有' : '展开所有'"
-          >
-            {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
-          </button>
-          
-          <button
-            class="action-btn"
-            :class="{ active: isSearchExpanded }"
-            @click="isSearchExpanded = !isSearchExpanded"
-            :title="isSearchExpanded ? '隐藏搜索' : '显示搜索'"
-          >
-            🔍
-          </button>
-        </div>
-        
-        <div class="status-indicator" @click="onStatusTextTap">
-          <div v-if="showStatusText && !showRefreshButton" class="status-text">
-            {{ latestNavDateString }}
-          </div>
-          
-          <button
-            v-if="showRefreshButton"
-            class="refresh-btn"
-            @click.stop="handleRefresh"
-            :disabled="isRefreshing"
-            :title="isRefreshing ? '刷新中...' : '刷新数据'"
-          >
-            <span v-if="isRefreshing" class="spinner-small"></span>
-            <span v-else>⟳</span>
-          </button>
-        </div>
-      </div>
-      
-      <div v-if="isSearchExpanded" class="search-box">
-        <div class="search-input-wrapper">
-          <span class="search-icon">🔍</span>
-          <input
-            v-model="searchText"
-            type="text"
-            placeholder="输入客户名、基金代码、基金名称..."
-            class="search-input"
-          />
-          <button
-            v-if="searchText"
-            class="clear-search"
-            @click="searchText = ''"
-          >
-            ×
-          </button>
-        </div>
-      </div>
-    </div>
-    
-    <div class="content-area">
-      <div v-if="searchText" class="search-results">
-        <div v-if="searchResults.length === 0" class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <h3>未找到匹配的内容</h3>
-          <p>请尝试其他搜索关键词</p>
-        </div>
-        
-        <div v-else class="search-results-list">
-          <div
-            v-for="holding in searchResults.slice(0, loadedSearchResultCount)"
-            :key="holding.id"
-            class="holding-card-compact"
-          >
-            <div class="holding-header-compact">
-              <div class="holding-info-compact">
-                <div class="fund-name-row">
-                  <h4 class="fund-name">{{ holding.fundName }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
-                </div>
-                <div class="client-info-row">
-                  <span class="client-name-id">{{ getClientDisplayName(holding.clientName, holding.clientID) }}</span>
-                </div>
-              </div>
-              <div class="nav-info-single-line">
-                <span class="nav-with-date">
-                  {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
-                </span>
-              </div>
-            </div>
-            
-            <div class="holding-details-compact">
-              <div class="detail-row">
-                <span class="detail-label">金额:</span>
-                <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                <span class="detail-label" style="margin-left: 8px;">份额:</span>
-                <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">收益:</span>
-                <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
-                  {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
-                </span>
-                <span class="detail-label" style="margin-left: 8px;">收益率:</span>
-                <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
-                  {{ formatPercentage(calculateProfit(holding).annualized) }}
-                </span>
-              </div>
-              
-              <div v-if="holding.remarks" class="detail-row">
-                <span class="detail-label">备注:</span>
-                <span class="detail-value">{{ holding.remarks }}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div v-if="loadedSearchResultCount < searchResults.length" class="load-more">
-            <button @click="loadedSearchResultCount += 10">加载更多</button>
-          </div>
-        </div>
-      </div>
-      
-      <div v-else class="client-groups">
-        <div v-if="holdings.length === 0" class="empty-state">
-          <div class="empty-icon">📊</div>
-          <h3>当前没有数据</h3>
-          <p>请导入数据开始使用</p>
-        </div>
-        
-        <div v-else class="clients-container">
-          <div
-            v-for="clientGroup in groupedHoldingsByClientName"
-            :key="clientGroup.id"
-            class="client-group-single"
-          >
-            <div
-              class="group-header-single"
-              @click="expandedClients.has(clientGroup.id) ? expandedClients.delete(clientGroup.id) : expandedClients.add(clientGroup.id)"
-            >
-              <div class="header-content-single">
-                <div class="client-info-single">
-                  <span class="client-name-id-single">{{ getClientDisplayName(clientGroup.clientName, clientGroup.clientID) }}</span>
-                </div>
-                <div class="header-right-section">
-                  <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
-                    持仓数: <i>{{ clientGroup.holdings.length }}</i> 支
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div v-if="expandedClients.has(clientGroup.id)" class="group-content-single">
-              <div
-                v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
-                :key="holding.id"
-                class="holding-card-compact"
-              >
-                <div class="holding-header-compact">
-                  <div class="holding-info-compact">
-                    <div class="fund-name-row">
-                      <h4 class="fund-name">{{ holding.fundName }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
-                    </div>
-                  </div>
-                  <div class="nav-info-single-line">
-                    <span class="nav-with-date">
-                      {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
-                    </span>
-                  </div>
-                </div>
-                
-                <div class="holding-details-compact">
-                  <div class="detail-row">
-                    <span class="detail-label">金额:</span>
-                    <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                    <span class="detail-label" style="margin-left: 8px;">份额:</span>
-                    <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
-                  </div>
-                  
-                  <div class="detail-row">
-                    <span class="detail-label">收益:</span>
-                    <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
-                      {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
-                    </span>
-                    <span class="detail-label" style="margin-left: 8px;">收益率:</span>
-                    <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
-                      {{ formatPercentage(calculateProfit(holding).annualized) }}
-                    </span>
-                  </div>
-                  
-                  <div class="detail-row">
-                    <span class="detail-label">购买日期:</span>
-                    <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
-                    <span class="detail-label" style="margin-left: 8px;">持有天数:</span>
-                    <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
-                  </div>
-                  
-                  <div v-if="holding.remarks" class="detail-row">
-                    <span class="detail-label">备注:</span>
-                    <span class="detail-value">{{ holding.remarks }}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
-                <button @click="loadedGroupedClientCount += 10">加载更多</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div v-if="isRefreshing" class="refresh-overlay">
-      <div class="refresh-progress">
-        <div class="progress-text">
-          更新中{{ updatingText }}
-        </div>
-        <div class="progress-details">
-          [{{ refreshProgress.current }}/{{ refreshProgress.total }}]
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <style scoped>
-/* 样式保持不变 */
 .client-view {
   min-height: 100vh;
   background: var(--bg-primary);
@@ -580,7 +528,7 @@ onMounted(() => {
   transition: background-color 0.3s ease;
   overflow-x: hidden;
 }
-/* ... 剩余样式 ... */
+
 .header-section {
   background: var(--bg-primary);
   padding: 16px 16px 12px;
@@ -655,7 +603,7 @@ onMounted(() => {
   height: 36px;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-color), #764ba2);
+  background: var(--accent-color);
   color: white;
   font-size: 18px;
   cursor: pointer;
@@ -725,7 +673,7 @@ onMounted(() => {
   position: absolute;
   right: 12px;
   background: var(--text-secondary);
-  color: white;
+  color: var(--bg-primary);
   border: none;
   border-radius: 50%;
   font-size: 16px;
@@ -1183,28 +1131,6 @@ onMounted(() => {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  body.dark-mode .refresh-btn {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-  }
-  
-  body.dark-mode .holding-card-compact {
-    background: rgba(28, 28, 30, 0.8);
-  }
-  
-  body.dark-mode .client-group-single {
-    background: rgba(28, 28, 30, 0.8);
-  }
-}
-
-.holding-card-compact {
-  margin-bottom: 6px;
-}
-
-.client-group-single {
-  margin-bottom: 6px;
-}
-
 @media (hover: none) and (pointer: coarse) {
   .group-header-single:active {
     background: var(--bg-hover);
@@ -1213,5 +1139,34 @@ onMounted(() => {
   .holding-card-compact:active {
     transform: scale(0.98);
   }
+}
+
+/* 深色模式适配 */
+:root.dark .refresh-btn {
+  background: var(--accent-color);
+}
+
+:root.dark .holding-card-compact {
+  background: var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+:root.dark .client-group-single {
+  background: var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+:root.dark .group-content-single {
+  background: var(--bg-hover);
+}
+
+:root.dark .clear-search {
+  background: var(--text-secondary);
+  color: var(--bg-primary);
+}
+
+:root.dark .clear-search:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
 }
 </style>

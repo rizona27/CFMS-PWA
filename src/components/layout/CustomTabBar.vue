@@ -6,7 +6,7 @@
           v-for="tab in tabs"
           :key="tab.id"
           class="tab-button"
-          :class="{ 
+          :class="{
             active: activeTab === tab.id,
             'button-glass': activeTab === tab.id
           }"
@@ -16,7 +16,7 @@
             <div class="icon-container">
               <span class="tab-icon">{{ tab.icon }}</span>
             </div>
-            <span class="tab-label">{{ tab.label }}</span> 
+            <span class="tab-label">{{ tab.label }}</span>
           </div>
           <div class="active-indicator" v-if="activeTab === tab.id"></div>
         </button>
@@ -60,7 +60,7 @@ watch(
 <style scoped>
 .ios-tab-bar-container {
   position: fixed;
-  bottom: 20px; 
+  bottom: 20px;
   left: 0;
   right: 0;
   display: flex;
@@ -73,15 +73,15 @@ watch(
 
 .ios-tab-bar {
   pointer-events: auto;
-  border-radius: 999px; 
+  border-radius: 999px;
   padding: 8px;
-  max-width: 400px; 
+  max-width: 400px;
   margin: 0 auto;
   background: var(--glass-bg, rgba(255, 255, 255, 0.8));
-  -webkit-backdrop-filter: blur(20px); /* Safari 9+, iOS Safari 9.2+ */
-  backdrop-filter: blur(20px); /* Standard syntax */
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
-  box-shadow: var(--card-shadow, 0 8px 32px rgba(0, 0, 0, 0.1)), 
+  box-shadow: var(--card-shadow, 0 8px 32px rgba(0, 0, 0, 0.1)),
               0 12px 60px rgba(79, 172, 254, 0.2);
 }
 
@@ -95,16 +95,16 @@ watch(
 .tab-button {
   position: relative;
   display: flex;
-  justify-content: center; 
+  justify-content: center;
   align-items: center;
   background: transparent;
   border: none;
   padding: 8px 12px;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
-  border-radius: 999px; 
-  min-width: unset; 
-  flex-grow: 1; 
+  border-radius: 999px;
+  min-width: unset;
+  flex-grow: 1;
   overflow: hidden;
 }
 
@@ -113,15 +113,15 @@ watch(
 }
 
 .tab-button.active {
-  transform: none; 
-  flex-grow: 3; 
+  transform: none;
+  flex-grow: 3;
 }
 
 /* 磨玻璃效果 */
 .button-glass {
   background: var(--glass-button-bg, rgba(79, 172, 254, 0.1)) !important;
-  border: 1px solid var(--glass-button-border, rgba(79, 172, 254, 0.05)); 
-  box-shadow: 
+  border: 1px solid var(--glass-button-border, rgba(79, 172, 254, 0.05));
+  box-shadow:
     0 4px 15px var(--glass-button-shadow, rgba(79, 172, 254, 0.05)),
     inset 0 0 4px var(--glass-button-highlight, rgba(255, 255, 255, 0.3));
 }
@@ -134,7 +134,7 @@ watch(
   position: relative;
   z-index: 2;
   height: 24px;
-  padding-right: 6px; 
+  padding-right: 6px;
 }
 
 .icon-container {
@@ -148,7 +148,7 @@ watch(
 .tab-icon {
   font-size: 20px;
   transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
-  filter: grayscale(100%); 
+  filter: grayscale(100%);
   opacity: 0.7;
   color: var(--text-primary, #333333);
 }
@@ -161,11 +161,11 @@ watch(
 }
 
 .tab-label {
-  font-size: 14px; 
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0;
-  white-space: nowrap; 
-  min-width: 30px; 
+  white-space: nowrap;
+  min-width: 30px;
   transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
@@ -187,32 +187,32 @@ watch(
   display: none;
 }
 
-/* 适配深色模式 */
-.dark-mode .ios-tab-bar {
-  background: var(--glass-bg-dark, rgba(30, 30, 30, 0.8));
-  border: 1px solid var(--glass-border-dark, rgba(255, 255, 255, 0.1));
-  box-shadow: var(--card-shadow-dark, 0 8px 32px rgba(0, 0, 0, 0.4));
+/* 深色模式适配 */
+:root.dark .ios-tab-bar {
+  background: var(--glass-bg, rgba(30, 30, 46, 0.8));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--card-shadow, 0 8px 32px rgba(0, 0, 0, 0.4));
 }
 
-.dark-mode .tab-button:hover:not(.active) {
-  background: var(--bg-hover-dark, rgba(255, 255, 255, 0.05));
+:root.dark .tab-button:hover:not(.active) {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
 }
 
 /* 深色模式下的磨玻璃激活按钮样式 */
-.dark-mode .button-glass {
-  background: var(--glass-button-bg-dark, rgba(79, 172, 254, 0.1)) !important;
-  border: 1px solid var(--glass-button-border-dark, rgba(79, 172, 254, 0.08));
-  box-shadow: 
-    0 4px 15px var(--glass-button-shadow-dark, rgba(79, 172, 254, 0.05)),
-    inset 0 0 4px var(--glass-button-highlight-dark, rgba(255, 255, 255, 0.08));
+:root.dark .button-glass {
+  background: var(--glass-button-bg, rgba(79, 172, 254, 0.1)) !important;
+  border: 1px solid var(--glass-button-border, rgba(79, 172, 254, 0.08));
+  box-shadow:
+    0 4px 15px var(--glass-button-shadow, rgba(79, 172, 254, 0.05)),
+    inset 0 0 4px var(--glass-button-highlight, rgba(255, 255, 255, 0.08));
 }
 
-.dark-mode .tab-button.active .tab-icon {
-  color: var(--accent-color-dark, #64b5f6);
+:root.dark .tab-button.active .tab-icon {
+  color: var(--accent-color, #64b5f6);
 }
 
-.dark-mode .tab-button.active .tab-label {
-  color: var(--accent-color-dark, #64b5f6);
+:root.dark .tab-button.active .tab-label {
+  color: var(--accent-color, #64b5f6);
 }
 
 /* 移动端适配 */

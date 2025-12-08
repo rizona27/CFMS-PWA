@@ -1,6 +1,201 @@
+<template>
+  <div class="import-holding-view">
+    <NavBar title="导入持仓数据" show-back @back="goBack" />
+    
+    <div class="container">
+      <!-- 文件上传区域 -->
+      <div class="upload-section">
+        <div
+          class="upload-area"
+          :class="{ 'drag-over': dragOver }"
+          @dragover.prevent="handleDragOver"
+          @dragleave="dragOver = false"
+          @drop="handleFileDrop"
+          @click="triggerFileInput"
+        >
+          <div class="upload-icon">📁</div>
+          <h3 class="upload-title">拖放文件到此处</h3>
+          <p class="upload-subtitle">或点击选择CSV文件</p>
+          <p class="upload-hint">支持标准的CSV格式文件</p>
+          <input
+            type="file"
+            ref="fileInput"
+            accept=".csv"
+            @change="handleFileSelect"
+            style="display: none"
+          />
+        </div>
+        
+        <!-- 已选择文件 -->
+        <div v-if="selectedFile" class="selected-file">
+          <div class="file-info">
+            <div class="file-icon">📄</div>
+            <div class="file-details">
+              <h4>{{ selectedFile.name }}</h4>
+              <p>{{ formatFileSize(selectedFile.size) }}</p>
+            </div>
+            <button class="remove-file" @click="selectedFile = null">
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 导入设置 -->
+      <div class="settings-section">
+        <h2 class="section-title">导入设置</h2>
+        
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label class="setting-label">
+              <input
+                type="checkbox"
+                v-model="settings.overwrite"
+                class="setting-checkbox"
+              />
+              <span>覆盖现有数据</span>
+            </label>
+            <p class="setting-hint">如果启用，将先清空所有现有持仓数据</p>
+          </div>
+          
+          <div class="setting-item">
+            <label class="setting-label">
+              <input
+                type="checkbox"
+                v-model="settings.skipDuplicates"
+                class="setting-checkbox"
+              />
+              <span>跳过重复记录</span>
+            </label>
+            <p class="setting-hint">跳过客户、基金和日期完全相同的记录</p>
+          </div>
+          
+          <div class="setting-item">
+            <label class="setting-label">
+              <input
+                type="checkbox"
+                v-model="settings.autoFetchFundInfo"
+                class="setting-checkbox"
+              />
+              <span>自动获取基金信息</span>
+            </label>
+            <p class="setting-hint">自动获取基金名称和最新净值</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 导入按钮 -->
+      <div class="action-section">
+        <button
+          class="import-button"
+          :class="{ 'importing': isImporting }"
+          @click="startImport"
+          :disabled="!selectedFile || isImporting"
+        >
+          <span v-if="!isImporting">开始导入</span>
+          <span v-else>导入中... {{ progressPercentage.toFixed(0) }}%</span>
+        </button>
+        
+        <button class="template-button" @click="downloadTemplate">
+          下载模板
+        </button>
+      </div>
+      
+      <!-- 导入进度 -->
+      <div v-if="isImporting" class="progress-section">
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              :style="{ width: progressPercentage + '%' }"
+            ></div>
+          </div>
+          <div class="progress-text">
+            正在处理: {{ importProgress.current }}/{{ importProgress.total }}
+            <span v-if="currentProcessingLine"> - {{ currentProcessingLine }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 导入结果 -->
+      <div v-if="importResult" class="result-section">
+        <h2 class="section-title">导入结果</h2>
+        
+        <div class="result-summary">
+          <div class="result-item success">
+            <div class="result-icon">✅</div>
+            <div class="result-content">
+              <h3>成功</h3>
+              <p>{{ importResult.success }} 条</p>
+            </div>
+          </div>
+          
+          <div class="result-item failed">
+            <div class="result-icon">❌</div>
+            <div class="result-content">
+              <h3>失败</h3>
+              <p>{{ importResult.failed }} 条</p>
+            </div>
+          </div>
+          
+          <div class="result-item skipped">
+            <div class="result-icon">⏭️</div>
+            <div class="result-content">
+              <h3>跳过</h3>
+              <p>{{ importResult.skipped }} 条</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 错误详情 -->
+        <div v-if="importResult.errors.length > 0" class="errors-section">
+          <h3 class="errors-title">错误详情</h3>
+          <div class="errors-list">
+            <div
+              v-for="(error, index) in importResult.errors"
+              :key="index"
+              class="error-item"
+            >
+              <span class="error-line">第{{ error.line }}行</span>
+              <span class="error-field">{{ error.field }}:</span>
+              <span class="error-message">{{ error.message }}</span>
+              <span class="error-value" v-if="error.value">({{ error.value }})</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 成功详情 -->
+        <div v-if="importResult.successItems.length > 0" class="success-section">
+          <h3 class="success-title">成功导入的记录</h3>
+          <div class="success-list">
+            <div
+              v-for="(item, index) in importResult.successItems"
+              :key="index"
+              class="success-item"
+            >
+              <span class="success-client">{{ item.client_name }}</span>
+              <span class="success-fund">{{ item.fund_code }}</span>
+              <span class="success-amount">{{ item.purchase_amount.toFixed(2) }}元</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Toast消息 -->
+    <ToastMessage
+      :show="showToast"
+      :message="toastMessage"
+      :type="toastType"
+      @close="showToast = false"
+    />
+  </div>
+</template>
+
 <script setup lang="ts">
-import { ref, computed } from 'vue' 
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import NavBar from '@/components/layout/NavBar.vue'
 import ToastMessage from '@/components/common/ToastMessage.vue'
 import { useDataStore } from '@/stores/dataStore'
 import { fundService } from '@/services/fundService'
@@ -44,6 +239,11 @@ const toastMessage = ref('')
 const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
 
 // 处理文件拖放
+const handleDragOver = (event: DragEvent) => {
+  dragOver.value = true
+  event.preventDefault()
+}
+
 const handleFileDrop = (event: DragEvent) => {
   dragOver.value = false
   const files = event.dataTransfer?.files
@@ -69,6 +269,12 @@ const handleFileSelect = (event: Event) => {
       input.value = ''
     }
   }
+}
+
+// 触发文件输入
+const triggerFileInput = () => {
+  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+  fileInput?.click()
 }
 
 // 格式化文件大小
@@ -438,3 +644,456 @@ const goBack = () => {
   router.push('/holdings/manage')
 }
 </script>
+
+<style scoped>
+.import-holding-view {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.upload-section {
+  margin-bottom: 2rem;
+}
+
+.upload-area {
+  border: 3px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  padding: 3rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.upload-area:hover,
+.upload-area.drag-over {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.upload-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.upload-title {
+  color: white;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.upload-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.upload-hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+}
+
+.selected-file {
+  margin-top: 1rem;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.file-icon {
+  font-size: 2rem;
+  margin-right: 1rem;
+}
+
+.file-details {
+  flex: 1;
+}
+
+.file-details h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.file-details p {
+  margin: 0.25rem 0 0;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.remove-file {
+  background: #ef4444;
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.remove-file:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.section-title {
+  color: white;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #333;
+}
+
+.setting-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.setting-hint {
+  font-size: 0.875rem;
+  color: #666;
+  margin-left: 2rem;
+}
+
+.action-section {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.import-button {
+  flex: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.import-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+}
+
+.import-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.import-button.importing {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+}
+
+.template-button {
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border: 2px solid #667eea;
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.template-button:hover {
+  background: #667eea;
+  color: white;
+}
+
+.progress-section {
+  margin-top: 2rem;
+}
+
+.progress-container {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.result-section {
+  margin-top: 2rem;
+}
+
+.result-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.result-icon {
+  font-size: 2rem;
+}
+
+.result-content h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.result-content p {
+  margin: 0.25rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.result-item.success .result-content p {
+  color: #10b981;
+}
+
+.result-item.failed .result-content p {
+  color: #ef4444;
+}
+
+.result-item.skipped .result-content p {
+  color: #f59e0b;
+}
+
+.errors-section,
+.success-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.errors-title,
+.success-title {
+  color: #333;
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.errors-list,
+.success-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.error-item,
+.success-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.error-line {
+  font-weight: 600;
+  color: #333;
+  min-width: 60px;
+}
+
+.error-field {
+  color: #ef4444;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.error-message {
+  color: #666;
+  flex: 1;
+}
+
+.error-value {
+  color: #999;
+  font-style: italic;
+}
+
+.success-client {
+  font-weight: 600;
+  color: #333;
+  min-width: 100px;
+}
+
+.success-fund {
+  color: #667eea;
+  font-family: 'Courier New', monospace;
+  min-width: 80px;
+}
+
+.success-amount {
+  color: #10b981;
+  font-weight: 600;
+}
+
+/* 深色模式适配 */
+:root.dark .import-holding-view {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+:root.dark .file-info {
+  background: rgba(30, 41, 59, 0.95);
+}
+
+:root.dark .file-details h4 {
+  color: #f1f5f9;
+}
+
+:root.dark .file-details p {
+  color: #cbd5e1;
+}
+
+:root.dark .settings-grid,
+:root.dark .progress-container,
+:root.dark .result-item,
+:root.dark .errors-section,
+:root.dark .success-section {
+  background: rgba(30, 41, 59, 0.95);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark .setting-label {
+  color: #f1f5f9;
+}
+
+:root.dark .setting-hint {
+  color: #cbd5e1;
+}
+
+:root.dark .progress-text {
+  color: #cbd5e1;
+}
+
+:root.dark .result-content h3 {
+  color: #f1f5f9;
+}
+
+:root.dark .errors-title,
+:root.dark .success-title {
+  color: #f1f5f9;
+}
+
+:root.dark .error-item,
+:root.dark .success-item {
+  background: rgba(15, 23, 42, 0.7);
+}
+
+:root.dark .error-line {
+  color: #f1f5f9;
+}
+
+:root.dark .error-message {
+  color: #cbd5e1;
+}
+
+:root.dark .error-value {
+  color: #94a3b8;
+}
+
+:root.dark .success-client {
+  color: #f1f5f9;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .upload-area {
+    padding: 2rem;
+  }
+  
+  .settings-grid {
+    grid-template-columns: 1fr;
+    padding: 1.5rem;
+  }
+  
+  .action-section {
+    flex-direction: column;
+  }
+  
+  .result-summary {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

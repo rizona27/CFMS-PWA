@@ -25,8 +25,8 @@
           <h3 class="section-title">更新日志</h3>
           <div class="log-carousel-wrapper">
             <div class="log-carousel" :style="{ transform: `translateY(-${currentLogIndex * 100}%)` }">
-              <div 
-                v-for="(log, index) in updateLogs" 
+              <div
+                v-for="(log, index) in updateLogs"
                 :key="log.id"
                 class="log-item"
                 :class="{ active: index === currentLogIndex }"
@@ -262,6 +262,10 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+:root.dark .log-carousel-wrapper {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
 .log-carousel {
   height: 100%;
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -350,11 +354,16 @@ onUnmounted(() => {
   border-radius: 12px;
   border: 1px solid var(--border-color);
   transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+:root.dark .feature-item {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .feature-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 16px rgba(var(--accent-color-rgb), 0.1);
 }
 
 .bullet-point {

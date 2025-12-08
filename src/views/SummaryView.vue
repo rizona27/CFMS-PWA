@@ -1,5 +1,3 @@
-[file name]: SummaryView.vue
-[file content begin]
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
@@ -405,15 +403,14 @@ const showStatusText = computed({
   }
 })
 
-// 隐私模式变化处理器
+// 隐私模式变化处理器 - 修复：通过正确的API更新
 const handlePrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
   console.log(`SummaryView: 隐私模式变化到 ${enabled}`)
   
-  // 直接更新dataStore
-  dataStore.isPrivacyMode = enabled
+  // ✅ 正确的更新方式：通过updateUserPreferences
+  dataStore.updateUserPreferences({ isPrivacyMode: enabled })
   
-  // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
@@ -423,9 +420,8 @@ const handlePrivacyModeChange = (event: any) => {
 
 // 主题变化处理器
 const handleThemeChange = (event: any) => {
-  const { theme } = event.detail
-  console.log(`SummaryView: 主题变化到 ${theme}`)
-  applyThemeToDocument(theme)
+  const { mode } = event.detail
+  console.log(`SummaryView: 主题变化到 ${mode}`)
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
@@ -435,73 +431,13 @@ const handleGlobalPrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
   console.log(`SummaryView: 收到全局隐私模式变化事件: ${enabled}`)
   
-  // 直接更新dataStore
-  dataStore.isPrivacyMode = enabled
+  // ✅ 正确的更新方式
+  dataStore.updateUserPreferences({ isPrivacyMode: enabled })
   
   // 强制重新渲染
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
-}
-
-// 应用主题到文档
-const applyThemeToDocument = (mode: string) => {
-  const root = document.documentElement
-  const body = document.body
-  
-  // 移除所有主题类
-  root.classList.remove('theme-light', 'theme-dark', 'theme-system')
-  body.classList.remove('light-mode', 'dark-mode')
-  
-  if (mode === 'dark') {
-    root.classList.add('theme-dark')
-    body.classList.add('dark-mode')
-    updateCSSVariables('dark')
-  } else if (mode === 'light') {
-    root.classList.add('theme-light')
-    body.classList.add('light-mode')
-    updateCSSVariables('light')
-  } else {
-    root.classList.add('theme-system')
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-    if (prefersDark) {
-      body.classList.add('dark-mode')
-      updateCSSVariables('dark')
-    } else {
-      body.classList.add('light-mode')
-      updateCSSVariables('light')
-    }
-  }
-  
-  // 强制重绘
-  nextTick(() => {
-    void body.offsetHeight
-  })
-}
-
-// 立即更新CSS变量
-const updateCSSVariables = (theme: 'light' | 'dark') => {
-  const root = document.documentElement
-  
-  if (theme === 'dark') {
-    root.style.setProperty('--bg-primary', '#000000')
-    root.style.setProperty('--bg-card', '#1c1c1e')
-    root.style.setProperty('--bg-hover', '#2c2c2e')
-    root.style.setProperty('--text-primary', '#ffffff')
-    root.style.setProperty('--text-secondary', '#8e8e93')
-    root.style.setProperty('--border-color', '#3a3a3c')
-    root.style.setProperty('--accent-color', '#3b82f6')
-    root.style.setProperty('--accent-color-rgb', '59, 130, 246')
-  } else {
-    root.style.setProperty('--bg-primary', '#f5f5f7')
-    root.style.setProperty('--bg-card', '#ffffff')
-    root.style.setProperty('--bg-hover', '#f0f7ff')
-    root.style.setProperty('--text-primary', '#333333')
-    root.style.setProperty('--text-secondary', '#666666')
-    root.style.setProperty('--border-color', '#e5e5e7')
-    root.style.setProperty('--accent-color', '#3b82f6')
-    root.style.setProperty('--accent-color-rgb', '59, 130, 246')
-  }
 }
 
 // 强制同步处理器
@@ -513,8 +449,6 @@ const handleForcePrivacySync = () => {
 
 const handleForceThemeSync = () => {
   console.log('SummaryView: 收到强制主题同步事件')
-  const savedTheme = localStorage.getItem('themeMode') || 'system'
-  applyThemeToDocument(savedTheme)
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
@@ -536,21 +470,6 @@ onMounted(() => {
   // 初始化数据
   dataStore.init()
   
-  // 初始化主题
-  const savedTheme = localStorage.getItem('themeMode') || 'system'
-  applyThemeToDocument(savedTheme)
-  
-  // 禁止缩放
-  const metaViewport = document.querySelector('meta[name="viewport"]')
-  if (metaViewport) {
-    metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
-  } else {
-    const meta = document.createElement('meta')
-    meta.name = 'viewport'
-    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
-    document.head.appendChild(meta)
-  }
-  
   dataStore.addLog('用户访问概览视图页面', 'info')
   
   // 延迟检查并显示过时基金Toast
@@ -562,25 +481,12 @@ onMounted(() => {
   window.addEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.addEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
   
-  // 监听主题变化事件
-  window.addEventListener('theme-changed', handleThemeChange)
-  window.addEventListener('theme-changed-global', handleThemeChange)
+  // 监听主题变化事件（统一使用 theme-mode-changed）
+  window.addEventListener('theme-mode-changed', handleThemeChange)
   
   // 监听强制同步事件
   window.addEventListener('force-privacy-sync', handleForcePrivacySync)
   window.addEventListener('force-theme-sync', handleForceThemeSync)
-  
-  // 监听系统主题变化
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-  const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-    const currentTheme = localStorage.getItem('themeMode') || 'system'
-    if (currentTheme === 'system') {
-      applyThemeToDocument('system')
-      refreshKey.value = Date.now()
-      themeKey.value = Date.now()
-    }
-  }
-  mediaQuery.addEventListener('change', handleSystemThemeChange)
   
   onUnmounted(() => {
     // 清理定时器
@@ -590,11 +496,9 @@ onMounted(() => {
     // 移除监听器
     window.removeEventListener('privacy-mode-changed', handlePrivacyModeChange)
     window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
-    window.removeEventListener('theme-changed', handleThemeChange)
-    window.removeEventListener('theme-changed-global', handleThemeChange)
+    window.removeEventListener('theme-mode-changed', handleThemeChange)
     window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
     window.removeEventListener('force-theme-sync', handleForceThemeSync)
-    mediaQuery.removeEventListener('change', handleSystemThemeChange)
   })
 })
 </script>
@@ -1023,6 +927,10 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
+:root.dark .empty-state {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
 .empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
@@ -1066,6 +974,10 @@ onMounted(() => {
   position: relative;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+:root.dark .fund-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .fund-card:hover {
@@ -1266,15 +1178,25 @@ onMounted(() => {
   position: fixed;
   bottom: 100px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(20px);
   background: var(--bg-card);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.08);
   max-width: 400px;
   z-index: 999;
   animation: slideUp 0.3s ease;
   border: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+:root.dark .outdated-toast {
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes slideUp {
@@ -1348,6 +1270,12 @@ onMounted(() => {
   .fund-name, .fund-code-text {
     width: 100%;
   }
+  
+  .outdated-toast {
+    max-width: 320px;
+    padding: 14px;
+    bottom: 80px;
+  }
 }
 
 /* 深色模式特定样式 */
@@ -1361,4 +1289,3 @@ onMounted(() => {
   }
 }
 </style>
-[file content end]

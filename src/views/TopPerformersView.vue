@@ -292,11 +292,13 @@ const getValueColor = (value: number) => {
   return '#666'
 }
 
+// 修复：通过正确的API更新隐私模式
 const handlePrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
   console.log(`TopPerformersView: 隐私模式变化到 ${enabled}`)
   
-  dataStore.isPrivacyMode = enabled
+  // ✅ 正确的更新方式
+  dataStore.updateUserPreferences({ isPrivacyMode: enabled })
   
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
@@ -309,71 +311,20 @@ const handleGlobalPrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
   console.log(`TopPerformersView: 收到全局隐私模式变化事件: ${enabled}`)
   
-  dataStore.isPrivacyMode = enabled
+  // ✅ 正确的更新方式
+  dataStore.updateUserPreferences({ isPrivacyMode: enabled })
   
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
 }
 
+// 主题变化处理器
 const handleThemeChange = (event: any) => {
-  const { theme } = event.detail
-  console.log(`TopPerformersView: 主题变化到 ${theme}`)
-  applyThemeToDocument(theme)
+  const { mode } = event.detail
+  console.log(`TopPerformersView: 主题变化到 ${mode}`)
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
-}
-
-const applyThemeToDocument = (mode: string) => {
-  const root = document.documentElement
-  const body = document.body
-  
-  root.classList.remove('theme-light', 'theme-dark', 'theme-system')
-  body.classList.remove('light-mode', 'dark-mode')
-  
-  if (mode === 'dark') {
-    root.classList.add('theme-dark')
-    body.classList.add('dark-mode')
-    updateCSSVariables('dark')
-  } else if (mode === 'light') {
-    root.classList.add('theme-light')
-    body.classList.add('light-mode')
-    updateCSSVariables('light')
-  } else {
-    root.classList.add('theme-system')
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-    if (prefersDark) {
-      body.classList.add('dark-mode')
-      updateCSSVariables('dark')
-    } else {
-      body.classList.add('light-mode')
-      updateCSSVariables('light')
-    }
-  }
-}
-
-const updateCSSVariables = (theme: 'light' | 'dark') => {
-  const root = document.documentElement
-  
-  if (theme === 'dark') {
-    root.style.setProperty('--bg-primary', '#000000')
-    root.style.setProperty('--bg-card', '#1c1c1e')
-    root.style.setProperty('--bg-hover', '#2c2c2e')
-    root.style.setProperty('--text-primary', '#ffffff')
-    root.style.setProperty('--text-secondary', '#8e8e93')
-    root.style.setProperty('--border-color', '#3a3a3c')
-    root.style.setProperty('--accent-color', '#3b82f6')
-    root.style.setProperty('--accent-color-rgb', '59, 130, 246')
-  } else {
-    root.style.setProperty('--bg-primary', '#f5f5f7')
-    root.style.setProperty('--bg-card', '#ffffff')
-    root.style.setProperty('--bg-hover', '#f0f7ff')
-    root.style.setProperty('--text-primary', '#333333')
-    root.style.setProperty('--text-secondary', '#666666')
-    root.style.setProperty('--border-color', '#e5e5e7')
-    root.style.setProperty('--accent-color', '#3b82f6')
-    root.style.setProperty('--accent-color-rgb', '59, 130, 246')
-  }
 }
 
 const handleForcePrivacySync = () => {
@@ -384,8 +335,6 @@ const handleForcePrivacySync = () => {
 
 const handleForceThemeSync = () => {
   console.log('TopPerformersView: 收到强制主题同步事件')
-  const savedTheme = localStorage.getItem('themeMode') || 'system'
-  applyThemeToDocument(savedTheme)
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
@@ -415,24 +364,22 @@ onMounted(() => {
     document.head.appendChild(meta)
   }
   
+  // 监听隐私模式变化事件
   window.addEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.addEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
   
-  window.addEventListener('theme-changed', handleThemeChange)
-  window.addEventListener('theme-changed-global', handleThemeChange)
+  // 监听主题变化事件（统一使用 theme-mode-changed）
+  window.addEventListener('theme-mode-changed', handleThemeChange)
   
+  // 监听强制同步事件
   window.addEventListener('force-privacy-sync', handleForcePrivacySync)
   window.addEventListener('force-theme-sync', handleForceThemeSync)
-  
-  const savedTheme = localStorage.getItem('themeMode') || 'system'
-  applyThemeToDocument(savedTheme)
 })
 
 onUnmounted(() => {
   window.removeEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
-  window.removeEventListener('theme-changed', handleThemeChange)
-  window.removeEventListener('theme-changed-global', handleThemeChange)
+  window.removeEventListener('theme-mode-changed', handleThemeChange)
   window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
   window.removeEventListener('force-theme-sync', handleForceThemeSync)
 })
@@ -615,7 +562,7 @@ onUnmounted(() => {
       </div>
     </div>
     
-    <div v-if="showingToast" class="toast">
+    <div v-if="showingToast" class="global-toast info">
       {{ toastMessage }}
     </div>
   </div>
@@ -782,6 +729,10 @@ onUnmounted(() => {
   animation: slideDown 0.2s ease;
 }
 
+:root.dark .filter-section {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
@@ -884,6 +835,10 @@ onUnmounted(() => {
   transition: all 0.3s ease;
 }
 
+:root.dark .empty-state {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
 .empty-icon {
   font-size: 42px;
   margin-bottom: 14px;
@@ -909,6 +864,10 @@ onUnmounted(() => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
   border: 1px solid var(--border-color);
+}
+
+:root.dark .performers-table {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .table-header {
@@ -1049,26 +1008,7 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
-.toast {
-  position: fixed;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--text-primary);
-  color: var(--bg-card);
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 13px;
-  z-index: 1000;
-  animation: slideUp 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translate(-50%, 20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
+/* 响应式调整 */
 @media (max-width: 768px) {
   .header-section {
     padding: 14px 12px 10px;
@@ -1113,12 +1053,6 @@ onUnmounted(() => {
   
   .filter-label {
     font-size: 10px;
-  }
-  
-  .toast {
-    bottom: 90px;
-    padding: 10px 18px;
-    font-size: 12px;
   }
 }
 
