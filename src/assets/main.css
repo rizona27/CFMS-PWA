@@ -1,35 +1,68 @@
+/* main.css - 全局样式入口 */
 @import './base.css';
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+/* 1. 全局重置与基础设置 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
   font-weight: normal;
 }
 
-a,
-.green {
+body {
+  min-height: 100vh;
+  /* 核心：直接把渐变背景应用到 body 上，这样所有页面（Auth/Config）都有统一背景 */
+  background: var(--bg-gradient); 
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+  font-size: 15px;
+  /* 平滑过渡效果，切换主题时不会闪烁 */
+  transition: background 0.3s ease, color 0.3s ease;
+  
+  /* 移动端优化：防止点击高亮和橡皮筋效果 */
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none; 
+}
+
+/* 2. 应用容器设置 (移除原来的 max-width 限制，让 PWA 全屏) */
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: block; /* 移除原本的 grid */
+}
+
+/* 3. 通用工具类 (Utility Classes) - 让组件复用风格 */
+
+/* 毛玻璃卡片 - AuthView 和 ConfigView 都可以加这个类 */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 20px;
+}
+
+/* 渐变按钮 */
+.btn-gradient {
+  background: linear-gradient(90deg, #C2E9FB 0%, #A1C4FD 100%);
+  color: #1a237e; /* 按钮文字深色更易读 */
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+}
+
+a {
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+  color: var(--color-accent);
+  transition: 0.3s;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+/* 滚动条隐藏 (移动端体验更好) */
+::-webkit-scrollbar {
+  display: none;
 }

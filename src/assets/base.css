@@ -1,86 +1,58 @@
-/* color palette from <https://github.com/vuejs/theme> */
+/* base.css - 定义全局变量 (Design Tokens) */
+
 :root {
-  --vt-c-white: #ffffff;
-  --vt-c-white-soft: #f8f8f8;
-  --vt-c-white-mute: #f2f2f2;
+  /* --- 1. 核心色板 (Palette) --- */
+  /* 蓝色系 - 用于主色调 */
+  --color-blue-dark: #1a237e;
+  --color-blue-medium: #283593;
+  --color-blue-light: #bbdefb;
+  --color-blue-pale: #e0f7fa;
+  
+  /* 功能色 */
+  --color-accent: #2196f3;       /* 强调色 */
+  --color-success: #4caf50;      /* 成功 */
+  --color-warning: #ff9800;      /* 警告/VIP */
+  --color-danger: #ef5350;       /* 错误 */
 
-  --vt-c-black: #181818;
-  --vt-c-black-soft: #222222;
-  --vt-c-black-mute: #282828;
-
-  --vt-c-indigo: #2c3e50;
-
-  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
-  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
-  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
-  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
-
-  --vt-c-text-light-1: var(--vt-c-indigo);
-  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
-  --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+  /* --- 2. 主题变量 (Light Mode 默认) --- */
+  /* 背景渐变 */
+  --bg-gradient: linear-gradient(135deg, var(--color-blue-pale) 0%, var(--color-blue-light) 100%);
+  
+  /* 文本颜色 */
+  --text-primary: #1a237e;
+  --text-secondary: #5d697a;
+  
+  /* 毛玻璃 (Glassmorphism) 核心变量 */
+  --glass-bg: rgba(255, 255, 255, 0.7);           /* 卡片背景透明度 */
+  --glass-border: rgba(255, 255, 255, 0.6);       /* 卡片边框 */
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); /* 柔和投影 */
+  --glass-blur: 12px;                             /* 模糊程度 */
 }
 
-/* semantic color variables for this project */
-:root {
-  --color-background: var(--vt-c-white);
-  --color-background-soft: var(--vt-c-white-soft);
-  --color-background-mute: var(--vt-c-white-mute);
-
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
-
-  --color-heading: var(--vt-c-text-light-1);
-  --color-text: var(--vt-c-text-light-1);
-
-  --section-gap: 160px;
-}
-
+/* --- 3. 深色模式 (Dark Mode) --- */
+/* 当系统处于深色模式，或者 body 带有 .theme-dark 类时生效 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: var(--vt-c-black);
-    --color-background-soft: var(--vt-c-black-soft);
-    --color-background-mute: var(--vt-c-black-mute);
-
-    --color-border: var(--vt-c-divider-dark-2);
-    --color-border-hover: var(--vt-c-divider-dark-1);
-
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
+    /* 深邃的蓝色渐变背景 */
+    --bg-gradient: linear-gradient(135deg, var(--color-blue-dark) 0%, var(--color-blue-medium) 100%);
+    
+    /* 深色模式下的文本 */
+    --text-primary: #e3f2fd;
+    --text-secondary: #b0bec5;
+    
+    /* 深色模式下的毛玻璃 */
+    --glass-bg: rgba(30, 30, 46, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
-}
-
-body {
-  min-height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
-  line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-  font-size: 15px;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* 为了支持手动切换主题，也可以保留 .theme-dark 类选择器 */
+.theme-dark {
+  --bg-gradient: linear-gradient(135deg, var(--color-blue-dark) 0%, var(--color-blue-medium) 100%);
+  --text-primary: #e3f2fd;
+  --text-secondary: #b0bec5;
+  --glass-bg: rgba(30, 30, 46, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
