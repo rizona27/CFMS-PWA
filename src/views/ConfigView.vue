@@ -34,8 +34,9 @@ const showNotification = (message: string, type: 'info' | 'success' | 'error' | 
 watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
   console.log(`隐私模式变化: ${oldValue} -> ${newValue}`)
   
-  privacyKey.value = Date.now()
-  refreshKey.value = Date.now()
+  // 移除这里的 key 更新，防止触发根组件重新渲染导致跳回顶部
+  // privacyKey.value = Date.now()
+  // refreshKey.value = Date.now()
   
   if (isPrivacyInitialized && oldValue !== newValue) {
     showNotification(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')
@@ -113,7 +114,7 @@ const getUserColors = () => {
 
 const fundAPIs = [
   { name: '天天基金', value: 'eastmoney', color: '#007bff' },
-  { name: '同花顺', value: 'ths', color: '#28a745' },
+  { name: '同花顺', value: 'ths', color: '#dc3545' },
 ]
 const selectedAPI = ref(dataStore.userPreferences.selectedFundAPI || 'eastmoney')
 
@@ -174,23 +175,31 @@ const handleLogout = async () => {
   }
 }
 
-const togglePrivacyMode = () => {
-  const newValue = !dataStore.isPrivacyMode
-  const oldValue = dataStore.isPrivacyMode
-  console.log(`切换隐私模式: ${oldValue} -> ${newValue}`)
+const togglePrivacyMode = (value: boolean) => {
+  if (dataStore.isPrivacyMode === value) return
   
-  dataStore.updateUserPreferences({ isPrivacyMode: newValue })
+  const newValue = value
+  console.log(`切换隐私模式: ${dataStore.isPrivacyMode} -> ${newValue}`)
   
-  localStorage.setItem('privacy_mode', newValue.toString())
-  
+  // 直接更新状态，避免重新加载页面
   dataStore.isPrivacyMode = newValue
+  dataStore.updateUserPreferences({ isPrivacyMode: newValue })
+  localStorage.setItem('privacy_mode', newValue.toString())
   
   dataStore.addLog(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')
   
-  nextTick(() => {
-    privacyKey.value = Date.now()
-    refreshKey.value = Date.now()
+  // 只触发必要的更新，不强制重新渲染整个组件
+  const event = new CustomEvent('privacy-mode-changed-global', {
+    detail: {
+      enabled: newValue,
+      timestamp: Date.now(),
+      source: 'toggle-switch'
+    },
+    bubbles: true,
+    composed: true
   })
+  
+  window.dispatchEvent(event)
 }
 
 onMounted(() => {
@@ -260,8 +269,8 @@ onMounted(() => {
 const handleForcePrivacySync = () => {
   const privacyMode = dataStore.isPrivacyMode
   console.log('强制同步隐私模式:', privacyMode)
+  // 这里保留 key 更新以应对强制同步的情况，但常规 toggle 不需要
   privacyKey.value = Date.now()
-  refreshKey.value = Date.now()
 }
 
 onUnmounted(() => {
@@ -270,31 +279,29 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="config-view" :key="`${refreshKey}-${privacyKey}`">
+  <div class="config-view">
     <div class="config-scroll-area">
       <div class="config-content-wrapper">
         <div class="config-content">
           
-          <!-- 用户信息卡片 -->
           <div class="user-info-section">
             <div class="user-card-wrapper">
-              <div 
+              <div
                 class="user-info-card"
                 :style="{
                   backgroundColor: getUserColors().cardBg,
-                  borderColor: authStore.userType === 'vip' ? 'rgba(255, 215, 0, 0.3)' : 
-                               authStore.userType === 'subscribed' ? 'rgba(224, 224, 224, 0.3)' : 
+                  borderColor: authStore.userType === 'vip' ? 'rgba(255, 215, 0, 0.3)' :
+                               authStore.userType === 'subscribed' ? 'rgba(224, 224, 224, 0.3)' :
                                'rgba(0, 123, 255, 0.2)'
                 }"
               >
-                <!-- 用户类型徽章 -->
-                <div 
+                <div
                   class="user-type-ribbon"
                   :class="authStore.userType"
                   :style="{
-                    background: authStore.userType === 'vip' ? 
+                    background: authStore.userType === 'vip' ?
                               'linear-gradient(135deg, #FFD700, #FFA500, #FF8C00)' :
-                              authStore.userType === 'subscribed' ? 
+                              authStore.userType === 'subscribed' ?
                               'linear-gradient(135deg, #E0E0E0, #B0B0B0, #909090)' :
                               'linear-gradient(135deg, #9E9E9E, #757575, #616161)',
                     color: authStore.userType === 'subscribed' ? '#424242' : 'white'
@@ -305,7 +312,7 @@ onUnmounted(() => {
 
                 <div class="user-content">
                   <div class="avatar-section">
-                    <div 
+                    <div
                       class="avatar-icon"
                       :style="{ color: getUserColors().iconColor }"
                     >
@@ -315,29 +322,41 @@ onUnmounted(() => {
                       </svg>
                     </div>
                     <div class="user-details">
-                      <h3 
+                      <h3
                         class="user-name"
                         :style="{ color: getUserColors().textColor }"
                       >
                         {{ displayName }}
                       </h3>
-                      <p class="user-email">{{ authStore.currentUser?.email || '未设置邮箱' }}</p>
-                      <div class="user-type-info" v-if="authStore.userType === 'subscribed' || authStore.userType === 'vip'">
-                        <span 
-                          class="type-tag"
+                      <p class="user-email" v-if="authStore.currentUser?.email">{{ authStore.currentUser.email }}</p>
+                      
+                      <div class="user-info-footer">
+                        <div class="user-type-info" v-if="authStore.userType === 'subscribed' || authStore.userType === 'vip'">
+                          <span
+                            class="type-tag"
+                            :style="{
+                              backgroundColor: authStore.userType === 'vip' ? 'rgba(255, 215, 0, 0.2)' : 'rgba(255, 152, 0, 0.2)',
+                              color: authStore.userType === 'vip' ? '#B8860B' : '#f57c00'
+                            }"
+                          >
+                            {{ authStore.userType === 'vip' ? '永久有效' : '体验用户' }}
+                          </span>
+                        </div>
+                        <button
+                          class="logout-btn"
+                          @click="handleLogout"
                           :style="{
-                            backgroundColor: authStore.userType === 'vip' ? 'rgba(255, 215, 0, 0.2)' : 'rgba(255, 152, 0, 0.2)',
-                            color: authStore.userType === 'vip' ? '#B8860B' : '#f57c00'
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)'
                           }"
                         >
-                          {{ authStore.userType === 'vip' ? '永久有效' : '体验用户' }}
-                        </span>
+                          退出
+                        </button>
                       </div>
                     </div>
                   </div>
                   
                   <div class="user-actions">
-                    <button 
+                    <button
                       class="upgrade-btn"
                       @click="handleUpgrade"
                       v-if="authStore.userType !== 'vip'"
@@ -351,85 +370,78 @@ onUnmounted(() => {
                         <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     </button>
-                    <button 
-                      class="logout-btn"
-                      @click="handleLogout"
-                      :style="{
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)'
-                      }"
-                    >
-                      退出
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 功能菜单区域 -->
           <div class="functions-section">
-            <h3 class="section-title">功能菜单</h3>
             <div class="function-grid">
-              <!-- 云端同步 -->
-              <div 
+              <div
                 class="function-card"
                 :class="{ 'disabled': authStore.userType === 'free' }"
                 @click="handleFeature('CloudSync')"
               >
-                <div class="card-icon" style="background: rgba(147, 51, 234, 0.1);">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 19L12 13L18 19" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M12 13V1" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M4 12L8 16" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M20 12L16 16" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
                 <div class="card-content">
-                  <h4 class="card-title">
-                    云端同步
-                    <span v-if="authStore.userType === 'free'" class="vip-badge">VIP</span>
-                  </h4>
+                  <div class="card-header">
+                    <div class="card-icon" style="background: rgba(147, 51, 234, 0.1);">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 19L12 13L18 19" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 13V1" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M4 12L8 16" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M20 12L16 16" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <h4 class="card-title">
+                      云端同步
+                      <span v-if="authStore.userType === 'free'" class="vip-badge">VIP</span>
+                    </h4>
+                  </div>
                   <p class="card-desc">上传或下载持仓数据到云端</p>
                 </div>
               </div>
               
-              <!-- 管理持仓 -->
               <div class="function-card" @click="handleFeature('ManageHoldings')">
-                <div class="card-icon" style="background: rgba(59, 130, 246, 0.1);">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
                 <div class="card-content">
-                  <h4 class="card-title">管理持仓</h4>
+                  <div class="card-header">
+                    <div class="card-icon" style="background: rgba(59, 130, 246, 0.1);">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <h4 class="card-title">管理持仓</h4>
+                  </div>
                   <p class="card-desc">新增、编辑或清空持仓数据</p>
                 </div>
               </div>
               
-              <!-- 日志查询 -->
               <div class="function-card" @click="handleFeature('APILog')">
-                <div class="card-icon" style="background: rgba(6, 182, 212, 0.1);">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="#06B6D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
                 <div class="card-content">
-                  <h4 class="card-title">日志查询</h4>
+                  <div class="card-header">
+                    <div class="card-icon" style="background: rgba(6, 182, 212, 0.1);">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="#06B6D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <h4 class="card-title">日志查询</h4>
+                  </div>
                   <p class="card-desc">API请求与响应日志</p>
                 </div>
               </div>
               
-              <!-- 数据接口 -->
               <div class="function-card">
-                <div class="card-icon" style="background: rgba(245, 158, 11, 0.1);">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7 12L17 12" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M12 17L12 7" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="12" cy="12" r="10" stroke="#F59E0B" stroke-width="2"/>
-                  </svg>
-                </div>
                 <div class="card-content">
-                  <h4 class="card-title">数据接口</h4>
+                  <div class="card-header">
+                    <div class="card-icon" style="background: rgba(245, 158, 11, 0.1);">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 12L17 12" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 17L12 7" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="12" cy="12" r="10" stroke="#F59E0B" stroke-width="2"/>
+                      </svg>
+                    </div>
+                    <h4 class="card-title">数据接口</h4>
+                  </div>
                   <p class="card-desc">选择基金数据源</p>
                   <div class="api-selector">
                     <div class="api-options">
@@ -462,55 +474,69 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- 设置区域 -->
           <div class="settings-section">
-            <h3 class="section-title">设置</h3>
             <div class="settings-grid">
-              <!-- 隐私模式 -->
               <div class="setting-card">
-                <div class="card-icon" style="background: rgba(20, 184, 166, 0.1);">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 15V17M6 21H18C18.5304 21 19.0391 20.7893 19.4142 20.4142C19.7893 20.0391 20 19.5304 20 19V13C20 12.4696 19.7893 11.9609 19.4142 11.5858C19.0391 11.2107 18.5304 11 18 11H6C5.46957 11 4.96086 11.2107 4.58579 11.5858C4.21071 11.9609 4 12.4696 4 13V19C4 19.5304 4.21071 20.0391 4.58579 20.4142C4.96086 20.7893 5.46957 21 6 21Z" stroke="#14B8A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M12 11C13.6569 11 15 9.65685 15 8C15 6.34315 13.6569 5 12 5C10.3431 5 9 6.34315 9 8C9 9.65685 10.3431 11 12 11Z" stroke="#14B8A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
                 <div class="card-content">
-                  <h4 class="card-title">隐私模式</h4>
+                  <div class="card-header">
+                    <div class="card-icon" style="background: rgba(20, 184, 166, 0.1);">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 15V17M6 21H18C18.5304 21 19.0391 20.7893 19.4142 20.4142C19.7893 20.0391 20 19.5304 20 19V13C20 12.4696 19.7893 11.9609 19.4142 11.5858C19.0391 11.2107 18.5304 11 18 11H6C5.46957 11 4.96086 11.2107 4.58579 11.5858C4.21071 11.9609 4 12.4696 4 13V19C4 19.5304 4.21071 20.0391 4.58579 20.4142C4.96086 20.7893 5.46957 21 6 21Z" stroke="#14B8A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 11C13.6569 11 15 9.65685 15 8C15 6.34315 13.6569 5 12 5C10.3431 5 9 6.34315 9 8C9 9.65685 10.3431 11 12 11Z" stroke="#14B8A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <h4 class="card-title">隐私模式</h4>
+                  </div>
+                  <p class="card-desc">隐藏敏感数据</p>
                   <div class="privacy-toggle">
-                    <div class="toggle-switch">
-                      <input
-                        type="checkbox"
-                        :id="'privacy-toggle'"
-                        :checked="dataStore.isPrivacyMode"
-                        @change="togglePrivacyMode"
-                        hidden
-                      />
-                      <label :for="'privacy-toggle'" class="toggle-slider">
-                        <span class="toggle-text">{{ dataStore.isPrivacyMode ? '开启' : '关闭' }}</span>
-                      </label>
+                    <div class="privacy-options">
+                      <button
+                        class="privacy-option"
+                        :class="{ 'active': dataStore.isPrivacyMode === true }"
+                        @click="togglePrivacyMode(true)"
+                        :style="{
+                          borderColor: '#14B8A6',
+                          color: dataStore.isPrivacyMode === true ? '#fff' : '#14B8A6',
+                          backgroundColor: dataStore.isPrivacyMode === true ? '#14B8A6' : 'transparent'
+                        }"
+                      >
+                        开启
+                      </button>
+                      <button
+                        class="privacy-option"
+                        :class="{ 'active': dataStore.isPrivacyMode === false }"
+                        @click="togglePrivacyMode(false)"
+                        :style="{
+                          borderColor: '#6B7280',
+                          color: dataStore.isPrivacyMode === false ? '#fff' : '#6B7280',
+                          backgroundColor: dataStore.isPrivacyMode === false ? '#6B7280' : 'transparent'
+                        }"
+                      >
+                        关闭
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <!-- 关于 -->
               <div class="setting-card" @click="handleFeature('About')">
-                <div class="card-icon" style="background: rgba(59, 130, 246, 0.1);">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org2000/svg">
-                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M12 16V12" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="12" cy="8" r="1" fill="#3B82F6"/>
-                  </svg>
-                </div>
                 <div class="card-content">
-                  <h4 class="card-title">关于 CFMS</h4>
+                  <div class="card-header">
+                    <div class="card-icon" style="background: rgba(59, 130, 246, 0.1);">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 16V12" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="12" cy="8" r="1" fill="#3B82F6"/>
+                      </svg>
+                    </div>
+                    <h4 class="card-title">关于 CFMS</h4>
+                  </div>
                   <p class="card-desc">程序版本信息和说明</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 底部装饰文本 -->
           <div class="footer-section">
             <div class="footer-text">
               <span class="gradient-text">Happiness around the corner.</span>
@@ -553,12 +579,13 @@ onUnmounted(() => {
 }
 
 .config-content {
-  padding: 20px 0 100px;
+  /* 修复2：增加底部 Padding，确保手机端能拉到底 */
+  padding: 16px 0 120px;
 }
 
 /* 用户信息卡片样式 */
 .user-info-section {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .user-card-wrapper {
@@ -568,25 +595,25 @@ onUnmounted(() => {
 .user-info-card {
   position: relative;
   background: white;
-  border-radius: 20px;
+  border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+  box-shadow: 0 8px 24px rgba(31, 38, 135, 0.1);
   overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .user-type-ribbon {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 4px 12px;
-  border-radius: 12px;
+  top: 10px;
+  right: 10px;
+  padding: 3px 10px;
+  border-radius: 10px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   z-index: 10;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .user-type-ribbon.vip {
@@ -600,14 +627,15 @@ onUnmounted(() => {
 }
 
 .user-content {
-  padding: 20px;
+  padding: 16px;
 }
 
+/* 头像区域通用布局 */
 .avatar-section {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .avatar-icon {
@@ -620,17 +648,24 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.9);
   border: 2px solid currentColor;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .user-details {
   flex: 1;
+  min-width: 0;
+  /* 确保垂直排列 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .user-name {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   margin: 0 0 4px 0;
   letter-spacing: -0.3px;
+  line-height: 1.2;
 }
 
 .user-email {
@@ -638,29 +673,62 @@ onUnmounted(() => {
   color: #666;
   margin: 0 0 8px 0;
   opacity: 0.8;
+  line-height: 1.3;
 }
 
-.user-type-info {
+.user-info-footer {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
   gap: 8px;
+  margin-top: 4px;
 }
 
 .type-tag {
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 28px;
+  -webkit-tap-highlight-color: transparent;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  white-space: nowrap;
+}
+
+.logout-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.logout-btn:active {
+  transform: translateY(0);
 }
 
 .user-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  padding-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.upgrade-btn, .logout-btn {
+.upgrade-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -672,39 +740,26 @@ onUnmounted(() => {
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 40px;
+  min-height: 38px;
   -webkit-tap-highlight-color: transparent;
+  width: 100%;
 }
 
-.upgrade-btn:hover, .logout-btn:hover {
+.upgrade-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.upgrade-btn:active, .logout-btn:active {
+.upgrade-btn:active {
   transform: translateY(0);
 }
 
-.logout-btn {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  width: 75px;
-}
-
 /* 功能区样式 */
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 16px 16px;
-  letter-spacing: -0.3px;
-}
-
 .function-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   padding: 0 8px;
 }
 
@@ -717,6 +772,7 @@ onUnmounted(() => {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  min-height: 90px;
 }
 
 .function-card:hover {
@@ -734,25 +790,34 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
+.card-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .card-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
-}
-
-.card-content {
-  min-height: 80px;
+  flex-shrink: 0;
 }
 
 .card-title {
   font-size: 15px;
   font-weight: 600;
   color: #333;
-  margin: 0 0 4px 0;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -774,6 +839,8 @@ onUnmounted(() => {
   margin: 0;
   line-height: 1.4;
   opacity: 0.8;
+  text-align: right;
+  margin-top: auto;
 }
 
 .api-selector {
@@ -834,6 +901,7 @@ onUnmounted(() => {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  min-height: 90px;
 }
 
 .setting-card:hover {
@@ -842,51 +910,48 @@ onUnmounted(() => {
 }
 
 .privacy-toggle {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
-.toggle-switch {
-  display: inline-block;
-  position: relative;
+.privacy-options {
+  display: flex;
+  gap: 8px;
 }
 
-.toggle-slider {
+.privacy-option {
+  flex: 1;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  height: 32px;
-  background: #e5e7eb;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
+  min-height: 32px;
 }
 
-.toggle-switch input:checked + .toggle-slider {
-  background: #14b8a6;
+.privacy-option:hover:not(.active) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.toggle-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.toggle-switch input:not(:checked) + .toggle-slider .toggle-text {
-  color: #6b7280;
+.privacy-option.active {
+  cursor: default;
 }
 
 /* 底部样式 */
 .footer-section {
-  margin-top: 40px;
+  margin-top: 30px;
   text-align: center;
   padding: 0 16px;
 }
 
 .footer-text {
-  padding: 20px 0;
+  padding: 16px 0;
 }
 
 .gradient-text {
@@ -920,7 +985,6 @@ onUnmounted(() => {
     border-color: rgba(255, 255, 255, 0.1);
   }
   
-  .section-title,
   .card-title {
     color: #e5e7eb;
   }
@@ -937,10 +1001,6 @@ onUnmounted(() => {
   .user-actions {
     border-top-color: rgba(255, 255, 255, 0.1);
   }
-  
-  .toggle-slider {
-    background: #374151;
-  }
 }
 
 /* 移动端优化 */
@@ -955,71 +1015,154 @@ onUnmounted(() => {
     gap: 12px;
   }
   
-  .user-name {
-    font-size: 18px;
+  .user-info-card {
+    padding: 0;
+  }
+  
+  .user-content {
+    padding: 14px;
+  }
+  
+  /* 移动端: 保持 flex 布局，不用 Grid，确保头像在左，文字在右 */
+  .avatar-section {
+    gap: 12px;
+    align-items: flex-start; /* 顶部对齐 */
+    margin-bottom: 12px;
   }
   
   .avatar-icon {
     width: 40px;
     height: 40px;
+    margin-top: 2px;
   }
   
-  .card-icon {
-    width: 40px;
-    height: 40px;
+  .user-name {
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+  
+  .user-email {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  
+  /* user-details 内部已经垂直排列，这里只需微调间距 */
+  .user-info-footer {
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 0;
+  }
+  
+  .type-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+  
+  .logout-btn {
+    padding: 3px 10px;
+    font-size: 12px;
+    min-height: 26px;
+  }
+  
+  .user-actions {
+    padding-top: 10px;
+  }
+  
+  .upgrade-btn {
+    min-height: 36px;
+    font-size: 13px;
   }
   
   .function-card,
   .setting-card {
     padding: 14px;
+    min-height: 85px;
   }
   
-  .api-options {
+  .card-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .card-title {
+    font-size: 14px;
+  }
+  
+  .card-desc {
+    font-size: 11px;
+  }
+  
+  .api-options,
+  .privacy-options {
     flex-direction: column;
   }
   
-  .api-option {
+  .api-option,
+  .privacy-option {
     width: 100%;
   }
   
-  .user-actions {
-    flex-direction: column;
-    gap: 12px;
+  .config-content {
+    /* 增加手机端 padding，防止底部被遮挡 */
+    padding: 12px 0 100px;
   }
   
-  .upgrade-btn,
-  .logout-btn {
-    width: 100%;
+  .footer-section {
+    margin-top: 20px;
+  }
+  
+  .footer-text {
+    padding: 12px 0;
+  }
+  
+  .gradient-text {
+    font-size: 14px;
   }
 }
 
 /* 小屏幕手机优化 */
 @media (max-width: 480px) {
   .config-content {
-    padding: 16px 0 80px;
+    padding: 10px 0 100px;
   }
   
   .user-content {
-    padding: 16px;
+    padding: 12px;
   }
   
-  .avatar-section {
-    flex-direction: column;
-    text-align: center;
-    gap: 12px;
+  .avatar-icon {
+    width: 36px;
+    height: 36px;
   }
   
-  .user-details {
-    text-align: center;
+  .user-name {
+    font-size: 15px;
+  }
+  
+  .user-email {
+    font-size: 11px;
   }
   
   .function-card,
   .setting-card {
     padding: 12px;
+    min-height: 80px;
   }
   
-  .card-content {
-    min-height: 70px;
+  .card-header {
+    gap: 10px;
+  }
+  
+  .card-desc {
+    font-size: 11px;
+  }
+  
+  .footer-section {
+    margin-top: 16px;
+  }
+  
+  .footer-text {
+    padding: 10px 0;
   }
 }
 
@@ -1030,16 +1173,20 @@ onUnmounted(() => {
   }
   
   .user-info-card {
-    padding: 12px;
+    padding: 0;
   }
   
-  .avatar-section {
-    margin-bottom: 12px;
+  .user-content {
+    padding: 12px;
   }
   
   .function-card,
   .setting-card {
-    min-height: 100px;
+    min-height: 80px;
+  }
+  
+  .config-content {
+    padding: 10px 0 80px;
   }
 }
 
@@ -1051,24 +1198,21 @@ onUnmounted(() => {
     transition: transform 0.1s ease;
   }
   
-  .api-option:active:not(.disabled):not(.active) {
+  .api-option:active:not(.disabled):not(.active),
+  .privacy-option:active:not(.active) {
     transform: scale(0.95);
   }
   
-  .toggle-slider:active {
-    transform: scale(0.95);
-  }
-  
-  .upgrade-btn:active,
-  .logout-btn:active {
+  .logout-btn:active,
+  .upgrade-btn:active {
     transform: scale(0.95);
   }
 }
 
-/* PWA 安装优化 */
+/* PWA 安装优化 - 关键：增加底部安全区域 */
 @media (display-mode: standalone) {
   .config-content {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
   }
 }
 </style>
