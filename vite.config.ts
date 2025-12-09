@@ -11,26 +11,53 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'CFMS · 一基暴富',
-        short_name: 'CFMS',
+        short_name: '一基暴富',  // 改为中文短名
         description: '基金客户管理系统',
-        theme_color: '#2196f3',
-        background_color: '#f5f5f5',
+        theme_color: '#4facfe',  // 与 index.html 保持一致
+        background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
         scope: '/',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: '/icons/icon-192x192.png',  // 修改路径
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
-            src: 'pwa-512x512.png',
+            src: '/icons/icon-512x512.png',  // 修改路径
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
+      },
+      // 添加 workbox 配置
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
+      },
+      // 添加 devOptions 配置
+      devOptions: {
+        enabled: false,
+        type: 'module'
       }
     })
   ],
@@ -48,38 +75,85 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    // 修改为相对路径以适应子域名部署
     base: './',
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['vue', 'vue-router', 'pinia']
-        }
+        manualChunks: (id) => {
+          // 将 node_modules 中的代码打包到 vendor
+          if (id.includes('node_modules')) {
+            return 'vendor'
+          }
+          // 将 dataStore 相关代码打包到单独的文件
+          if (id.includes('dataStore')) {
+            return 'dataStore'
+          }
+          // 将 authStore 相关代码打包到单独的文件
+          if (id.includes('authStore')) {
+            return 'authStore'
+          }
+          // 将 views 相关代码分组
+          if (id.includes('src/views')) {
+            const viewName = id.split('/').pop()?.split('.')[0]
+            if (viewName && viewName !== 'index') {
+              return `view-${viewName}`
+            }
+          }
+        },
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     },
-    chunkSizeWarningLimit: 1000
+    // 增加警告限制
+    chunkSizeWarningLimit: 1500,
+    // 启用 CSS 代码分割
+    cssCodeSplit: true,
+    // 优化构建输出
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: mode === 'production',
+        drop_debugger: mode === 'production'
+      }
+    }
   },
   server: {
     host: true,
     port: 5173,
     open: true,
-    // 开发时使用代理 - 更新为更可靠的配置
     proxy: {
       '/api': {
-        target: 'http://localhost:8315', // 改为本地后端端口
+        target: 'http://localhost:8315',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
         ws: true,
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
-            console.log('代理错误:', err);
-          });
+            console.log('代理错误:', err)
+          })
           proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('代理请求:', req.method, req.url);
-          });
+            console.log('代理请求:', req.method, req.url)
+          })
         }
       }
+    },
+    // 添加 hmr 配置
+    hmr: {
+      overlay: true
     }
+  },
+  // 添加 CSS 预处理器配置
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@import "./src/assets/styles/variables.scss";`
+      }
+    }
+  },
+  // 添加 optimizeDeps 配置
+  optimizeDeps: {
+    include: ['vue', 'vue-router', 'pinia'],
+    exclude: ['vue-demi']
   }
 }))
