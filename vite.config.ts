@@ -10,9 +10,9 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'CFMS基金管理系统',
+        name: 'CFMS · 一基暴富',
         short_name: 'CFMS',
-        description: '一站式基金持仓管理平台',
+        description: '基金客户管理系统',
         theme_color: '#2196f3',
         background_color: '#f5f5f5',
         display: 'standalone',
