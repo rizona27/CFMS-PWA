@@ -1,7 +1,12 @@
 <template>
   <div class="manage-holdings-view">
-    <!-- 使用统一的NavBar组件 -->
-    <NavBar :title="'持仓管理'" :back-route="'/config'" :shadow="false" />
+    
+    <div class="top-actions">
+      <button class="back-button-pill" @click="goBack">
+        <span class="back-icon">←</span>
+        返回
+      </button>
+    </div>
     
     <div class="config-scroll-area">
       <div class="config-content-wrapper">
@@ -9,7 +14,6 @@
           
           <div class="functions-section">
             <div class="function-grid">
-              <!-- 新增持仓 -->
               <div
                 class="function-card add-holding-card"
                 @click="goToAddHolding"
@@ -28,7 +32,6 @@
                 </div>
               </div>
               
-              <!-- 编辑持仓 -->
               <div
                 class="function-card edit-holding-card"
                 @click="goToEditHolding"
@@ -47,7 +50,6 @@
                 </div>
               </div>
               
-              <!-- 导入持仓 -->
               <div
                 class="function-card import-holding-card"
                 @click="goToImportHolding"
@@ -67,7 +69,6 @@
                 </div>
               </div>
               
-              <!-- 导出持仓 -->
               <div
                 class="function-card export-holding-card"
                 @click="goToExportHolding"
@@ -76,7 +77,7 @@
                   <div class="card-header">
                     <div class="card-icon">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 20.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M17 10L12 5L7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
@@ -87,7 +88,6 @@
                 </div>
               </div>
               
-              <!-- 清空持仓 -->
               <div
                 class="function-card clear-holding-card warning-card"
                 @click="goToClearHoldings"
@@ -130,12 +130,24 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import NavBar from '@/components/layout/NavBar.vue'
+// 移除了对 NavBar 的导入
 
 const router = useRouter()
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
+
+// 返回逻辑常量
+const backRoute = '/config'
+
+// 函数名改为 goBack 与 AboutView.vue 保持一致
+const goBack = () => {
+  if (backRoute) {
+    router.push(backRoute)
+  } else {
+    router.back()
+  }
+}
 
 const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
   toastMessage.value = message
@@ -169,6 +181,70 @@ const goToClearHoldings = () => {
 </script>
 
 <style scoped>
+/* ========================================================================= */
+/* 顶部操作区域和返回按钮样式 - 复制自 AboutView.vue 以保证统一 */
+/* ========================================================================= */
+.top-actions {
+  /* 模仿 AboutView 的顶部 padding */
+  padding: 16px 16px 0; 
+  margin-bottom: 8px; /* 按钮和下方内容之间的间距 */
+}
+
+.back-button-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 20px; /* 药丸形状 */
+  color: var(--text-primary, #1e293b);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-button-pill:hover {
+  background: var(--accent-color, #3b82f6);
+  color: white;
+  border-color: var(--accent-color, #3b82f6);
+  transform: translateX(-2px); /* 悬停效果 */
+}
+
+.back-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* 深色模式适配 */
+:root.dark .back-button-pill {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+  border-color: var(--border-color, #334155);
+  color: var(--text-primary, #f1f5f9);
+}
+
+:root.dark .back-button-pill:hover {
+  background: var(--accent-color, #60a5fa);
+  border-color: var(--accent-color, #60a5fa);
+}
+
+@media (max-width: 768px) {
+  .top-actions {
+    padding: 10px 12px 0;
+    margin-bottom: 6px;
+  }
+  
+  .back-button-pill {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+/* ========================================================================= */
+/* 原有的样式继续保留 */
+/* ========================================================================= */
+
 .manage-holdings-view {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
@@ -182,7 +258,9 @@ const goToClearHoldings = () => {
 }
 
 .config-scroll-area {
-  height: calc(100vh - 60px);
+  /* 调整高度以适应新的布局，如果内容本身是可滚动的，可以移除高度限制 */
+  /* 这里暂时保留原有的高度定义 */
+  height: calc(100vh - 60px); 
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
