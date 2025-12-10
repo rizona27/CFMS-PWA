@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
 import { fundService } from '@/services/fundService'
@@ -7,7 +7,6 @@ import { fundService } from '@/services/fundService'
 const router = useRouter()
 const dataStore = useDataStore()
 
-// 状态
 const isSearchExpanded = ref(false)
 const searchText = ref('')
 const selectedSortKey = ref<'none' | 'navReturn1m' | 'navReturn3m' | 'navReturn6m' | 'navReturn1y'>('none')
@@ -17,12 +16,10 @@ const isRefreshing = ref(false)
 const updatingTextState = ref(0)
 const updatingTextTimer = ref<number | null>(null)
 
-// 重新渲染键
 const refreshKey = ref(0)
 const privacyKey = ref(0)
 const themeKey = ref(0)
 
-// 计算属性
 const holdings = computed(() => dataStore.holdings)
 const isPrivacyMode = computed(() => dataStore.isPrivacyMode)
 const showRefreshButton = computed(() => dataStore.showRefreshButton)
@@ -34,6 +31,17 @@ const sortKeyDisplay = computed(() => {
     navReturn1m: '近1月',
     navReturn3m: '近3月',
     navReturn6m: '近6月',
+    navReturn1y: '近1年'
+  }
+  return map[selectedSortKey.value]
+})
+
+const sortKeyFullDisplay = computed(() => {
+  const map = {
+    none: '无排序',
+    navReturn1m: '近1个月',
+    navReturn3m: '近3个月',
+    navReturn6m: '近6个月',
     navReturn1y: '近1年'
   }
   return map[selectedSortKey.value]
@@ -115,10 +123,26 @@ const latestNavDate = computed(() => {
 })
 
 const hasLatestNavDate = computed(() => {
-  const latest = latestNavDate.value
-  if (!latest) return false
+  if (holdings.value.length === 0) return false
+  const prevWorkday = previousWorkday.value
   
-  return isSameDay(latest, previousWorkday.value)
+  return holdings.value.some(holding =>
+    holding.isValid && isSameDay(new Date(holding.navDate), prevWorkday)
+  )
+})
+
+const outdatedLatestDate = computed(() => {
+  if (holdings.value.length === 0 || hasLatestNavDate.value) return null
+  
+  const outdatedHoldings = holdings.value.filter(h => h.isValid)
+  if (outdatedHoldings.length === 0) return null
+  
+  const latest = outdatedHoldings.reduce((latest, holding) => {
+    const date = new Date(holding.navDate)
+    return date > latest ? date : latest
+  }, new Date(0))
+  
+  return latest
 })
 
 const outdatedFunds = computed(() => {
@@ -138,23 +162,20 @@ const outdatedFundCodes = computed(() => {
 const statusText = computed(() => {
   if (holdings.value.length === 0) return '暂无数据'
   
-  const latestDate = latestNavDate.value
-  if (!latestDate) return '暂无数据'
-  
   const formatter = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' })
-  const dateString = formatter.format(latestDate)
   
   if (hasLatestNavDate.value) {
-    return `最新日期: ${dateString}`
-  } else {
     const prevDateString = formatter.format(previousWorkday.value)
-    return `待更新: ${prevDateString}`
+    return `最新: ${prevDateString}`
+  } else {
+    if (outdatedLatestDate.value) {
+      const outdatedDateString = formatter.format(outdatedLatestDate.value)
+      return `待更新: ${outdatedDateString}`
+    } else {
+      const prevDateString = formatter.format(previousWorkday.value)
+      return `待更新: ${prevDateString}`
+    }
   }
-})
-
-const statusColor = computed(() => {
-  if (holdings.value.length === 0) return '#f97316'
-  return hasLatestNavDate.value ? '#10b981' : '#f97316'
 })
 
 const updatingText = computed(() => {
@@ -163,14 +184,58 @@ const updatingText = computed(() => {
   return baseText + dots
 })
 
-// 方法
+const getFundHash = (fundName: string): number => {
+  let hash = 0
+  for (let i = 0; i < fundName.length; i++) {
+    hash = ((hash << 5) - hash) + fundName.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+const getFundGradient = (fundName: string): string => {
+  const hash = getFundHash(fundName)
+  const hue = hash % 360
+  const saturationLight = hash % 31 + 60
+  
+  const lightGradient = `linear-gradient(90deg,
+    hsl(${hue}, ${saturationLight}%, 85%) 0%,
+    hsl(${hue}, ${saturationLight}%, 92%) 25%,
+    hsl(${hue}, ${saturationLight}%, 96%) 50%,
+    hsl(${hue}, ${saturationLight}%, 98%) 75%,
+    white 100%)`
+  
+  const darkGradient = `linear-gradient(90deg,
+    hsl(${hue}, ${saturationLight - 20}%, 18%) 0%,
+    hsl(${hue}, ${saturationLight - 20}%, 22%) 25%,
+    hsl(${hue}, ${saturationLight - 20}%, 25%) 50%,
+    hsl(${hue}, ${saturationLight - 20}%, 28%) 75%,
+    var(--bg-card) 100%)`
+  
+  return `var(--fund-gradient-light, ${lightGradient}) var(--fund-gradient-dark, ${darkGradient})`
+}
+
+const getCurrentSortReturn = (fundCode: string) => {
+  if (selectedSortKey.value === 'none') return null
+  
+  const fund = groupedByFund.value[fundCode]?.[0]
+  if (!fund) return null
+  
+  switch (selectedSortKey.value) {
+    case 'navReturn1m': return fund.navReturn1m
+    case 'navReturn3m': return fund.navReturn3m
+    case 'navReturn6m': return fund.navReturn6m
+    case 'navReturn1y': return fund.navReturn1y
+    default: return null
+  }
+}
+
 const toggleAllCards = () => {
   if (areAnyCardsExpanded.value) {
     expandedFundCodes.value.clear()
   } else {
     expandedFundCodes.value = new Set(sortedFundCodes.value)
   }
-  dataStore.addLog(`概览视图: ${areAnyCardsExpanded.value ? '折叠' : '展开'}所有基金卡片`, 'info')
 }
 
 const toggleSearch = () => {
@@ -178,31 +243,28 @@ const toggleSearch = () => {
   if (!isSearchExpanded.value) {
     searchText.value = ''
   }
-  dataStore.addLog(`概览视图: ${isSearchExpanded.value ? '显示' : '隐藏'}搜索框`, 'info')
 }
 
 const performSearch = (text: string) => {
   searchText.value = text
-  if (text) {
-    dataStore.addLog(`概览视图: 搜索 "${text}"`, 'info')
-  }
 }
 
 const clearSearch = () => {
   searchText.value = ''
-  dataStore.addLog('概览视图: 清除搜索', 'info')
 }
 
 const cycleSortKey = () => {
   const keys = ['none', 'navReturn1m', 'navReturn3m', 'navReturn6m', 'navReturn1y'] as const
   const currentIndex = keys.indexOf(selectedSortKey.value)
   selectedSortKey.value = keys[(currentIndex + 1) % keys.length]
-  dataStore.addLog(`概览视图: 切换排序方式为 ${sortKeyDisplay.value}`, 'info')
+  
+  dataStore.showToastMessage(`排序方式: ${sortKeyFullDisplay.value}`)
 }
 
 const toggleSortOrder = () => {
   sortOrder.value = sortOrder.value === 'ascending' ? 'descending' : 'ascending'
-  dataStore.addLog(`概览视图: 切换排序顺序为 ${sortOrder.value === 'ascending' ? '升序' : '降序'}`, 'info')
+  const orderText = sortOrder.value === 'ascending' ? '升序' : '降序'
+  dataStore.showToastMessage(`排序顺序: ${orderText}`)
 }
 
 const toggleFundCard = (fundCode: string) => {
@@ -215,7 +277,7 @@ const toggleFundCard = (fundCode: string) => {
 
 const getFundName = (fundCode: string) => {
   const fund = groupedByFund.value[fundCode]?.[0]
-  return fund?.fundName || '加载中...'
+  return fund?.fundName || (fundCode ? `未加载(${fundCode})` : '未加载')
 }
 
 const getClientCountColor = (count: number) => {
@@ -244,7 +306,7 @@ const formatReturn = (value: number | null | undefined) => {
 
 const getReturnColor = (value: number | null | undefined) => {
   if (value == null) return '#666'
-  return value > 0 ? '#ef4444' : value < 0 ? '#10b981' : '#666'  // 正红负绿零黑
+  return value > 0 ? '#ef4444' : value < 0 ? '#10b981' : '#666'
 }
 
 const getHoldingReturn = (holding: any) => {
@@ -260,12 +322,8 @@ const processClientName = (name: string) => {
   return name.charAt(0) + '*'.repeat(name.length - 2) + name.charAt(name.length - 1)
 }
 
-const getDisplayName = (clientName: string, clientID: string): string => {
-  const processedName = processClientName(clientName)
-  return clientID ? `${processedName}(${clientID})` : processedName
-}
-
 const getFundDisplayName = (name: string) => {
+  if (!name) return '未加载'
   if (name.length <= 8) return name
   return name.substring(0, 8) + '...'
 }
@@ -279,31 +337,21 @@ const isSameDay = (date1: Date, date2: Date) => {
 const onStatusTextTap = () => {
   if (holdings.value.length === 0) return
   
-  showStatusText.value = false
+  dataStore.updateUserPreferences({ showRefreshButton: true })
   
-  setTimeout(() => {
-    dataStore.updateUserPreferences({ showRefreshButton: true })
-    
-    autoHideTimer.value = setTimeout(() => {
-      if (!isRefreshing.value) {
-        dataStore.updateUserPreferences({ showRefreshButton: false })
-        
-        setTimeout(() => {
-          showStatusText.value = true
-        }, 500)
-      }
-    }, 5000) as unknown as number
-  }, 500)
+  autoHideTimer.value = setTimeout(() => {
+    if (!isRefreshing.value) {
+      dataStore.updateUserPreferences({ showRefreshButton: false })
+    }
+  }, 5000) as unknown as number
 }
 
 const handleRefresh = async () => {
   if (isRefreshing.value) return
   
-  // 检查认证令牌
   const token = localStorage.getItem('auth_token')
   if (!token) {
     dataStore.showToastMessage('请先登录以刷新数据')
-    // 触发重新登录事件
     const event = new CustomEvent('auth-required', {
       detail: { message: '请先登录以刷新基金数据' }
     })
@@ -314,7 +362,6 @@ const handleRefresh = async () => {
   isRefreshing.value = true
   startUpdatingTextAnimation()
   dataStore.startRefresh()
-  dataStore.addLog('开始刷新基金数据', 'info')
   
   const total = holdings.value.length
   
@@ -323,9 +370,6 @@ const handleRefresh = async () => {
       const holding = holdings.value[i]
       
       try {
-        dataStore.addLog(`正在刷新基金 ${holding.fundCode} 数据...`, 'network')
-        
-        // 使用fundService获取基金信息，它已经处理了代理问题
         const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
         
         if (fundInfo.name && fundInfo.nav > 0) {
@@ -339,11 +383,8 @@ const handleRefresh = async () => {
             navReturn6m: fundInfo.returns?.navReturn6m,
             navReturn1y: fundInfo.returns?.navReturn1y
           })
-          dataStore.addLog(`基金 ${holding.fundCode} 数据更新成功`, 'success')
         }
       } catch (error) {
-        console.error(`刷新基金 ${holding.fundCode} 失败:`, error)
-        dataStore.addLog(`基金 ${holding.fundCode} 数据更新失败: ${(error as Error).message}`, 'error')
       }
       
       dataStore.updateRefreshProgress(i + 1)
@@ -353,17 +394,11 @@ const handleRefresh = async () => {
     dataStore.completeRefresh()
     isRefreshing.value = false
     stopUpdatingTextAnimation()
-    dataStore.addLog('基金数据刷新完成', 'success')
     
-    // 强制重新渲染组件以显示最新数据
     refreshKey.value = Date.now()
     
     setTimeout(() => {
       dataStore.updateUserPreferences({ showRefreshButton: false })
-      
-      setTimeout(() => {
-        showStatusText.value = true
-      }, 500)
     }, 1000)
   }
 }
@@ -397,7 +432,7 @@ const getSortedUniqueOutdatedFunds = () => {
   const uniqueFunds = new Map<string, string>()
   outdatedFunds.value.forEach(fund => {
     if (!uniqueFunds.has(fund.fundCode)) {
-      uniqueFunds.set(fund.fundCode, fund.fundName)
+      uniqueFunds.set(fund.fundCode, fund.fundName || `未加载(${fund.fundCode})`)
     }
   })
   
@@ -405,159 +440,117 @@ const getSortedUniqueOutdatedFunds = () => {
     .sort((a, b) => a[0].localeCompare(b[0]))
 }
 
-// 从dataStore获取状态
-const showStatusText = computed({
-  get: () => !dataStore.showRefreshButton,
-  set: (value) => {
-    if (!value) {
-      dataStore.updateUserPreferences({ showRefreshButton: true })
-    }
+const copyClientID = (clientID: string, clientName: string) => {
+  if (!hasLatestNavDate.value) {
+    dataStore.showToastMessage('数据未更新，请先刷新数据')
+    return
   }
-})
-
-// 隐私模式变化处理器 - 修复：通过正确的API更新
-const handlePrivacyModeChange = (event: any) => {
-  const { enabled } = event.detail
-  console.log(`SummaryView: 隐私模式变化到 ${enabled}`)
   
-  // ✅ 正确的更新方式：通过updateUserPreferences
-  dataStore.updateUserPreferences({ isPrivacyMode: enabled })
+  if (!clientID || clientID.trim() === '') {
+    dataStore.showToastMessage('客户号为空')
+    return
+  }
   
-  privacyKey.value = Date.now()
-  refreshKey.value = Date.now()
-  themeKey.value = Date.now()
-  
-  dataStore.addLog(`隐私模式变化: ${enabled ? '开启' : '关闭'}`, 'info')
+  navigator.clipboard.writeText(clientID)
+    .then(() => {
+      dataStore.showToastMessage('客户号已复制到剪贴板')
+    })
+    .catch(err => {
+      dataStore.showToastMessage('复制失败，请重试')
+    })
 }
 
-// 主题变化处理器
+const generateReport = (holding: any) => {
+  if (!hasLatestNavDate.value) {
+    dataStore.showToastMessage('数据未更新，请先刷新数据')
+    return
+  }
+  
+  const profit = getHoldingReturn(holding)
+  const purchaseAmount = holding.purchaseAmount
+  const purchaseShares = holding.purchaseShares
+  const currentNav = holding.currentNav
+  const navDate = new Date(holding.navDate)
+  const purchaseDate = new Date(holding.purchaseDate)
+  
+  const formatter = new Intl.DateTimeFormat('zh-CN', {
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit'
+  })
+  
+  const purchaseDateStr = formatter.format(purchaseDate)
+  const navDateStr = formatter.format(navDate)
+  
+  const timeDiff = Math.abs(navDate.getTime() - purchaseDate.getTime())
+  const holdingDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1
+  
+  const annualizedReturn = holdingDays > 0 ?
+    (Math.pow(1 + (profit || 0) / 100, 365 / holdingDays) - 1) * 100 : 0
+  
+  const formatCurrency = (amount: number) => {
+    if (amount >= 10000 && amount % 10000 === 0) return `${(amount / 10000).toFixed(0)}万`
+    else if (amount >= 10000) return `${(amount / 10000).toFixed(2)}万`
+    else return `${amount.toFixed(2)}元`
+  }
+  
+  const reportContent = `
+${holding.fundName || `未加载(${holding.fundCode})`} | ${holding.fundCode}
+├ 客户: ${holding.clientName} (${holding.clientID || '无客户号'})
+├ 购买日期: ${purchaseDateStr}
+├ 持有天数: ${holdingDays}天
+├ 购买金额: ${formatCurrency(purchaseAmount)}
+├ 购买份额: ${purchaseShares.toFixed(2)}份
+├ 最新净值: ${currentNav.toFixed(4)} | ${navDateStr}
+├ 收益: ${profit ? (profit > 0 ? '+' : '') + profit.toFixed(2) + '元' : '/'}
+├ 收益率: ${profit ? (profit > 0 ? '+' : '') + profit.toFixed(2) + '%' : '/'}
+└ 年化收益率: ${annualizedReturn ? (annualizedReturn > 0 ? '+' : '') + annualizedReturn.toFixed(2) + '%' : '/'}
+`
+  
+  navigator.clipboard.writeText(reportContent)
+    .then(() => {
+      dataStore.showToastMessage('报告已复制到剪贴板')
+    })
+    .catch(err => {
+      dataStore.showToastMessage('生成报告失败，请重试')
+    })
+}
+
 const handleThemeChange = (event: any) => {
   const { mode } = event.detail
-  console.log(`SummaryView: 主题变化到 ${mode}`)
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
 
-// 全局事件处理器
-const handleGlobalPrivacyModeChange = (event: any) => {
-  const { enabled } = event.detail
-  console.log(`SummaryView: 收到全局隐私模式变化事件: ${enabled}`)
-  
-  // ✅ 正确的更新方式
-  dataStore.updateUserPreferences({ isPrivacyMode: enabled })
-  
-  // 强制重新渲染
-  privacyKey.value = Date.now()
-  refreshKey.value = Date.now()
-  themeKey.value = Date.now()
-}
-
-// 强制同步处理器
-const handleForcePrivacySync = () => {
-  console.log('SummaryView: 收到强制隐私同步事件')
-  privacyKey.value = Date.now()
-  refreshKey.value = Date.now()
-}
-
-const handleForceThemeSync = () => {
-  console.log('SummaryView: 收到强制主题同步事件')
-  themeKey.value = Date.now()
-  refreshKey.value = Date.now()
-}
-
-// 认证事件处理器
-const handleAuthRequired = (event: any) => {
-  console.log('SummaryView: 收到认证要求事件:', event.detail.message)
-  dataStore.showToastMessage(event.detail.message)
-  
-  // 跳转到登录页
-  setTimeout(() => {
-    window.location.hash = '#/auth'
-  }, 2000)
-}
-
-const handleAuthExpired = (event: any) => {
-  console.log('SummaryView: 收到认证过期事件:', event.detail.message)
-  dataStore.showToastMessage('登录已过期，请重新登录')
-  
-  // 跳转到登录页
-  setTimeout(() => {
-    window.location.hash = '#/auth'
-  }, 2000)
-}
-
-// 检查认证状态
-const checkAuth = () => {
-  const token = localStorage.getItem('auth_token')
-  if (!token) {
-    console.warn('SummaryView: 未找到认证令牌，可能无法获取基金数据')
-  } else {
-    console.log('SummaryView: 认证令牌存在:', token.substring(0, 20) + '...')
-  }
-}
-
-// 响应式变量
 const showOutdatedToast = ref(false)
 const autoHideTimer = ref<number | null>(null)
 
-// 监听隐私模式变化
 watch(() => dataStore.isPrivacyMode, (newValue) => {
-  console.log(`SummaryView: dataStore.isPrivacyMode变化到 ${newValue}`)
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
 })
 
-// 生命周期
 onMounted(() => {
-  // 初始化数据
   dataStore.init()
   
-  // 检查认证
-  checkAuth()
-  
-  dataStore.addLog('用户访问概览视图页面', 'info')
-  
-  // 延迟检查并显示过时基金Toast
   setTimeout(() => {
     checkAndShowOutdatedToast()
   }, 1000)
   
-  // 监听隐私模式变化事件
-  window.addEventListener('privacy-mode-changed', handlePrivacyModeChange)
-  window.addEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
-  
-  // 监听主题变化事件（统一使用 theme-mode-changed）
   window.addEventListener('theme-mode-changed', handleThemeChange)
   
-  // 监听强制同步事件
-  window.addEventListener('force-privacy-sync', handleForcePrivacySync)
-  window.addEventListener('force-theme-sync', handleForceThemeSync)
-  
-  // 监听认证事件
-  window.addEventListener('auth-required', handleAuthRequired)
-  window.addEventListener('auth-expired', handleAuthExpired)
-  
   onUnmounted(() => {
-    // 清理定时器
     updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
     autoHideTimer.value !== null && clearTimeout(autoHideTimer.value)
     
-    // 移除监听器
-    window.removeEventListener('privacy-mode-changed', handlePrivacyModeChange)
-    window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
     window.removeEventListener('theme-mode-changed', handleThemeChange)
-    window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
-    window.removeEventListener('force-theme-sync', handleForceThemeSync)
-    window.removeEventListener('auth-required', handleAuthRequired)
-    window.removeEventListener('auth-expired', handleAuthExpired)
   })
 })
 </script>
 
 <template>
   <div class="summary-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <!-- 标题和状态栏 -->
     <div class="header-section">
       <div class="header-row">
         <div class="action-buttons">
@@ -579,47 +572,53 @@ onMounted(() => {
             🔍
           </button>
           
-          <!-- 近期收益排序按钮 -->
-          <button
-            class="action-btn"
-            :class="{ active: selectedSortKey !== 'none' }"
-            @click="cycleSortKey"
-            :style="{ color: selectedSortKey !== 'none' ? sortKeyColor : '' }"
-            :title="selectedSortKey !== 'none' ? `${sortKeyDisplay}排序` : '选择排序方式'"
-          >
-            {{ sortButtonIcon }}
-          </button>
-          
-          <button
-            v-if="selectedSortKey !== 'none'"
-            class="action-btn"
-            @click="toggleSortOrder"
-            :style="{ background: sortKeyColor }"
-            :title="`${sortOrder === 'ascending' ? '升序' : '降序'}`"
-          >
-            {{ sortOrder === 'ascending' ? '↑' : '↓' }}
-          </button>
+          <div class="sort-group">
+            <button
+              class="sort-btn"
+              @click="cycleSortKey"
+              :title="selectedSortKey !== 'none' ? `按${sortKeyFullDisplay}排序` : '无排序'"
+              :style="{ color: sortKeyColor }"
+            >
+              <span class="sort-icon">{{ sortButtonIcon }}</span>
+            </button>
+            
+            <button
+              v-if="selectedSortKey !== 'none'"
+              class="sort-order-btn"
+              @click="toggleSortOrder"
+              :title="`${sortOrder === 'ascending' ? '升序' : '降序'}排序`"
+              :style="{ color: sortKeyColor }"
+            >
+              <span class="sort-order-icon">
+                {{ sortOrder === 'ascending' ? '▲' : '▼' }}
+              </span>
+            </button>
+          </div>
         </div>
         
-        <div class="status-indicator" @click="onStatusTextTap">
-          <div v-if="showStatusText && !showRefreshButton" class="status-text">
-            {{ statusText }}
+        <div class="status-pill-group">
+          <div
+            v-if="!showRefreshButton"
+            class="status-pill"
+            @click="onStatusTextTap"
+            :class="{ 'status-latest': hasLatestNavDate }"
+          >
+            <span class="status-text">{{ statusText }}</span>
           </div>
           
           <button
             v-if="showRefreshButton"
-            class="refresh-btn"
+            class="refresh-pill"
             @click.stop="handleRefresh"
             :disabled="isRefreshing"
             :title="isRefreshing ? '刷新中...' : '刷新数据'"
           >
             <span v-if="isRefreshing" class="spinner-small"></span>
-            <span v-else>⟳</span>
+            <span v-else class="refresh-icon">🔄</span>
           </button>
         </div>
       </div>
       
-      <!-- 搜索框 -->
       <div v-if="isSearchExpanded" class="search-box">
         <div class="search-input-wrapper">
           <span class="search-icon">🔍</span>
@@ -641,7 +640,6 @@ onMounted(() => {
       </div>
     </div>
     
-    <!-- 主要内容 -->
     <div class="content-area">
       <div v-if="holdings.length === 0" class="empty-state">
         <div class="empty-icon">📊</div>
@@ -665,12 +663,26 @@ onMounted(() => {
             class="fund-card"
             :class="{ expanded: expandedFundCodes.has(fundCode) }"
             @click="toggleFundCard(fundCode)"
+            :style="{ '--fund-gradient': getFundGradient(getFundName(fundCode)) }"
           >
+            <div class="fund-bar-background"></div>
+            
             <div class="fund-header">
               <div class="fund-info-single-line">
-                <h3 class="fund-name">
-                  {{ getFundName(fundCode) }}<span class="fund-code-text">({{ fundCode }})</span>
-                </h3>
+                <div class="fund-name-id-wrapper">
+                  <h3 class="fund-name-single">
+                    <span class="fund-name-text">{{ getFundName(fundCode) }}</span>
+                    <span class="fund-code-text-single">({{ fundCode }})</span>
+                  </h3>
+                </div>
+                
+                <div
+                  v-if="selectedSortKey !== 'none'"
+                  class="current-sort-return"
+                  :style="{ color: getReturnColor(getCurrentSortReturn(fundCode)) }"
+                >
+                  {{ formatReturn(getCurrentSortReturn(fundCode)) }}
+                </div>
               </div>
               
               <div v-if="!isPrivacyMode" class="client-count">
@@ -685,7 +697,6 @@ onMounted(() => {
               </div>
             </div>
             
-            <!-- 展开内容 -->
             <div v-if="expandedFundCodes.has(fundCode)" class="expanded-content">
               <div class="fund-details">
                 <div class="returns-grid">
@@ -727,30 +738,48 @@ onMounted(() => {
                   </div>
                 </div>
                 
-                <!-- 客户信息显示 - 仅在隐私模式关闭时显示（参照SummaryView.swift逻辑） -->
                 <div v-if="expandedFundCodes.has(fundCode) && !isPrivacyMode" class="clients-section">
                   <div class="clients-header">
                     <span class="clients-label">持有客户:</span>
                   </div>
                   <div class="clients-list">
-                    <span
+                    <div
                       v-for="(holding, index) in groupedByFund[fundCode]"
                       :key="holding.id"
-                      class="client-item"
+                      class="client-item-with-actions"
                     >
-                      <span class="client-name-id">
-                        {{ getDisplayName(holding.clientName, holding.clientID) }}
-                      </span>
-                      <span
-                        v-if="getHoldingReturn(holding) !== null"
-                        class="client-return"
-                        :style="{ color: getReturnColor(getHoldingReturn(holding)) }"
-                      >
-                        ({{ formatReturn(getHoldingReturn(holding)) }})
-                      </span>
-                      <span v-else class="client-return">(/)</span>
+                      <div class="client-info">
+                        <div class="client-name-id-display">
+                          <span class="client-name-text">{{ processClientName(holding.clientName) }}</span>
+                          <span v-if="holding.clientID" class="client-id-text">({{ holding.clientID }})</span>
+                        </div>
+                        <span
+                          v-if="getHoldingReturn(holding) !== null"
+                          class="client-return"
+                          :style="{ color: getReturnColor(getHoldingReturn(holding)) }"
+                        >
+                          ({{ formatReturn(getHoldingReturn(holding)) }})
+                        </span>
+                        <span v-else class="client-return">(/)</span>
+                      </div>
+                      <div class="client-actions" v-if="holding.clientID">
+                        <button
+                          class="client-action-btn copy-btn"
+                          @click.stop="copyClientID(holding.clientID, holding.clientName)"
+                          title="复制客户号"
+                        >
+                          复制客户号
+                        </button>
+                        <button
+                          class="client-action-btn report-btn"
+                          @click.stop="generateReport(holding)"
+                          title="生成报告"
+                        >
+                          复制报告
+                        </button>
+                      </div>
                       <span v-if="index < groupedByFund[fundCode].length - 1" class="separator">、</span>
-                    </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -760,7 +789,6 @@ onMounted(() => {
       </div>
     </div>
     
-    <!-- 刷新进度 -->
     <div v-if="isRefreshing" class="refresh-overlay">
       <div class="refresh-progress">
         <div class="progress-text">
@@ -772,7 +800,6 @@ onMounted(() => {
       </div>
     </div>
     
-    <!-- Toast消息 -->
     <div v-if="showOutdatedToast" class="outdated-toast">
       <div class="toast-content">
         <div class="toast-header">
@@ -824,26 +851,29 @@ onMounted(() => {
 .action-buttons {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .action-btn {
-  width: 36px;
   height: 36px;
   border: 1px solid var(--border-color);
   border-radius: 18px;
   background: var(--bg-card);
-  font-size: 18px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
+  min-width: 36px;
+  padding: 0 12px;
 }
 
 .action-btn:hover {
   border-color: var(--accent-color);
-  background: var(--bg-hover);
+  background: var(--accent-color);
+  color: white;
 }
 
 .action-btn.active {
@@ -852,44 +882,147 @@ onMounted(() => {
   color: white;
 }
 
-.status-indicator {
-  min-width: 100px;
-  text-align: right;
+.sort-group {
+  display: flex;
+  gap: 4px;
+}
+
+.sort-btn {
+  height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--bg-card);
+  font-size: 14px;
   cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  padding: 0 12px;
+  gap: 6px;
+  min-width: 36px;
+  font-weight: 500;
+}
+
+.sort-btn:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: white;
+}
+
+.sort-icon {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sort-order-btn {
+  height: 36px;
+  min-width: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--bg-card);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  padding: 0;
+  font-weight: bold;
+}
+
+.sort-order-btn:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: white;
+}
+
+.sort-order-icon {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-pill-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.status-pill {
+  height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: center;
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.status-pill:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: white;
+}
+
+.status-pill.status-latest {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #065f46;
+}
+
+.status-pill.status-latest:hover {
+  background: #065f46;
+  color: white;
+  border-color: #065f46;
 }
 
 .status-text {
-  font-size: 14px;
-  color: var(--text-secondary);
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--bg-hover);
-  transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
-.refresh-btn {
-  width: 36px;
+.refresh-pill {
   height: 36px;
-  border: none;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-color), #764ba2);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--accent-color);
   color: white;
-  font-size: 18px;
+  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  padding: 0 16px;
+  gap: 6px;
+  font-weight: 500;
 }
 
-.refresh-btn:hover:not(:disabled) {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
+.refresh-pill:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
 }
 
-.refresh-btn:disabled {
+.refresh-pill:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.refresh-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .spinner-small {
@@ -926,7 +1059,7 @@ onMounted(() => {
   width: 100%;
   padding: 10px 40px 10px 36px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s ease;
@@ -979,10 +1112,6 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-:root.dark .empty-state {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
 .empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
@@ -1018,35 +1147,37 @@ onMounted(() => {
 
 .fund-card {
   background: var(--bg-card);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 0;
   cursor: pointer;
   transition: all 0.3s ease;
   border: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-:root.dark .fund-card {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .fund-card:hover {
   border-color: var(--accent-color);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(var(--accent-color-rgb), 0.1);
 }
 
-.fund-card::before {
-  content: '';
+.fund-bar-background {
   position: absolute;
   top: 0;
   left: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(to bottom, var(--accent-color), #764ba2);
-  border-radius: 2px 0 0 2px;
+  right: 0;
+  height: 36px;
+  background: var(--fund-gradient);
+  opacity: 0.7;
+  z-index: 0;
+  transition: opacity 0.3s ease;
+}
+
+.fund-card:hover .fund-bar-background {
+  opacity: 0.8;
+}
+
+.fund-card.expanded .fund-bar-background {
+  opacity: 0.6;
 }
 
 .fund-card.expanded {
@@ -1058,6 +1189,10 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  position: relative;
+  z-index: 1;
+  padding: 8px 16px;
+  min-height: 36px;
 }
 
 .fund-info-single-line {
@@ -1065,28 +1200,54 @@ onMounted(() => {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: nowrap;
 }
 
-.fund-name {
-  font-size: 16px;
+.fund-name-id-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.fund-name-single {
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1.3;
 }
 
-.fund-code-text {
-  font-size: 13px;
+.fund-name-text {
+  display: inline-block;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fund-code-text-single {
+  font-size: 12px;
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
-  margin-left: 4px;
   font-weight: normal;
+  flex-shrink: 0;
+}
+
+.current-sort-return {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .client-count {
@@ -1097,10 +1258,14 @@ onMounted(() => {
   color: var(--text-secondary);
   margin-right: 8px;
   white-space: nowrap;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 6px;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
 }
 
 .count-label {
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .count-value {
@@ -1109,10 +1274,13 @@ onMounted(() => {
 }
 
 .expanded-content {
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: 0;
+  padding: 16px;
   border-top: 1px solid var(--border-color);
   animation: slideDown 0.3s ease;
+  position: relative;
+  z-index: 1;
+  background: var(--bg-card);
 }
 
 @keyframes slideDown {
@@ -1123,8 +1291,8 @@ onMounted(() => {
 .fund-details {
   background: var(--bg-card);
   border-radius: 8px;
-  padding: 16px;
-  border: 1px solid var(--border-color);
+  padding: 0;
+  border: none;
 }
 
 .returns-grid {
@@ -1167,29 +1335,103 @@ onMounted(() => {
 
 .clients-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.client-item-with-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  background: var(--bg-hover);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  position: relative;
+  min-height: 40px;
+}
+
+.client-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.client-name-id-display {
+  display: flex;
+  align-items: center;
   gap: 4px;
-  align-items: center;
+  min-width: 0;
 }
 
-.client-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.client-name-id {
+.client-name-text {
   font-size: 13px;
+  font-weight: 500;
   color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.client-id-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  font-weight: normal;
 }
 
 .client-return {
   font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.client-actions {
+  display: flex;
+  gap: 4px;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-card);
+  border-radius: 4px;
+  padding: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.client-action-btn {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.client-action-btn.copy-btn:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.client-action-btn.report-btn:hover {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
 }
 
 .separator {
   color: var(--text-secondary);
   margin-right: 4px;
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .refresh-overlay {
@@ -1207,22 +1449,22 @@ onMounted(() => {
 
 .refresh-progress {
   background: var(--bg-card);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
   text-align: center;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .progress-text {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 4px;
 }
 
 .progress-details {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -1242,13 +1484,6 @@ onMounted(() => {
   animation: slideUp 0.3s ease;
   border: 1px solid var(--border-color);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-:root.dark .outdated-toast {
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.25),
-    0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes slideUp {
@@ -1297,7 +1532,6 @@ onMounted(() => {
   font-style: italic;
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
   .header-section {
     padding: 15px 12px 12px;
@@ -1316,11 +1550,15 @@ onMounted(() => {
   .fund-info-single-line {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 8px;
   }
   
-  .fund-name, .fund-code-text {
+  .fund-name-text, .fund-code-text-single {
     width: 100%;
+  }
+  
+  .current-sort-return {
+    align-self: flex-start;
   }
   
   .outdated-toast {
@@ -1328,16 +1566,94 @@ onMounted(() => {
     padding: 14px;
     bottom: 80px;
   }
-}
-
-/* 深色模式特定样式 */
-@media (prefers-color-scheme: dark) {
-  body.dark-mode .fund-card::before {
-    background: linear-gradient(to bottom, #667eea, #764ba2);
+  
+  .sort-btn {
+    min-width: auto;
+    padding: 0 8px;
   }
   
-  body.dark-mode .refresh-btn {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+  .sort-order-btn {
+    min-width: 28px;
+    height: 28px;
   }
+  
+  .refresh-pill {
+    min-width: 36px;
+    padding: 0;
+  }
+  
+  .status-pill {
+    min-width: 60px;
+    padding: 0 12px;
+  }
+  
+  .client-item-with-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding-bottom: 36px;
+  }
+  
+  .client-actions {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    top: auto;
+    transform: none;
+    flex-wrap: wrap;
+  }
+  
+  .client-action-btn {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  
+  .client-return {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+:root.dark .status-pill {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root.dark .status-pill.status-latest {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border-color: #4ade80;
+}
+
+:root.dark .status-pill.status-latest:hover {
+  background: #4ade80;
+  color: #1e293b;
+  border-color: #4ade80;
+}
+
+:root.dark .sort-btn,
+:root.dark .sort-order-btn {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+:root.dark .sort-btn:hover,
+:root.dark .sort-order-btn:hover {
+  background: var(--accent-color);
+  color: white;
+}
+
+:root.dark .refresh-pill {
+  background: var(--accent-color);
+}
+
+:root.dark .refresh-pill:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+:root.dark .client-action-btn {
+  background: var(--bg-card);
+  border-color: var(--border-color);
 }
 </style>

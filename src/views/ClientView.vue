@@ -22,20 +22,25 @@
           </button>
         </div>
         
-        <div class="status-indicator" @click="onStatusTextTap">
-          <div v-if="showStatusText && !showRefreshButton" class="status-text">
-            {{ latestNavDateString }}
+        <div class="status-pill-group">
+          <div
+            v-if="!showRefreshButton"
+            class="status-pill"
+            @click="onStatusTextTap"
+            :class="{ 'status-latest': hasLatestNavDate }"
+          >
+            <span class="status-text">{{ statusText }}</span>
           </div>
           
           <button
             v-if="showRefreshButton"
-            class="refresh-btn"
+            class="refresh-pill"
             @click.stop="handleRefresh"
             :disabled="isRefreshing"
             :title="isRefreshing ? '刷新中...' : '刷新数据'"
           >
             <span v-if="isRefreshing" class="spinner-small"></span>
-            <span v-else>⟳</span>
+            <span v-else class="refresh-icon">🔄</span>
           </button>
         </div>
       </div>
@@ -77,10 +82,13 @@
             <div class="holding-header-compact">
               <div class="holding-info-compact">
                 <div class="fund-name-row">
-                  <h4 class="fund-name">{{ holding.fundName }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
+                  <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
                 </div>
                 <div class="client-info-row">
-                  <span class="client-name-id">{{ getClientDisplayName(holding.clientName, holding.clientID) }}</span>
+                  <div class="client-name-id-display">
+                    <span class="client-name-text">{{ getClientDisplayName(holding.clientName, holding.clientID).name }}</span>
+                    <span v-if="holding.clientID" class="client-id-text">({{ holding.clientID }})</span>
+                  </div>
                 </div>
               </div>
               <div class="nav-info-single-line">
@@ -107,6 +115,32 @@
                 <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
                   {{ formatPercentage(calculateProfit(holding).annualized) }}
                 </span>
+              </div>
+              
+              <div class="detail-row date-actions-row">
+                <div class="date-info">
+                  <span class="detail-label">购买日期:</span>
+                  <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
+                  <span class="detail-label" style="margin-left: 8px;">持有天数:</span>
+                  <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                </div>
+                <div class="holding-actions">
+                  <button
+                    class="holding-action-btn copy-btn"
+                    @click.stop="copyClientID(holding.clientID, holding.clientName)"
+                    :disabled="!holding.clientID"
+                    :title="holding.clientID ? '复制客户号' : '无客户号'"
+                  >
+                    复制客户号
+                  </button>
+                  <button
+                    class="holding-action-btn report-btn"
+                    @click.stop="generateReport(holding)"
+                    title="生成报告"
+                  >
+                    复制报告
+                  </button>
+                </div>
               </div>
               
               <div v-if="holding.remarks" class="detail-row">
@@ -141,7 +175,10 @@
             >
               <div class="header-content-single">
                 <div class="client-info-single">
-                  <span class="client-name-id-single">{{ getClientDisplayName(clientGroup.clientName, clientGroup.clientID) }}</span>
+                  <div class="client-name-id-display-single">
+                    <span class="client-name-text-single">{{ getClientDisplayName(clientGroup.clientName, clientGroup.clientID).name }}</span>
+                    <span v-if="clientGroup.clientID" class="client-id-text-single">({{ clientGroup.clientID }})</span>
+                  </div>
                 </div>
                 <div class="header-right-section">
                   <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
@@ -160,7 +197,7 @@
                 <div class="holding-header-compact">
                   <div class="holding-info-compact">
                     <div class="fund-name-row">
-                      <h4 class="fund-name">{{ holding.fundName }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
+                      <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
                     </div>
                   </div>
                   <div class="nav-info-single-line">
@@ -189,11 +226,30 @@
                     </span>
                   </div>
                   
-                  <div class="detail-row">
-                    <span class="detail-label">购买日期:</span>
-                    <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
-                    <span class="detail-label" style="margin-left: 8px;">持有天数:</span>
-                    <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                  <div class="detail-row date-actions-row">
+                    <div class="date-info">
+                      <span class="detail-label">购买日期:</span>
+                      <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
+                      <span class="detail-label" style="margin-left: 8px;">持有天数:</span>
+                      <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                    </div>
+                    <div class="holding-actions">
+                      <button
+                        class="holding-action-btn copy-btn"
+                        @click.stop="copyClientID(holding.clientID, holding.clientName)"
+                        :disabled="!holding.clientID"
+                        :title="holding.clientID ? '复制客户号' : '无客户号'"
+                      >
+                        复制客户号
+                      </button>
+                      <button
+                        class="holding-action-btn report-btn"
+                        @click.stop="generateReport(holding)"
+                        title="生成报告"
+                      >
+                        复制报告
+                      </button>
+                    </div>
                   </div>
                   
                   <div v-if="holding.remarks" class="detail-row">
@@ -226,7 +282,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
 import { fundService } from '@/services/fundService'
@@ -235,7 +291,7 @@ const router = useRouter()
 const dataStore = useDataStore()
 
 const refreshKey = ref(0)
-const privacyKey = ref(0) // 用于强制重新渲染受隐私模式影响的组件
+const privacyKey = ref(0)
 const themeKey = ref(0)
 
 const isSearchExpanded = ref(false)
@@ -248,14 +304,11 @@ const loadedGroupedClientCount = ref(10)
 const loadedSearchResultCount = ref(10)
 
 const holdings = computed(() => dataStore.holdings)
-// 直接使用 store 的状态
 const isPrivacyMode = computed(() => dataStore.isPrivacyMode)
 const showRefreshButton = computed(() => dataStore.showRefreshButton)
 const refreshProgress = computed(() => dataStore.refreshProgress)
 
-// 监听隐私模式变化，触发重绘
 watch(isPrivacyMode, (newValue) => {
-  console.log(`ClientView 检测到隐私模式变更: ${newValue}`)
   privacyKey.value = Date.now()
 })
 
@@ -279,19 +332,44 @@ const latestNavDate = computed(() => {
 })
 
 const hasLatestNavDate = computed(() => {
-  if (holdings.value.length === 0 || holdings.value.every(h => !h.isValid)) return false
-  return holdings.value.some(holding => holding.isValid && isSameDay(new Date(holding.navDate), previousWorkday.value))
+  if (holdings.value.length === 0) return false
+  const prevWorkday = previousWorkday.value
+  
+  return holdings.value.some(holding =>
+    holding.isValid && isSameDay(new Date(holding.navDate), prevWorkday)
+  )
 })
 
-const latestNavDateString = computed(() => {
-  const latestDate = latestNavDate.value
-  if (!latestDate) return '暂无数据'
+const outdatedLatestDate = computed(() => {
+  if (holdings.value.length === 0 || hasLatestNavDate.value) return null
+  
+  const outdatedHoldings = holdings.value.filter(h => h.isValid)
+  if (outdatedHoldings.length === 0) return null
+  
+  const latest = outdatedHoldings.reduce((latest, holding) => {
+    const date = new Date(holding.navDate)
+    return date > latest ? date : latest
+  }, new Date(0))
+  
+  return latest
+})
+
+const statusText = computed(() => {
+  if (holdings.value.length === 0) return '暂无数据'
+  
   const formatter = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' })
-  const dateString = formatter.format(latestDate)
-  if (hasLatestNavDate.value) return `最新日期: ${dateString}`
-  else {
+  
+  if (hasLatestNavDate.value) {
     const prevDateString = formatter.format(previousWorkday.value)
-    return `待更新: ${prevDateString}`
+    return `最新: ${prevDateString}`
+  } else {
+    if (outdatedLatestDate.value) {
+      const outdatedDateString = formatter.format(outdatedLatestDate.value)
+      return `待更新: ${outdatedDateString}`
+    } else {
+      const prevDateString = formatter.format(previousWorkday.value)
+      return `待更新: ${prevDateString}`
+    }
   }
 })
 
@@ -341,9 +419,21 @@ const updatingText = computed(() => {
   return baseText + dots
 })
 
-// 关键修复：直接调用 store 的方法，无需额外逻辑
-const getClientDisplayName = (clientName: string, clientID: string): string => {
-  return dataStore.getClientDisplayName(clientName, clientID)
+const getFundDisplayName = (fundName: string, fundCode: string): string => {
+  return fundName || (fundCode ? `未加载(${fundCode})` : '未加载')
+}
+
+const getClientDisplayName = (clientName: string, clientID: string) => {
+  const processedName = dataStore.isPrivacyMode ?
+    (clientName.length <= 1 ? clientName :
+     clientName.length === 2 ? clientName.charAt(0) + '*' :
+     clientName.charAt(0) + '*'.repeat(clientName.length - 2) + clientName.charAt(clientName.length - 1)) :
+    clientName
+  
+  return {
+    name: processedName,
+    id: clientID
+  }
 }
 
 const colorForHoldingCount = (count: number) => {
@@ -401,16 +491,12 @@ const isSameDay = (date1: Date, date2: Date) => {
 
 const onStatusTextTap = () => {
   if (holdings.value.length === 0) return
-  showStatusText.value = false
-  setTimeout(() => {
-    dataStore.updateUserPreferences({ showRefreshButton: true })
-    autoHideTimer.value = setTimeout(() => {
-      if (!isRefreshing.value) {
-        dataStore.updateUserPreferences({ showRefreshButton: false })
-        setTimeout(() => { showStatusText.value = true }, 500)
-      }
-    }, 5000) as unknown as number
-  }, 500)
+  dataStore.updateUserPreferences({ showRefreshButton: true })
+  autoHideTimer.value = setTimeout(() => {
+    if (!isRefreshing.value) {
+      dataStore.updateUserPreferences({ showRefreshButton: false })
+    }
+  }, 5000) as unknown as number
 }
 
 const handleRefresh = async () => {
@@ -439,7 +525,6 @@ const handleRefresh = async () => {
           })
         }
       } catch (error) {
-        // fundService 已经记录了错误
       }
       dataStore.updateRefreshProgress(i + 1)
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -452,7 +537,6 @@ const handleRefresh = async () => {
     refreshKey.value = Date.now()
     setTimeout(() => {
       dataStore.updateUserPreferences({ showRefreshButton: false })
-      setTimeout(() => { showStatusText.value = true }, 500)
     }, 1000)
   }
 }
@@ -471,17 +555,75 @@ const stopUpdatingTextAnimation = () => {
   }
 }
 
-const showStatusText = computed({
-  get: () => !dataStore.showRefreshButton,
-  set: (value) => {
-    if (!value) dataStore.updateUserPreferences({ showRefreshButton: true })
+const copyClientID = (clientID: string, clientName: string) => {
+  if (!hasLatestNavDate.value) {
+    dataStore.showToastMessage('数据未更新，请先刷新数据')
+    return
   }
-})
+  
+  if (!clientID || clientID.trim() === '') {
+    dataStore.showToastMessage('客户号为空')
+    return
+  }
+  
+  navigator.clipboard.writeText(clientID)
+    .then(() => {
+      dataStore.showToastMessage('客户号已复制到剪贴板')
+    })
+    .catch(err => {
+      dataStore.showToastMessage('复制失败，请重试')
+    })
+}
 
-// 主题相关逻辑 - 修复事件监听
+const generateReport = (holding: any) => {
+  if (!hasLatestNavDate.value) {
+    dataStore.showToastMessage('数据未更新，请先刷新数据')
+    return
+  }
+  
+  const profit = calculateProfit(holding).absolute
+  const annualizedReturn = calculateProfit(holding).annualized
+  const purchaseAmount = holding.purchaseAmount
+  const purchaseShares = holding.purchaseShares
+  const currentNav = holding.currentNav
+  const navDate = new Date(holding.navDate)
+  const purchaseDate = new Date(holding.purchaseDate)
+  
+  const formatter = new Intl.DateTimeFormat('zh-CN', {
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit'
+  })
+  
+  const purchaseDateStr = formatter.format(purchaseDate)
+  const navDateStr = formatter.format(navDate)
+  
+  const holdingDays = calculateHoldingDays(holding)
+  
+  const reportContent = `
+${getFundDisplayName(holding.fundName, holding.fundCode)} | ${holding.fundCode}
+├ 客户: ${holding.clientName} (${holding.clientID || '无客户号'})
+├ 购买日期: ${purchaseDateStr}
+├ 持有天数: ${holdingDays}天
+├ 购买金额: ${formatCurrency(purchaseAmount)}
+├ 购买份额: ${purchaseShares.toFixed(2)}份
+├ 最新净值: ${currentNav.toFixed(4)} | ${navDateStr}
+├ 收益: ${profit > 0 ? '+' : ''}${profit.toFixed(2)}元
+├ 收益率: ${formatPercentage(annualizedReturn)} (年化)
+└ 持有天数: ${holdingDays}天
+`
+  
+  navigator.clipboard.writeText(reportContent)
+    .then(() => {
+      dataStore.showToastMessage('报告已复制到剪贴板')
+    })
+    .catch(err => {
+      dataStore.showToastMessage('生成报告失败，请重试')
+    })
+}
+
 const handleThemeChange = (event: any) => {
   const { mode } = event.detail
-  console.log('ClientView: 收到主题变更事件', mode)
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
@@ -495,14 +637,11 @@ watch(holdings, () => {
 onMounted(() => {
   dataStore.init()
   
-  // 监听主题变更事件（统一使用 theme-mode-changed）
   window.addEventListener('theme-mode-changed', handleThemeChange)
   
-  // 监听系统主题变化
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   const handleSystemThemeChange = (e: MediaQueryListEvent) => {
     if (dataStore.userPreferences.themeMode === 'system') {
-      console.log('系统主题变化，触发重新渲染')
       themeKey.value = Date.now()
       refreshKey.value = Date.now()
     }
@@ -513,7 +652,6 @@ onMounted(() => {
     updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
     autoHideTimer.value !== null && clearTimeout(autoHideTimer.value)
     
-    // 移除事件监听
     window.removeEventListener('theme-mode-changed', handleThemeChange)
     mediaQuery.removeEventListener('change', handleSystemThemeChange)
   })
@@ -531,7 +669,7 @@ onMounted(() => {
 
 .header-section {
   background: var(--bg-primary);
-  padding: 16px 16px 12px;
+  padding: 20px 16px 16px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
   position: sticky;
@@ -543,7 +681,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   gap: 8px;
 }
 
@@ -553,23 +691,25 @@ onMounted(() => {
 }
 
 .action-btn {
-  width: 36px;
   height: 36px;
   border: 1px solid var(--border-color);
   border-radius: 18px;
   background: var(--bg-card);
-  font-size: 18px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
+  min-width: 36px;
+  padding: 0 12px;
 }
 
 .action-btn:hover {
   border-color: var(--accent-color);
-  background: var(--bg-hover);
+  background: var(--accent-color);
+  color: white;
 }
 
 .action-btn.active {
@@ -578,49 +718,83 @@ onMounted(() => {
   color: white;
 }
 
-.status-indicator {
-  min-width: 100px;
-  text-align: right;
+.status-pill-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.status-pill {
+  height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: center;
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.status-pill:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: white;
+}
+
+.status-pill.status-latest {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #065f46;
+}
+
+.status-pill.status-latest:hover {
+  background: #065f46;
+  color: white;
+  border-color: #065f46;
 }
 
 .status-text {
-  font-size: 14px;
-  color: var(--text-secondary);
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--bg-hover);
-  transition: all 0.2s ease;
   white-space: nowrap;
 }
 
-.status-text:hover {
-  background: var(--border-color);
-}
-
-.refresh-btn {
-  width: 36px;
+.refresh-pill {
   height: 36px;
-  border: none;
-  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
   background: var(--accent-color);
   color: white;
-  font-size: 18px;
+  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  padding: 0 16px;
+  gap: 6px;
+  font-weight: 500;
 }
 
-.refresh-btn:hover:not(:disabled) {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
+.refresh-pill:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
 }
 
-.refresh-btn:disabled {
+.refresh-pill:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.refresh-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .spinner-small {
@@ -637,7 +811,7 @@ onMounted(() => {
 }
 
 .search-box {
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .search-input-wrapper {
@@ -657,7 +831,7 @@ onMounted(() => {
   width: 100%;
   padding: 10px 40px 10px 36px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s ease;
@@ -673,7 +847,7 @@ onMounted(() => {
   position: absolute;
   right: 12px;
   background: var(--text-secondary);
-  color: var(--bg-primary);
+  color: white;
   border: none;
   border-radius: 50%;
   font-size: 16px;
@@ -692,8 +866,8 @@ onMounted(() => {
 }
 
 .content-area {
-  padding: 12px;
-  min-height: calc(100vh - 120px);
+  padding: 16px;
+  min-height: calc(100vh - 150px);
   overflow-y: auto;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
@@ -701,30 +875,30 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: 60px 20px;
   color: var(--text-secondary);
   background: var(--bg-card);
-  border-radius: 10px;
-  margin: 16px;
+  border-radius: 12px;
+  margin: 20px;
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
 }
 
 .empty-icon {
-  font-size: 36px;
-  margin-bottom: 12px;
+  font-size: 48px;
+  margin-bottom: 16px;
   opacity: 0.5;
 }
 
 .empty-state h3 {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: var(--text-primary);
 }
 
 .empty-state p {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
 }
 
@@ -737,23 +911,21 @@ onMounted(() => {
 .holding-card-compact {
   background: var(--bg-card);
   border-radius: 8px;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .holding-card-compact:hover {
   border-color: var(--accent-color);
-  box-shadow: 0 2px 8px rgba(var(--accent-color-rgb), 0.08);
 }
 
 .holding-header-compact {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   gap: 8px;
 }
 
@@ -765,7 +937,7 @@ onMounted(() => {
 .fund-name-row {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   flex-wrap: wrap;
 }
 
@@ -775,17 +947,15 @@ onMounted(() => {
   color: var(--text-primary);
   margin: 0;
   line-height: 1.2;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
 
 .fund-code-inline {
   font-size: 12px;
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
-  margin-left: 4px;
   font-weight: normal;
 }
 
@@ -795,14 +965,25 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.client-name-id {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-primary);
+.client-name-id-display {
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
   line-height: 1.3;
+}
+
+.client-name-text {
+  font-weight: 600;
+}
+
+.client-id-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  font-weight: normal;
 }
 
 .nav-info-single-line {
@@ -835,7 +1016,7 @@ onMounted(() => {
 .holding-details-compact {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--bg-hover);
 }
@@ -848,16 +1029,67 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
+.date-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.date-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.holding-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
 .detail-label {
   color: var(--text-secondary);
   min-width: 35px;
   font-size: 11px;
+  font-weight: 500;
 }
 
 .detail-value {
   font-weight: 500;
   color: var(--text-primary);
   font-size: 11px;
+}
+
+.holding-action-btn {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.holding-action-btn.copy-btn:hover:not(:disabled) {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.holding-action-btn.report-btn:hover {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
+.holding-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .load-more {
@@ -883,20 +1115,19 @@ onMounted(() => {
 .clients-container {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .client-group-single {
   background: var(--bg-card);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
   border: 1px solid var(--border-color);
 }
 
 .group-header-single {
-  padding: 10px 12px;
+  padding: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -921,15 +1152,29 @@ onMounted(() => {
   min-width: 0;
 }
 
-.client-name-id-single {
+.client-name-id-display-single {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.client-name-text-single {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
+}
+
+.client-id-text-single {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  font-weight: normal;
+  white-space: nowrap;
 }
 
 .header-right-section {
@@ -941,7 +1186,7 @@ onMounted(() => {
 .holdings-count-single {
   font-size: 11px;
   font-weight: 500;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 8px;
   background: rgba(var(--accent-color-rgb), 0.1);
   white-space: nowrap;
@@ -1000,12 +1245,12 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .header-section {
-    padding: 14px 12px 10px;
+    padding: 15px 12px 12px;
   }
   
   .content-area {
-    padding: 10px;
-    min-height: calc(100vh - 110px);
+    padding: 12px;
+    min-height: calc(100vh - 130px);
   }
   
   .holding-header-compact {
@@ -1033,13 +1278,17 @@ onMounted(() => {
     font-size: 10px;
   }
   
-  .client-name-id-single {
+  .client-name-text-single {
     font-size: 13px;
+  }
+  
+  .client-id-text-single {
+    font-size: 11px;
   }
   
   .holdings-count-single {
     font-size: 10px;
-    padding: 2px 5px;
+    padding: 2px 6px;
   }
   
   .fund-name {
@@ -1059,29 +1308,56 @@ onMounted(() => {
   }
   
   .empty-state {
-    padding: 32px 16px;
+    padding: 40px 16px;
   }
   
   .empty-icon {
-    font-size: 32px;
+    font-size: 36px;
   }
   
   .empty-state h3 {
-    font-size: 15px;
+    font-size: 16px;
   }
   
   .empty-state p {
-    font-size: 12px;
+    font-size: 13px;
+  }
+  
+  .status-pill {
+    min-width: 60px;
+    padding: 0 12px;
+  }
+  
+  .refresh-pill {
+    min-width: 36px;
+    padding: 0;
+  }
+  
+  .holding-action-btn {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  
+  .date-actions-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .holding-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 
 @media (max-width: 480px) {
   .content-area {
-    padding: 8px;
+    padding: 10px;
   }
   
   .clients-container {
-    gap: 5px;
+    gap: 6px;
   }
   
   .client-group-single {
@@ -1089,21 +1365,25 @@ onMounted(() => {
   }
   
   .group-header-single {
-    padding: 8px 10px;
+    padding: 10px;
   }
   
-  .client-name-id-single {
+  .client-name-text-single {
     font-size: 12px;
+  }
+  
+  .client-id-text-single {
+    font-size: 10px;
   }
   
   .holdings-count-single {
     font-size: 9px;
-    padding: 1px 4px;
+    padding: 1px 5px;
   }
   
   .holding-card-compact {
-    padding: 8px;
-    margin-bottom: 5px;
+    padding: 10px;
+    margin-bottom: 6px;
   }
   
   .group-content-single {
@@ -1118,8 +1398,12 @@ onMounted(() => {
     font-size: 10px;
   }
   
-  .client-name-id {
+  .client-name-text {
     font-size: 11px;
+  }
+  
+  .client-id-text {
+    font-size: 10px;
   }
   
   .nav-with-date {
@@ -1141,23 +1425,29 @@ onMounted(() => {
   }
 }
 
-/* 深色模式适配 */
-:root.dark .refresh-btn {
+:root.dark .status-pill {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root.dark .status-pill.status-latest {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border-color: #4ade80;
+}
+
+:root.dark .status-pill.status-latest:hover {
+  background: #4ade80;
+  color: #1e293b;
+  border-color: #4ade80;
+}
+
+:root.dark .refresh-pill {
   background: var(--accent-color);
 }
 
-:root.dark .holding-card-compact {
-  background: var(--bg-card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-:root.dark .client-group-single {
-  background: var(--bg-card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-:root.dark .group-content-single {
-  background: var(--bg-hover);
+:root.dark .refresh-pill:hover:not(:disabled) {
+  background: #2563eb;
 }
 
 :root.dark .clear-search {
@@ -1168,5 +1458,10 @@ onMounted(() => {
 :root.dark .clear-search:hover {
   background: var(--text-primary);
   color: var(--bg-primary);
+}
+
+:root.dark .holding-action-btn {
+  background: var(--bg-card);
+  border-color: var(--border-color);
 }
 </style>
