@@ -45,18 +45,27 @@
               />
             </div>
             
-            <div class="form-group with-icon">
+            <div class="form-group with-icon password-group">
               <div class="icon-container">
                 <span class="input-icon">🔒</span>
               </div>
               <input
                 v-model="loginForm.password"
-                type="password"
+                :type="showPassword ? 'text' : 'password'"
                 placeholder="密码"
                 required
                 autocomplete="current-password"
                 class="icon-input"
               />
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showPassword = !showPassword"
+                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+              >
+                <span v-if="showPassword" class="password-toggle-icon">👁️</span>
+                <span v-else class="password-toggle-icon">🔒</span>
+              </button>
             </div>
             
             <!-- 开发环境测试账号提示 -->
@@ -95,14 +104,6 @@
                 {{ isLoading ? '登录中...' : '登录' }}
               </span>
             </button>
-            
-            <div v-if="errorMessage" class="error-message">
-              {{ errorMessage }}
-            </div>
-            
-            <div v-if="successMessage" class="success-message">
-              {{ successMessage }}
-            </div>
           </form>
           
           <!-- 注册表单 -->
@@ -121,18 +122,27 @@
               />
             </div>
             
-            <div class="form-group with-icon">
+            <div class="form-group with-icon password-group">
               <div class="icon-container">
                 <span class="input-icon">🔒</span>
               </div>
               <input
                 v-model="authStore.registerForm.password"
-                type="password"
+                :type="showPassword ? 'text' : 'password'"
                 placeholder="密码"
                 required
                 autocomplete="new-password"
                 class="icon-input"
               />
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showPassword = !showPassword"
+                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+              >
+                <span v-if="showPassword" class="password-toggle-icon">👁️</span>
+                <span v-else class="password-toggle-icon">🔒</span>
+              </button>
             </div>
             
             <div class="form-group with-icon">
@@ -176,14 +186,6 @@
                 {{ isLoading ? '注册中...' : '注册' }}
               </span>
             </button>
-            
-            <div v-if="errorMessage" class="error-message">
-              {{ errorMessage }}
-            </div>
-            
-            <div v-if="successMessage" class="success-message">
-              {{ successMessage }}
-            </div>
           </form>
           
           <!-- 模式切换链接 -->
@@ -216,6 +218,15 @@
         </div>
       </div>
     </div>
+    
+    <!-- Toast消息提示 -->
+    <ToastMessage
+      v-if="toast.show"
+      :show="toast.show"
+      :message="toast.message"
+      :type="toast.type"
+      @update:show="toast.show = false"
+    />
   </div>
 </template>
 
@@ -223,6 +234,7 @@
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
+import ToastMessage from '../components/common/ToastMessage.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -231,10 +243,25 @@ const authStore = useAuthStore()
 const isRegistering = ref(false)
 const showLoginCaptcha = ref(false)
 const showRegisterCaptcha = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
 const loginAttempts = ref(0)
 const registerAttempts = ref(0)
+const showPassword = ref(false) // 控制密码显示/隐藏
+
+// Toast消息
+const toast = ref({
+  show: false,
+  message: '',
+  type: 'info' as 'info' | 'success' | 'error' | 'warning'
+})
+
+// 显示Toast消息
+const showToast = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+  toast.value = {
+    show: true,
+    message,
+    type
+  }
+}
 
 // 开发环境检测
 const isDevEnvironment = computed(() => {
@@ -341,18 +368,16 @@ const refreshCaptcha = async () => {
 const switchToLogin = () => {
   isRegistering.value = false
   resetAttempts()
-  errorMessage.value = ''
-  successMessage.value = ''
   loginForm.value.captcha_code = ''
   loginForm.value.captcha_id = ''
+  showPassword.value = false
 }
 
 // 切换到注册模式
 const switchToRegister = async () => {
   isRegistering.value = true
   resetAttempts()
-  errorMessage.value = ''
-  successMessage.value = ''
+  showPassword.value = false
   
   // 获取验证码（如果需要）
   if (registerAttempts.value >= 3) {
@@ -362,9 +387,6 @@ const switchToRegister = async () => {
 }
 
 const handleLogin = async () => {
-  errorMessage.value = ''
-  successMessage.value = ''
-  
   try {
     console.log('正在登录，用户名:', loginForm.value.username)
     
@@ -375,7 +397,7 @@ const handleLogin = async () => {
     const needCaptcha = loginAttempts.value >= 3
     
     if (needCaptcha && !loginForm.value.captcha_code) {
-      errorMessage.value = '请输入验证码'
+      showToast('请输入验证码', 'warning')
       return
     }
     
@@ -404,7 +426,7 @@ const handleLogin = async () => {
       // 登录成功，重置尝试次数
       loginAttempts.value = 0
       showLoginCaptcha.value = false
-      successMessage.value = `登录成功！欢迎 ${authStore.displayName}`
+      showToast(`登录成功！欢迎 ${authStore.displayName}`, 'success')
       
       console.log('登录成功，准备跳转到配置页面...')
       
@@ -434,7 +456,7 @@ const handleLogin = async () => {
         }
       }
       
-      errorMessage.value = authStore.error || '登录失败，请检查用户名和密码'
+      showToast(authStore.error || '登录失败，请检查用户名和密码', 'error')
     }
     
   } catch (error: any) {
@@ -446,25 +468,22 @@ const handleLogin = async () => {
       const normalizedUsername = loginForm.value.username.toLowerCase()
       const success = authStore.mockLogin(normalizedUsername, loginForm.value.password)
       if (success) {
-        successMessage.value = `模拟登录成功！欢迎 ${authStore.displayName}`
+        showToast(`模拟登录成功！欢迎 ${authStore.displayName}`, 'success')
         console.log('模拟登录成功，准备跳转到配置页面...')
         // 使用 replace 而不是 push
         router.replace('/config').catch(() => {
           router.replace('/')
         })
       } else {
-        errorMessage.value = '登录失败，请使用测试账号：admin, user, guest'
+        showToast('登录失败，请使用测试账号：admin, user, guest', 'error')
       }
     } else {
-      errorMessage.value = `登录失败: ${error.message || '请检查网络连接和服务器状态'}`
+      showToast(`登录失败: ${error.message || '请检查网络连接和服务器状态'}`, 'error')
     }
   }
 }
 
 const handleRegister = async () => {
-  errorMessage.value = ''
-  successMessage.value = ''
-  
   try {
     console.log('正在注册，用户名:', authStore.registerForm.username)
     
@@ -476,7 +495,7 @@ const handleRegister = async () => {
       if (success) {
         registerAttempts.value = 0
         showRegisterCaptcha.value = false
-        successMessage.value = `模拟注册成功！欢迎 ${authStore.displayName}`
+        showToast(`模拟注册成功！欢迎 ${authStore.displayName}`, 'success')
         
         console.log('注册成功，准备跳转到配置页面...')
         // 使用 replace 而不是 push
@@ -489,7 +508,7 @@ const handleRegister = async () => {
     const needCaptcha = registerAttempts.value >= 3
     
     if (needCaptcha && !authStore.registerForm.captcha_code) {
-      errorMessage.value = '请输入验证码'
+      showToast('请输入验证码', 'warning')
       return
     }
     
@@ -505,7 +524,7 @@ const handleRegister = async () => {
       // 注册成功，重置尝试次数
       registerAttempts.value = 0
       showRegisterCaptcha.value = false
-      successMessage.value = `注册成功！欢迎 ${authStore.displayName}`
+      showToast(`注册成功！欢迎 ${authStore.displayName}`, 'success')
       
       console.log('注册成功，准备跳转到配置页面...')
       // 使用 replace 而不是 push
@@ -522,12 +541,12 @@ const handleRegister = async () => {
         authStore.registerForm.captcha_id = authStore.captchaId
       }
       
-      errorMessage.value = authStore.error || '注册失败'
+      showToast(authStore.error || '注册失败', 'error')
     }
     
   } catch (error: any) {
     console.error('注册错误:', error)
-    errorMessage.value = `注册失败: ${error.message || '请检查网络连接和服务器状态'}`
+    showToast(`注册失败: ${error.message || '请检查网络连接和服务器状态'}`, 'error')
   }
 }
 </script>
@@ -767,6 +786,10 @@ const handleRegister = async () => {
   border-color: var(--accent-color);
 }
 
+.form-group.with-icon.password-group {
+  padding-right: 10px; /* 为密码显示按钮留出空间 */
+}
+
 .icon-container {
   display: flex;
   align-items: center;
@@ -796,7 +819,36 @@ const handleRegister = async () => {
   color: var(--text-tertiary);
 }
 
-/* 验证码容器 */
+/* 密码显示/隐藏按钮 */
+.password-toggle {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  margin-left: 8px;
+  color: var(--text-tertiary);
+}
+
+.password-toggle:hover {
+  background-color: rgba(var(--accent-color-rgb), 0.1);
+  color: var(--accent-color);
+}
+
+.password-toggle:active {
+  transform: scale(0.95);
+}
+
+.password-toggle-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* 验证码容器 - 修复手机端高度问题 */
 .captcha-group {
   margin-top: 10px;
   width: 100%;
@@ -835,12 +887,13 @@ const handleRegister = async () => {
   flex: 1;
   min-width: 120px;
   max-width: 140px;
+  display: flex;
+  align-items: center;
 }
 
 .captcha-image {
   width: 100%;
-  height: 100%;
-  min-height: 54px;
+  height: 54px;
   border-radius: 10px;
   cursor: pointer;
   overflow: hidden;
@@ -857,6 +910,12 @@ const handleRegister = async () => {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-color: var(--accent-color);
+}
+
+.captcha-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .captcha-placeholder {
@@ -902,35 +961,6 @@ const handleRegister = async () => {
   cursor: not-allowed;
   transform: none !important;
   box-shadow: none !important;
-}
-
-/* 错误和成功消息 */
-.error-message {
-  margin-top: 18px;
-  padding: 14px;
-  border-radius: 10px;
-  font-size: 14px;
-  text-align: center;
-  border: 1px solid;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  background: rgba(var(--error-color), 0.1);
-  color: var(--error-color);
-  border-color: rgba(var(--error-color), 0.2);
-}
-
-.success-message {
-  margin-top: 18px;
-  padding: 14px;
-  border-radius: 10px;
-  font-size: 14px;
-  text-align: center;
-  border: 1px solid;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  background: rgba(var(--success-color), 0.1);
-  color: var(--success-color);
-  border-color: rgba(var(--success-color), 0.2);
 }
 
 /* 模式切换链接 */
@@ -1018,17 +1048,23 @@ const handleRegister = async () => {
     padding: 0 12px;
   }
   
+  .form-group.with-icon.password-group {
+    padding-right: 10px;
+  }
+  
   .icon-input {
     padding: 14px 0;
     font-size: 14px;
   }
   
-  .captcha-image-container {
-    min-width: 110px;
+  .captcha-input-group,
+  .captcha-image {
+    height: 50px;
+    min-height: 50px;
   }
   
-  .captcha-image {
-    min-height: 50px;
+  .captcha-image-container {
+    min-width: 110px;
   }
   
   .gradient-button {
@@ -1053,12 +1089,19 @@ const handleRegister = async () => {
     font-size: 15px;
   }
   
+  .captcha-input-group,
+  .captcha-image {
+    height: 46px;
+    min-height: 46px;
+  }
+  
   .captcha-image-container {
     min-width: 100px;
   }
   
-  .captcha-image {
-    min-height: 46px;
+  .gradient-button {
+    padding: 14px;
+    font-size: 15px;
   }
 }
 
@@ -1090,6 +1133,7 @@ const handleRegister = async () => {
   
   .captcha-input-group {
     flex: 2;
+    height: 50px;
     min-height: 50px;
   }
   
@@ -1100,6 +1144,7 @@ const handleRegister = async () => {
   }
   
   .captcha-image {
+    height: 50px;
     min-height: 50px;
   }
   
@@ -1135,6 +1180,7 @@ const handleRegister = async () => {
   }
   
   .captcha-input-group {
+    height: 48px;
     min-height: 48px;
   }
   
@@ -1144,6 +1190,7 @@ const handleRegister = async () => {
   }
   
   .captcha-image {
+    height: 48px;
     min-height: 48px;
   }
   
@@ -1179,6 +1226,10 @@ const handleRegister = async () => {
     min-height: 44px;
   }
   
+  .form-group.with-icon.password-group {
+    padding-right: 8px;
+  }
+  
   .icon-input {
     padding: 10px 0;
     font-size: 14px;
@@ -1188,11 +1239,9 @@ const handleRegister = async () => {
     gap: 8px;
   }
   
-  .captcha-input-group {
-    min-height: 44px;
-  }
-  
+  .captcha-input-group,
   .captcha-image {
+    height: 44px;
     min-height: 44px;
   }
 }
