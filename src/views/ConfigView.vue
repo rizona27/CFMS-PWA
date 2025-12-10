@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useDataStore } from '../stores/dataStore'
+import ToastMessage from '../components/common/ToastMessage.vue' // 🚀 导入 ToastMessage 组件
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -576,14 +577,21 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="showToast" class="global-toast" :class="toastType">
-      {{ toastMessage }}
-    </div>
+    <ToastMessage
+      :show="showToast"
+      :message="toastMessage"
+      :type="toastType"
+    />
   </div>
 </template>
 
 <style scoped>
+/* * 移除ConfigView.vue中自定义的 .global-toast 样式，
+ * 现在由 ToastMessage.vue 组件自带的样式处理。
+ * * 仅保留 ConfigView.vue 页面本身的样式
+ */
 .config-view {
+  /* ... (ConfigView styles) */
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
