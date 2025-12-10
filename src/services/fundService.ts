@@ -1,10 +1,14 @@
 import { useDataStore } from '@/stores/dataStore'
 
+// 【重要修改】定义正确的 API 基础 URL，解决因域名不一致导致的 404/401 错误
+const API_BASE_URL = 'https://cfms.crnas.uk:8315'
+
 export interface FundInfo {
   code: string
   name: string
   nav: number
   navDate: string
+  isValid?: boolean
   returns?: {
     navReturn1m?: number
     navReturn3m?: number
@@ -25,444 +29,373 @@ export interface FundReturns {
   navReturn1y?: number
 }
 
-// 定义代理列表，按优先级排序
-const PROXY_SERVICES = [
-  // 直接访问（通常会在浏览器环境失败，但保留作为第一尝试）
-  (url: string) => url,
-  // CORS代理服务
-  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-  (url: string) => `https://crossorigin.me/${url.replace(/^https?:\/\//, '')}`,
-  // 备用代理
-  (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
-  (url: string) => `https://cors-anywhere.herokuapp.com/${url}`,
-  (url: string) => `https://proxy.cors.sh/${url}`,
-  (url: string) => `https://cors-proxy.htmldriven.com/?url=${encodeURIComponent(url)}`,
-  (url: string) => `https://api.cors.sh/${url}`,
-]
+class DateFormatters {
+  static formatYYYY_MM_DD(date: Date): string {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
 
-// 基金API端点配置
-const FUND_API_CONFIG = {
-  eastmoney: {
-    baseUrl: 'https://fundgz.1234567.com.cn/js',
-    infoUrl: (code: string) => `https://fund.eastmoney.com/pingzhongdata/${code}.js`,
-    returnsUrl: (code: string) => `https://fund.eastmoney.com/pingzhongdata/${code}.js`,
-  },
-  ths: {
-    baseUrl: 'https://fund.10jqka.com.cn',
-    infoUrl: (code: string) => `https://fund.10jqka.com.cn/${code}/`,
-  },
-  tencent: {
-    baseUrl: 'https://qt.gtimg.cn',
-    infoUrl: (code: string) => `q=ff_${code}`,
-  },
-  fund123: {
-    baseUrl: 'https://www.fund123.cn/api',
-    infoUrl: (code: string) => `https://www.fund123.cn/fund/${code}`,
+  static parseYYYY_MM_DD(dateString: string): Date | null {
+    try {
+      const [year, month, day] = dateString.split('-').map(Number)
+      return new Date(year, month - 1, day)
+    } catch (error) {
+      return null
+    }
   }
 }
 
 class FundService {
   private dataStore: any
-  
+  private fundCache: Map<string, { holding: FundInfo; timestamp: number }> = new Map()
+  private activeRequests: Map<string, Promise<FundInfo>> = new Map()
+  private readonly cacheExpirationInterval: number = 24 * 60 * 60 * 1000
+
   constructor() {
+    // 【正确】从 Pinia 获取 Store 实例
     this.dataStore = useDataStore()
   }
 
-  // 获取用户选择的API
   private getSelectedAPI() {
     return this.dataStore.userPreferences?.selectedFundAPI || 'eastmoney'
   }
 
-  // 尝试使用代理获取数据
-  private async fetchWithProxy(url: string, options?: RequestInit): Promise<Response> {
-    const proxiesToTry = [...PROXY_SERVICES]
-    let lastError: any = null;
-    
-    for (let i = 0; i < proxiesToTry.length; i++) {
-      const proxy = proxiesToTry[i];
-      const isDirect = i === 0;
-      
-      try {
-        const proxyUrl = proxy(url)
-        const proxyName = isDirect ? '直接访问' : `代理服务(${i})`
-        
-        // 仅在控制台记录尝试，不写入UI日志以免造成干扰
-        console.debug(`尝试请求: ${proxyName} -> ${url}`)
-        
-        const response = await fetch(proxyUrl, {
-          ...options,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-            ...options?.headers,
-          },
-          mode: 'cors',
-          credentials: 'omit',
-        })
-
-        if (response.ok) {
-          if (!isDirect) {
-             console.log(`代理成功: ${proxyName}`)
-          }
-          // 只有非直连成功才记录一条网络日志，或者完全不记录以保持清爽
-          if (!isDirect) {
-            this.dataStore.addLog(`数据请求成功 (使用${proxyName})`, 'network')
-          }
-          return response
-        }
-        
-        // 如果失败，仅在控制台警告，继续下一次循环
-        console.warn(`节点响应非200: ${response.status} ${response.statusText} (使用${proxyName})`)
-        
-      } catch (error) {
-        lastError = error;
-        // 仅控制台记录，不打扰用户
-        // console.debug(`节点请求异常:`, error)
-      }
-    }
-    
-    // 如果循环结束仍未返回，说明所有尝试都失败了
-    console.error(`所有代理尝试均失败:`, lastError)
-    this.dataStore.addLog(`基金数据请求最终失败: 无法连接到数据源`, 'error')
-    throw new Error('网络请求失败：所有代理节点均无法访问')
+  private formatFundCode(code: string): string {
+    const cleaned = code.replace(/\D/g, '')
+    const formatted = cleaned.padStart(6, '0')
+    console.log(`[代码格式化] ${code} -> ${formatted}`)
+    return formatted
   }
 
-  // 获取基金实时净值
-  async fetchFundRealTimeNav(fundCode: string): Promise<FundRealTimeNav> {
-    const apiType = this.getSelectedAPI()
-    
-    try {
-      // 减少日志噪音，不记录每次开始
-      // this.dataStore.addLog(`获取基金 ${fundCode} 实时净值 (API: ${apiType})`, 'network')
-      
-      switch (apiType) {
-        case 'eastmoney':
-          return await this.fetchFromEastMoneyRealTime(fundCode)
-        case 'ths':
-          const thsInfo = await this.fetchFromTHS(fundCode)
-          return { nav: thsInfo.nav, date: thsInfo.navDate }
-        case 'tencent':
-          const tencentInfo = await this.fetchFromTencent(fundCode)
-          return { nav: tencentInfo.nav, date: tencentInfo.navDate }
-        case 'fund123':
-          const fund123Info = await this.fetchFromFund123(fundCode)
-          return { nav: fund123Info.nav, date: fund123Info.navDate }
-        default:
-          return await this.fetchFromEastMoneyRealTime(fundCode)
-      }
-    } catch (error) {
-      console.error(`获取基金 ${fundCode} 实时净值失败:`, error)
-      this.dataStore.addLog(`获取基金 ${fundCode} 实时净值失败: ${(error as Error).message}`, 'error')
-      throw error
-    }
+  private isCacheExpired(cachedData: { holding: FundInfo; timestamp: number }): boolean {
+    return Date.now() - cachedData.timestamp > this.cacheExpirationInterval
   }
 
-  // 获取基金详细信息
-  async fetchFundInfo(fundCode: string): Promise<FundInfo> {
-    const apiType = this.getSelectedAPI()
+  private isSameDay(date1: Date, date2: Date): boolean {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate()
+  }
+
+  private async getAuthHeaders() {
+    // 关键：从 localStorage 获取正确的令牌键名
+    const token = localStorage.getItem('auth_token') || ''
+    console.log('[认证头] 当前令牌:', token ? token.substring(0, 20) + '...' : '未找到')
     
-    try {
-      // 首先尝试从缓存获取
-      const cached = this.dataStore.getFundFromCache(fundCode)
-      if (cached) {
-        console.log(`从缓存获取基金信息: ${fundCode}`)
-        // 降低缓存日志级别或不显示
-        return cached
-      }
-
-      this.dataStore.addLog(`正在更新基金 ${fundCode} 信息...`, 'network')
-      
-      let fundInfo: FundInfo
-      
-      switch (apiType) {
-        case 'eastmoney':
-          fundInfo = await this.fetchFromEastMoney(fundCode)
-          break
-        case 'ths':
-          fundInfo = await this.fetchFromTHS(fundCode)
-          break
-        case 'tencent':
-          fundInfo = await this.fetchFromTencent(fundCode)
-          break
-        case 'fund123':
-          fundInfo = await this.fetchFromFund123(fundCode)
-          break
-        default:
-          fundInfo = await this.fetchFromEastMoney(fundCode)
-      }
-
-      // 保存到缓存
-      this.dataStore.saveToFundCache(fundCode, {
-        ...fundInfo,
-        timestamp: Date.now()
+    if (!token) {
+      console.warn('[认证头] 令牌不存在，请先登录')
+      // 触发重新登录事件
+      const event = new CustomEvent('auth-required', {
+        detail: { message: '请先登录以获取基金数据' }
       })
-      
-      this.dataStore.addLog(`成功获取基金 ${fundCode} 信息`, 'success')
-
-      return fundInfo
-    } catch (error) {
-      console.error(`获取基金 ${fundCode} 信息失败:`, error)
-      this.dataStore.addLog(`获取基金 ${fundCode} 信息失败: ${(error as Error).message}`, 'error')
-      
-      // 返回默认值，防止应用崩溃
-      return {
-        code: fundCode,
-        name: '未知基金',
-        nav: 0,
-        navDate: new Date().toISOString().split('T')[0],
-      }
+      window.dispatchEvent(event)
     }
-  }
-
-  // 天天基金API
-  private async fetchFromEastMoney(fundCode: string): Promise<FundInfo> {
-    try {
-      // 尝试获取实时净值
-      const realTime = await this.fetchFromEastMoneyRealTime(fundCode)
-      
-      // 尝试获取历史收益率
-      let returns: FundReturns = {}
-      try {
-        returns = await this.fetchReturnsFromEastmoney(fundCode)
-      } catch (error) {
-        console.warn(`获取基金 ${fundCode} 收益率失败:`, error)
-      }
-
-      return {
-        code: fundCode,
-        name: realTime.name || '天天基金',
-        nav: realTime.nav,
-        navDate: realTime.date,
-        returns
-      }
-    } catch (error) {
-      // 如果实时API失败，尝试备用API
-      console.warn(`天天基金实时API失败，尝试备用方案`)
-      return await this.fetchFromEastMoneyFallback(fundCode)
-    }
-  }
-
-  private async fetchFromEastMoneyRealTime(fundCode: string): Promise<{ name: string; nav: number; date: string }> {
-    const url = `https://fundgz.1234567.com.cn/js/${fundCode}.js?rt=${Date.now()}`
-    
-    try {
-      const response = await this.fetchWithProxy(url)
-      const text = await response.text()
-      
-      // 解析JSONP响应
-      const jsonpMatch = text.match(/jsonpgz\((.+)\)/)
-      if (jsonpMatch) {
-        const data = JSON.parse(jsonpMatch[1])
-        return {
-          name: data.name || 'N/A',
-          nav: parseFloat(data.dwjz || data.gsz),
-          date: data.jzrq || data.gzrq
-        }
-      }
-      
-      throw new Error('无效的响应格式')
-    } catch (error) {
-      // 这里不抛出，由上层处理fallback
-      throw error
-    }
-  }
-
-  private async fetchFromEastMoneyFallback(fundCode: string): Promise<FundInfo> {
-    // 备用API：使用基金档案页
-    const url = `https://fund.eastmoney.com/${fundCode}.html`
-    
-    try {
-      const response = await this.fetchWithProxy(url)
-      const html = await response.text()
-      
-      // 从HTML中提取基金名称和净值
-      const nameMatch = html.match(/<title>([^<]+)/)
-      const navMatch = html.match(/单位净值[^>]*>([\d.]+)/)
-      const dateMatch = html.match(/(\d{4}-\d{2}-\d{2})/)
-      
-      return {
-        code: fundCode,
-        name: nameMatch ? nameMatch[1].replace('_天天基金网', '').trim() : '未知基金',
-        nav: navMatch ? parseFloat(navMatch[1]) : 0,
-        navDate: dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0],
-      }
-    } catch (error) {
-      console.error(`天天基金备用API也失败:`, error)
-      throw error
-    }
-  }
-
-  private async fetchReturnsFromEastmoney(fundCode: string): Promise<FundReturns> {
-    const url = `https://fund.eastmoney.com/pingzhongdata/${fundCode}.js`
-    
-    try {
-      const response = await this.fetchWithProxy(url)
-      const jsContent = await response.text()
-      
-      const returns: FundReturns = {}
-      
-      // 使用更精确的正则表达式匹配
-      const patterns = [
-        { key: 'navReturn1m' as const, regex: /syl_1y\s*=\s*"([^"]*)"/ },
-        { key: 'navReturn3m' as const, regex: /syl_3y\s*=\s*"([^"]*)"/ },
-        { key: 'navReturn6m' as const, regex: /syl_6y\s*=\s*"([^"]*)"/ },
-        { key: 'navReturn1y' as const, regex: /syl_1n\s*=\s*"([^"]*)"/ }
-      ]
-      
-      for (const { key, regex } of patterns) {
-        const match = jsContent.match(regex)
-        if (match && match[1]) {
-          const value = parseFloat(match[1])
-          if (!isNaN(value)) {
-            returns[key] = value
-          }
-        }
-      }
-      
-      if (Object.values(returns).filter(v => v !== undefined).length === 0) {
-        const alternativePattern = /syl_(1y|3y|6y|1n)\s*=\s*"([^"]*)"/
-        let match
-        const regex = new RegExp(alternativePattern, 'g')
-        while ((match = regex.exec(jsContent)) !== null) {
-          const key = match[1]
-          const value = parseFloat(match[2])
-          if (!isNaN(value)) {
-            switch (key) {
-              case '1y': returns.navReturn1m = value; break
-              case '3y': returns.navReturn3m = value; break
-              case '6y': returns.navReturn6m = value; break
-              case '1n': returns.navReturn1y = value; break
-            }
-          }
-        }
-      }
-      
-      return returns
-    } catch (error) {
-      console.warn(`获取收益率数据失败，使用模拟数据:`, error)
-      return this.generateMockReturns()
-    }
-  }
-
-  // 同花顺API
-  private async fetchFromTHS(fundCode: string): Promise<FundInfo> {
-    const url = `https://fund.10jqka.com.cn/${fundCode}/`
-    
-    try {
-      const response = await this.fetchWithProxy(url)
-      const html = await response.text()
-      
-      // 解析HTML获取基金信息
-      const nameMatch = html.match(/<h1[^>]*>([^<]+)</)
-      const navMatch = html.match(/单位净值[^>]*>([\d.]+)</)
-      const dateMatch = html.match(/净值日期[^>]*>([^<]+)</)
-      
-      return {
-        code: fundCode,
-        name: nameMatch ? nameMatch[1].trim() : '同花顺基金',
-        nav: navMatch ? parseFloat(navMatch[1]) : 0,
-        navDate: dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0],
-      }
-    } catch (error) {
-      console.error(`同花顺API失败:`, error)
-      // 回退到天天基金
-      return await this.fetchFromEastMoney(fundCode)
-    }
-  }
-
-  // 腾讯财经API
-  private async fetchFromTencent(fundCode: string): Promise<FundInfo> {
-    const url = `https://qt.gtimg.cn/q=ff_${fundCode}`
-    
-    try {
-      const response = await this.fetchWithProxy(url)
-      const text = await response.text()
-      
-      // 解析腾讯财经格式
-      const parts = text.split('~')
-      if (parts.length > 2) {
-        return {
-          code: fundCode,
-          name: parts[1] || '腾讯基金',
-          nav: parseFloat(parts[3]) || 0,
-          navDate: parts[2] || new Date().toISOString().split('T')[0],
-        }
-      }
-      
-      throw new Error('无效的响应格式')
-    } catch (error) {
-      console.error(`腾讯财经API失败:`, error)
-      // 回退到天天基金
-      return await this.fetchFromEastMoney(fundCode)
-    }
-  }
-
-  // 蚂蚁基金API
-  private async fetchFromFund123(fundCode: string): Promise<FundInfo> {
-    const url = `https://www.fund123.cn/api/fund/${fundCode}`
-    
-    try {
-      const response = await this.fetchWithProxy(url)
-      const data = await response.json()
-      
-      return {
-        code: fundCode,
-        name: data.name || '蚂蚁基金',
-        nav: data.nav || 0,
-        navDate: data.navDate || new Date().toISOString().split('T')[0],
-        returns: data.returns
-      }
-    } catch (error) {
-      console.error(`蚂蚁基金API失败:`, error)
-      // 回退到天天基金
-      return await this.fetchFromEastMoney(fundCode)
-    }
-  }
-
-  // 生成模拟收益率数据（用于开发环境）
-  private generateMockReturns(): FundReturns {
-    // 生成 -20% 到 +30% 的随机收益率
-    const getRandomReturn = () => (Math.random() * 50 - 20)
     
     return {
-      navReturn1m: parseFloat(getRandomReturn().toFixed(2)),
-      navReturn3m: parseFloat(getRandomReturn().toFixed(2)),
-      navReturn6m: parseFloat(getRandomReturn().toFixed(2)),
-      navReturn1y: parseFloat(getRandomReturn().toFixed(2)),
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'Origin': window.location.origin
     }
   }
 
-  // 批量获取基金信息
+  async fetchFundInfo(fundCode: string, useOnlyEastmoney: boolean = false): Promise<FundInfo> {
+    const formattedCode = this.formatFundCode(fundCode)
+    console.group(`🧭 [fetchFundInfo] 开始处理基金: ${fundCode} (${formattedCode})`)
+    
+    if (this.activeRequests.has(formattedCode)) {
+      console.log(`[请求去重] 使用现有请求`)
+      const result = await this.activeRequests.get(formattedCode)!
+      console.groupEnd()
+      return result
+    }
+
+    this.dataStore.addLog(`开始查询基金代码: ${formattedCode}，使用API: ${this.getSelectedAPI()}` + (useOnlyEastmoney ? " (仅使用天天基金)" : ""), 'network')
+
+    const cachedData = this.fundCache.get(formattedCode)
+    if (cachedData) {
+      const isSameNavDay = this.isSameDay(DateFormatters.parseYYYY_MM_DD(cachedData.holding.navDate) || new Date(), new Date())
+      const isCacheFresh = !this.isCacheExpired(cachedData)
+      
+      if (isSameNavDay && isCacheFresh) {
+        console.log(`[缓存] ✅ 命中有效缓存`)
+        this.dataStore.addLog(`基金代码 ${formattedCode}: 从缓存中获取数据`, 'cache')
+        console.groupEnd()
+        return cachedData.holding
+      } else {
+        console.log(`[缓存] ⏰ 缓存已过期或非今日`)
+      }
+    }
+
+    const requestTask = this.fetchFromProxy(formattedCode, useOnlyEastmoney)
+    this.activeRequests.set(formattedCode, requestTask)
+
+    try {
+      const result = await requestTask
+      console.groupEnd()
+      return result
+    } finally {
+      this.activeRequests.delete(formattedCode)
+    }
+  }
+
+  private async fetchFromProxy(fundCode: string, useOnlyEastmoney: boolean = false): Promise<FundInfo> {
+    console.log(`[代理请求] 创建代理获取任务: ${fundCode}`)
+    
+    // 首先检查令牌
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      console.error('[认证错误] 未找到令牌，需要重新登录')
+      // 触发重新登录事件
+      const event = new CustomEvent('auth-required', {
+        detail: { message: '认证令牌缺失，请重新登录' }
+      })
+      window.dispatchEvent(event)
+      throw new Error('认证令牌缺失，请重新登录')
+    }
+    
+    console.log(`[认证] 使用令牌: ${token.substring(0, 20)}...`)
+    
+    const apiType = this.getSelectedAPI()
+    const url = `${API_BASE_URL}/api/proxy/fund/${fundCode}?api=${apiType}`
+    console.log(`[代理请求] 请求URL: ${url}`)
+    
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Origin': window.location.origin
+      }
+      
+      console.log(`[请求] URL: ${url}`)
+      console.log(`[请求] 头信息:`, { ...headers, Authorization: `Bearer ${token.substring(0, 20)}...` })
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers,
+        credentials: 'include'  // 重要：跨域请求携带凭证
+      })
+      
+      console.log(`[响应] 状态: ${response.status}`)
+      
+      if (response.status === 401) {
+        console.error('[认证失败] 令牌无效或已过期')
+        // 清除无效令牌
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth_user')
+        
+        // 触发重新登录事件
+        const event = new CustomEvent('auth-expired', {
+          detail: { message: '登录已过期，请重新登录' }
+        })
+        window.dispatchEvent(event)
+        
+        throw new Error('登录已过期，请重新登录')
+      }
+      
+      if (!response.ok) {
+        console.error(`[请求失败] 状态: ${response.status}`)
+        throw new Error(`代理请求失败: ${response.status} ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      if (!result.success) {
+        console.error(`[业务错误]`, result.error)
+        throw new Error(result.error || '代理返回错误')
+      }
+      
+      console.log(`[成功] 基金数据:`, result.data.name, result.data.nav)
+      
+      // 保存到缓存
+      this.saveToCache(result.data)
+      
+      return result.data
+      
+    } catch (error) {
+      console.error(`[代理请求异常]`, error)
+      this.dataStore.addLog(`获取基金 ${fundCode} 数据失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error')
+      throw error
+    }
+  }
+
+  private saveToCache(info: FundInfo): void {
+    this.fundCache.set(info.code, {
+      holding: info,
+      timestamp: Date.now()
+    })
+  }
+
+  private createInvalidFundInfo(fundCode: string): FundInfo {
+    return {
+      code: fundCode,
+      name: 'N/A',
+      nav: 0,
+      navDate: DateFormatters.formatYYYY_MM_DD(new Date()),
+      isValid: false
+    }
+  }
+
   async fetchMultipleFunds(fundCodes: string[]): Promise<FundInfo[]> {
     const results: FundInfo[] = []
     
     this.dataStore.addLog(`开始批量获取 ${fundCodes.length} 支基金信息`, 'network')
     
-    for (const code of fundCodes) {
-      try {
-        const info = await this.fetchFundInfo(code)
-        results.push(info)
-        // 添加延迟避免请求过快
-        await new Promise(resolve => setTimeout(resolve, 100))
-      } catch (error) {
-        console.error(`获取基金 ${code} 失败:`, error)
-        this.dataStore.addLog(`批量获取基金 ${code} 信息失败`, 'error')
-        results.push({
-          code,
-          name: '获取失败',
-          nav: 0,
-          navDate: new Date().toISOString().split('T')[0],
+    // 使用批量代理接口
+    const url = `${API_BASE_URL}/api/proxy/fund/batch`
+    
+    // 检查令牌
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      console.error('[批量请求] 令牌缺失')
+      throw new Error('请先登录以获取基金数据')
+    }
+    
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Origin': window.location.origin
+      }
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          codes: fundCodes,
+          api: this.getSelectedAPI()
         })
+      })
+      
+      if (response.status === 401) {
+        console.error('[批量请求] 认证失败')
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth_user')
+        
+        const event = new CustomEvent('auth-expired', {
+          detail: { message: '登录已过期，请重新登录' }
+        })
+        window.dispatchEvent(event)
+        
+        throw new Error('登录已过期，请重新登录')
+      }
+      
+      if (!response.ok) {
+        throw new Error(`批量请求失败: ${response.status} ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || '批量请求返回错误')
+      }
+      
+      // 更新缓存
+      result.data.forEach((fund: FundInfo) => {
+        this.fundCache.set(fund.code, {
+          holding: fund,
+          timestamp: Date.now()
+        })
+      })
+      
+      this.dataStore.addLog(`批量获取基金信息完成`, 'success')
+      return result.data
+      
+    } catch (error) {
+      console.error(`批量请求异常:`, error)
+      this.dataStore.addLog(`批量获取基金信息失败，回退到逐个请求`, 'warning')
+      
+      // 回退到逐个请求
+      for (const code of fundCodes) {
+        try {
+          const info = await this.fetchFundInfo(code)
+          results.push(info)
+          await new Promise(resolve => setTimeout(resolve, 300))
+        } catch (error) {
+          console.error(`获取基金 ${code} 失败:`, error)
+          this.dataStore.addLog(`批量获取基金 ${code} 信息失败`, 'error')
+          results.push(this.createInvalidFundInfo(code))
+        }
       }
     }
     
-    this.dataStore.addLog(`批量获取基金信息完成`, 'success')
     return results
+  }
+
+  async fetchFundRealTimeNav(fundCode: string): Promise<FundRealTimeNav> {
+    const info = await this.fetchFundInfo(fundCode)
+    return {
+      nav: info.nav,
+      date: info.navDate
+    }
+  }
+
+  async fetchFundDetailsFromEastmoney(code: string): Promise<{ fundName: string; returns: FundReturns }> {
+    const formattedCode = this.formatFundCode(code)
+    this.dataStore.addLog(`基金代码 ${formattedCode}: 尝试从天天基金获取详情数据`, 'network')
+    
+    try {
+      // 检查令牌
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        throw new Error('请先登录以获取基金详情数据')
+      }
+      
+      const url = `${API_BASE_URL}/api/proxy/fund/${formattedCode}?api=eastmoney`
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Origin': window.location.origin
+      }
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers,
+        credentials: 'include'
+      })
+      
+      if (response.status === 401) {
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth_user')
+        
+        const event = new CustomEvent('auth-expired', {
+          detail: { message: '登录已过期，请重新登录' }
+        })
+        window.dispatchEvent(event)
+        
+        throw new Error('登录已过期，请重新登录')
+      }
+      
+      if (!response.ok) {
+        throw new Error(`详情数据请求失败: ${response.status} ${response.statusText}`)
+      }
+      
+      const result = await response.json()
+      
+      if (!result.success) {
+        throw new Error(result.error || '详情数据获取失败')
+      }
+      
+      this.dataStore.addLog(`基金代码 ${formattedCode}: 详情数据解析完成`, 'success')
+      
+      return {
+        fundName: result.data.name || 'N/A',
+        returns: result.data.returns || {}
+      }
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误'
+      this.dataStore.addLog(`基金代码 ${formattedCode}: 详情数据获取失败: ${errorMessage}`, 'error')
+      return { fundName: 'N/A', returns: {} }
+    }
+  }
+
+  // 清理缓存
+  clearCache(): void {
+    this.fundCache.clear()
+    console.log(`[缓存] 已清理所有基金缓存`)
   }
 }
 

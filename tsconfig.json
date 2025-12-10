@@ -20,8 +20,8 @@
     "noUnusedParameters": false,   // 改为false，允许未使用的参数
     "noFallthroughCasesInSwitch": true,
 
-    /* Vue */
-    "types": ["vue"],
+    /* Vue & Vite */
+    "types": ["vue", "vite/client"],  // 添加 vite/client 类型定义
     
     /* 路径别名 */
     "baseUrl": ".",
@@ -36,8 +36,8 @@
     }
   },
   "include": [
-    "src/**/*.ts", 
-    "src/**/*.tsx", 
+    "src/**/*.ts",
+    "src/**/*.tsx",
     "src/**/*.vue",
     "env.d.ts"
   ],

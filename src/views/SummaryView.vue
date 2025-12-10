@@ -299,6 +299,18 @@ const onStatusTextTap = () => {
 const handleRefresh = async () => {
   if (isRefreshing.value) return
   
+  // 检查认证令牌
+  const token = localStorage.getItem('auth_token')
+  if (!token) {
+    dataStore.showToastMessage('请先登录以刷新数据')
+    // 触发重新登录事件
+    const event = new CustomEvent('auth-required', {
+      detail: { message: '请先登录以刷新基金数据' }
+    })
+    window.dispatchEvent(event)
+    return
+  }
+  
   isRefreshing.value = true
   startUpdatingTextAnimation()
   dataStore.startRefresh()
@@ -453,6 +465,37 @@ const handleForceThemeSync = () => {
   refreshKey.value = Date.now()
 }
 
+// 认证事件处理器
+const handleAuthRequired = (event: any) => {
+  console.log('SummaryView: 收到认证要求事件:', event.detail.message)
+  dataStore.showToastMessage(event.detail.message)
+  
+  // 跳转到登录页
+  setTimeout(() => {
+    window.location.hash = '#/auth'
+  }, 2000)
+}
+
+const handleAuthExpired = (event: any) => {
+  console.log('SummaryView: 收到认证过期事件:', event.detail.message)
+  dataStore.showToastMessage('登录已过期，请重新登录')
+  
+  // 跳转到登录页
+  setTimeout(() => {
+    window.location.hash = '#/auth'
+  }, 2000)
+}
+
+// 检查认证状态
+const checkAuth = () => {
+  const token = localStorage.getItem('auth_token')
+  if (!token) {
+    console.warn('SummaryView: 未找到认证令牌，可能无法获取基金数据')
+  } else {
+    console.log('SummaryView: 认证令牌存在:', token.substring(0, 20) + '...')
+  }
+}
+
 // 响应式变量
 const showOutdatedToast = ref(false)
 const autoHideTimer = ref<number | null>(null)
@@ -469,6 +512,9 @@ watch(() => dataStore.isPrivacyMode, (newValue) => {
 onMounted(() => {
   // 初始化数据
   dataStore.init()
+  
+  // 检查认证
+  checkAuth()
   
   dataStore.addLog('用户访问概览视图页面', 'info')
   
@@ -488,6 +534,10 @@ onMounted(() => {
   window.addEventListener('force-privacy-sync', handleForcePrivacySync)
   window.addEventListener('force-theme-sync', handleForceThemeSync)
   
+  // 监听认证事件
+  window.addEventListener('auth-required', handleAuthRequired)
+  window.addEventListener('auth-expired', handleAuthExpired)
+  
   onUnmounted(() => {
     // 清理定时器
     updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
@@ -499,6 +549,8 @@ onMounted(() => {
     window.removeEventListener('theme-mode-changed', handleThemeChange)
     window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
     window.removeEventListener('force-theme-sync', handleForceThemeSync)
+    window.removeEventListener('auth-required', handleAuthRequired)
+    window.removeEventListener('auth-expired', handleAuthExpired)
   })
 })
 </script>

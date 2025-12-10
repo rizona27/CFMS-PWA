@@ -5,7 +5,7 @@
       <input
         v-model="searchTermInternal"
         type="text"
-        placeholder="搜索用户、基金名称、代码或金额..."
+        :placeholder="placeholder"
         class="search-input"
         @input="onInput"
       />
@@ -21,20 +21,22 @@ import { ref, watch } from 'vue'
 
 const props = defineProps<{
   /** 外部传入的搜索词，用于初始化或外部重置 */
-  searchTerm: string
+  modelValue: string
+  /** 占位符文本 */
+  placeholder?: string
 }>()
 
 const emit = defineEmits<{
   /** 搜索词变化时触发，更新父组件状态 */
-  (e: 'update:searchTerm', value: string): void
+  (e: 'update:modelValue', value: string): void
   /** 用户点击清空按钮时触发 */
   (e: 'clear'): void
 }>()
 
-const searchTermInternal = ref(props.searchTerm || '')
+const searchTermInternal = ref(props.modelValue || '')
 
-// 监听外部 searchTerm 的变化，保持内部状态同步
-watch(() => props.searchTerm, (newValue) => {
+// 监听外部 modelValue 的变化，保持内部状态同步
+watch(() => props.modelValue, (newValue) => {
   searchTermInternal.value = newValue
 })
 
@@ -42,7 +44,7 @@ watch(() => props.searchTerm, (newValue) => {
  * 处理输入事件，同步内部和外部状态
  */
 const onInput = () => {
-  emit('update:searchTerm', searchTermInternal.value)
+  emit('update:modelValue', searchTermInternal.value)
 }
 
 /**
@@ -50,14 +52,13 @@ const onInput = () => {
  */
 const clearSearch = () => {
   searchTermInternal.value = ''
-  emit('update:searchTerm', '')
+  emit('update:modelValue', '')
   emit('clear')
 }
 </script>
 
 <style scoped>
 .search-bar-container {
-  /* 确保搜索栏占满宽度，居中对齐 */
   width: 100%;
 }
 
@@ -65,15 +66,12 @@ const clearSearch = () => {
   display: flex;
   align-items: center;
   padding: 10px 16px;
-  border-radius: 999px; /* 药丸形状 */
-  
-  /* 确保磨玻璃效果 */
+  border-radius: 999px;
   background: var(--glass-bg, rgba(255, 255, 255, 0.8));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-
   transition: all 0.3s ease;
 }
 
@@ -91,11 +89,8 @@ const clearSearch = () => {
   font-size: 16px;
   color: var(--text-primary, #1e293b);
   padding: 0;
-  
-  /* 保证输入框背景与磨玻璃背景融合 */
 }
 
-/* 占位符样式 */
 .search-input::placeholder {
   color: var(--text-secondary, #64748b);
   opacity: 0.6;
@@ -125,8 +120,8 @@ const clearSearch = () => {
 
 /* 深色模式适配 */
 :root.dark .search-bar {
-  background: var(--glass-bg, rgba(30, 30, 46, 0.8));
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  background: var(--glass-bg-dark, rgba(30, 30, 46, 0.8));
+  border: 1px solid var(--glass-border-dark, rgba(255, 255, 255, 0.1));
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
