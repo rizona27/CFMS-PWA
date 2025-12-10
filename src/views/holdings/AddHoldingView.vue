@@ -30,8 +30,9 @@
                     placeholder="客户姓名 (必填, 2-10字符)"
                     class="form-input"
                     :class="{ 'error': clientNameError }"
-                    @input="validateClientName"
-                    @blur="validateClientName"
+                    @input="onClientNameInput"
+                    @blur="formatClientName"
+                    maxlength="10"
                   />
                 </div>
                 <p class="error-message" v-if="clientNameError">{{ clientNameError }}</p>
@@ -49,8 +50,7 @@
                     placeholder="基金代码 (必填, 6位数字)"
                     class="form-input"
                     :class="{ 'error': fundCodeError }"
-                    @input="validateFundCode"
-                    @blur="validateFundCode"
+                    @input="onFundCodeInput"
                     maxlength="6"
                   />
                 </div>
@@ -69,8 +69,7 @@
                     placeholder="购买金额 (¥)"
                     class="form-input"
                     :class="{ 'error': purchaseAmountError }"
-                    @input="validatePurchaseAmount"
-                    @blur="validatePurchaseAmount"
+                    @blur="formatPurchaseAmount"
                     step="0.01"
                     min="0.01"
                   />
@@ -90,8 +89,7 @@
                     placeholder="购买份额 (份)"
                     class="form-input"
                     :class="{ 'error': purchaseSharesError }"
-                    @input="validatePurchaseShares"
-                    @blur="validatePurchaseShares"
+                    @blur="formatPurchaseShares"
                     step="0.01"
                     min="0.01"
                   />
@@ -140,18 +138,18 @@
               </div>
               
               <div class="input-group">
-                <div class="input-icon-wrapper-textarea">
-                  <svg class="input-icon self-start-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V5C19 3.89543 18.1046 3 17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 13H15M9 9H15M10 17H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <textarea
+                <div class="input-icon-wrapper">
+                  <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V5C19 3.89543 18.1046 3 17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 13H15M9 9H15M10 17H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <input
                     v-model="remarks"
+                    type="text"
                     name="remarks"
                     id="remarksInput"
                     placeholder="备注 (最多10个字符)"
-                    class="form-textarea"
+                    class="form-input"
                     maxlength="10"
-                    rows="2"
                     @input="validateRemarks"
-                  ></textarea>
+                  />
                 </div>
                 <div class="char-counter">
                   {{ remarks.length }}/10
@@ -182,8 +180,8 @@
             </div>
             
             <div class="form-actions">
-              <button class="form-button cancel" @click="goBack">
-                取消
+              <button class="form-button cancel" @click="resetForm">
+                重置
               </button>
               <button
                 class="form-button submit"
@@ -192,7 +190,7 @@
                 :disabled="!isFormValid || isSaving"
               >
                 <span v-if="isSaving" class="loading-spinner"></span>
-                {{ isSaving ? '保存中...' : '保存持仓' }}
+                {{ isSaving ? '保存中...' : '保存' }}
               </button>
             </div>
             
@@ -214,7 +212,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 // 假设这些 store/service 模块已存在
 // 注意：以下导入是模拟代码，需要根据你的项目结构进行调整或移除
-// import { useDataStore } from '@/stores/dataStore' 
+// import { useDataStore } from '@/stores/dataStore'
 // import { useAuthStore } from '@/stores/authStore'
 // import { fundService } from '@/services/fundService'
 // import type { FundHolding } from '@/stores/dataStore'
@@ -229,24 +227,24 @@ const useDataStore = () => ({
   updateHolding: (id: string, updates: any) => updates,
 })
 const useAuthStore = () => ({
-  currentUser: { user_type: 'pro' } 
+  currentUser: { user_type: 'pro' }
 })
 const fundService = {
   fetchFundInfo: async (code: string) => ({ name: `模拟基金${code}`, nav: 1.5, navDate: new Date().toISOString() })
 }
-type FundHolding = { 
-  id: string, 
-  clientName: string, 
-  clientID: string, 
-  fundCode: string, 
-  purchaseAmount: number, 
-  purchaseShares: number, 
-  purchaseDate: Date, 
-  remarks: string, 
+type FundHolding = {
+  id: string,
+  clientName: string,
+  clientID: string,
+  fundCode: string,
+  purchaseAmount: number,
+  purchaseShares: number,
+  purchaseDate: Date,
+  remarks: string,
   fundName: string,
   currentNav: number,
-  navDate: Date, 
-  isValid: boolean, 
+  navDate: Date,
+  isValid: boolean,
   isPinned: boolean,
   pinnedTimestamp: number | undefined,
   navReturn1m: number | undefined,
@@ -275,7 +273,7 @@ const fundCode = ref('')
 const purchaseAmount = ref('')
 const purchaseShares = ref('')
 const purchaseDate = ref(getTodayDate())
-const remarks = ref('') 
+const remarks = ref('')
 
 // 验证错误
 const clientNameError = ref('')
@@ -287,7 +285,7 @@ const purchaseSharesError = ref('')
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
-const isSaving = ref(false) 
+const isSaving = ref(false)
 const showValidationSummary = ref(false)
 
 // ========== 计算属性 ==========
@@ -295,7 +293,7 @@ const today = computed(() => getTodayDate())
 const formattedDate = computed(() => {
   if (!purchaseDate.value) return '购买日期 (必选)'
   try {
-    const date = new Date(purchaseDate.value + 'T00:00:00') 
+    const date = new Date(purchaseDate.value + 'T00:00:00')
     if (isNaN(date.getTime())) return '日期格式错误'
     return date.toLocaleDateString('zh-CN', {
       year: 'numeric',
@@ -303,105 +301,98 @@ const formattedDate = computed(() => {
       day: '2-digit'
     })
   } catch {
-    return purchaseDate.value 
+    return purchaseDate.value
   }
 })
 
+// 表单是否有效：只检查必填项是否有值，不验证格式
 const isFormValid = computed(() => {
-  return !clientNameError.value &&
-         !fundCodeError.value &&
-         !purchaseAmountError.value &&
-         !purchaseSharesError.value &&
-         clientName.value.trim() !== '' &&
+  return clientName.value.trim() !== '' &&
          fundCode.value.trim() !== '' &&
          purchaseAmount.value !== '' &&
          purchaseShares.value !== '' &&
          purchaseDate.value.trim() !== ''
 })
 
+// 验证错误汇总（仅用于显示）
 const validationErrors = computed(() => {
   const errors: string[] = []
-  if (!clientName.value.trim() || clientNameError.value) errors.push('客户姓名')
-  if (!fundCode.value.trim() || fundCodeError.value) errors.push('基金代码')
-  if (!purchaseAmount.value || purchaseAmountError.value) errors.push('购买金额')
-  if (!purchaseShares.value || purchaseSharesError.value) errors.push('购买份额')
+  if (!clientName.value.trim()) errors.push('客户姓名')
+  if (!fundCode.value.trim()) errors.push('基金代码')
+  if (!purchaseAmount.value) errors.push('购买金额')
+  if (!purchaseShares.value) errors.push('购买份额')
   return errors
 })
 
 const isFreeUser = computed(() => {
-  const currentUser = authStore.currentUser || { user_type: 'pro' } 
+  const currentUser = authStore.currentUser || { user_type: 'pro' }
   return currentUser.user_type === 'free'
 })
 
-// ========== 方法定义 (保持和第一次重构一致的逻辑) ==========
+// ========== 方法定义 ==========
 const goBack = () => {
-  // 仅作模拟，实际应使用 router.back()
-  console.log("执行返回操作")
+  // 返回到持仓管理页面
+  router.push('/holdings/manage')
 }
 
 const onDateChange = () => {
   logAction('日期选择', `选择购买日期: ${formattedDate.value}`, 'info')
 }
 
-// 验证方法 (保持不变)
-const validateClientName = () => {
-  const name = clientName.value.trim()
-  clientNameError.value = '' 
+// 客户姓名输入处理
+const onClientNameInput = () => {
+  // 清除之前的错误
+  clientNameError.value = ''
   
-  if (!name) {
-    clientNameError.value = '客户姓名不能为空'
-  } else if (name.length < 2 || name.length > 10) {
-    clientNameError.value = '姓名长度应为2-10个字符'
-  } else if (!/^[\u4e00-\u9fa5a-zA-Z\s]+$/.test(name)) {
-    clientNameError.value = '姓名只能包含中文、英文和空格'
+  // 限制输入：只允许中文、英文和空格
+  const name = clientName.value
+  if (name && !/^[\u4e00-\u9fa5a-zA-Z\s]*$/.test(name)) {
+    // 移除非法字符
+    clientName.value = name.replace(/[^\u4e00-\u9fa5a-zA-Z\s]/g, '')
   }
-  return !clientNameError.value
 }
 
-const validateFundCode = () => {
-  const code = fundCode.value.trim()
+// 格式化客户姓名：去除前后空格
+const formatClientName = () => {
+  clientName.value = clientName.value.trim()
+}
+
+// 基金代码输入处理
+const onFundCodeInput = () => {
+  // 清除之前的错误
   fundCodeError.value = ''
   
-  if (!code) {
-    fundCodeError.value = '基金代码不能为空'
-  } else if (!/^\d{6}$/.test(code)) {
-    fundCodeError.value = '基金代码必须是6位数字'
+  // 限制输入：只允许数字，最多6位
+  const code = fundCode.value
+  if (code && !/^\d*$/.test(code)) {
+    // 移除非数字字符
+    fundCode.value = code.replace(/\D/g, '')
   }
-  return !fundCodeError.value
+  
+  // 限制为6位数字
+  if (fundCode.value.length > 6) {
+    fundCode.value = fundCode.value.substring(0, 6)
+  }
 }
 
-const validatePurchaseAmount = () => {
-  const amountStr = purchaseAmount.value
-  purchaseAmountError.value = ''
-  
-  if (!amountStr) {
-    purchaseAmountError.value = '购买金额不能为空'
-  } else {
-    const amount = parseFloat(amountStr)
-    if (isNaN(amount) || amount <= 0) {
-      purchaseAmountError.value = '请输入有效的正数金额'
-    } else if (amount > 100000000) {
-      purchaseAmountError.value = '金额不能超过1亿元'
+// 格式化购买金额，保留2位小数
+const formatPurchaseAmount = () => {
+  if (purchaseAmount.value) {
+    const amount = parseFloat(purchaseAmount.value)
+    if (!isNaN(amount)) {
+      purchaseAmount.value = amount.toFixed(2)
     }
   }
-  return !purchaseAmountError.value
 }
 
-const validatePurchaseShares = () => {
-  const sharesStr = purchaseShares.value
-  purchaseSharesError.value = ''
-  
-  if (!sharesStr) {
-    purchaseSharesError.value = '购买份额不能为空'
-  } else {
-    const shares = parseFloat(sharesStr)
-    if (isNaN(shares) || shares <= 0) {
-      purchaseSharesError.value = '请输入有效的正数份额'
-    } else if (shares > 10000000) {
-      purchaseSharesError.value = '份额不能超过1000万份'
+// 格式化购买份额，保留2位小数
+const formatPurchaseShares = () => {
+  if (purchaseShares.value) {
+    const shares = parseFloat(purchaseShares.value)
+    if (!isNaN(shares)) {
+      purchaseShares.value = shares.toFixed(2)
     }
   }
-  return !purchaseSharesError.value
 }
 
 const validateClientID = () => {
@@ -413,18 +404,88 @@ const validateClientID = () => {
 
 const validateRemarks = () => {
   const remarksText = remarks.value
-  const maxLength = 10 
+  const maxLength = 10
   
   if (remarksText.length > maxLength) {
     remarks.value = remarksText.slice(0, maxLength)
   }
 }
 
+// 验证表单（在保存时调用）
+const validateForm = () => {
+  let isValid = true
+  
+  // 验证客户姓名
+  const name = clientName.value.trim()
+  clientNameError.value = ''
+  
+  if (!name) {
+    clientNameError.value = '客户姓名不能为空'
+    isValid = false
+  } else if (name.length < 2 || name.length > 10) {
+    clientNameError.value = '姓名长度应为2-10个字符'
+    isValid = false
+  } else if (!/^[\u4e00-\u9fa5a-zA-Z\s]+$/.test(name)) {
+    clientNameError.value = '姓名只能包含中文、英文和空格'
+    isValid = false
+  }
+  
+  // 验证基金代码
+  const code = fundCode.value.trim()
+  fundCodeError.value = ''
+  
+  if (!code) {
+    fundCodeError.value = '基金代码不能为空'
+    isValid = false
+  } else if (!/^\d{6}$/.test(code)) {
+    fundCodeError.value = '基金代码必须是6位数字'
+    isValid = false
+  }
+  
+  // 验证购买金额
+  const amountStr = purchaseAmount.value
+  purchaseAmountError.value = ''
+  
+  if (!amountStr) {
+    purchaseAmountError.value = '购买金额不能为空'
+    isValid = false
+  } else {
+    const amount = parseFloat(amountStr)
+    if (isNaN(amount) || amount <= 0) {
+      purchaseAmountError.value = '请输入有效的正数金额'
+      isValid = false
+    } else if (amount > 100000000) {
+      purchaseAmountError.value = '金额不能超过1亿元'
+      isValid = false
+    }
+  }
+  
+  // 验证购买份额
+  const sharesStr = purchaseShares.value
+  purchaseSharesError.value = ''
+  
+  if (!sharesStr) {
+    purchaseSharesError.value = '购买份额不能为空'
+    isValid = false
+  } else {
+    const shares = parseFloat(sharesStr)
+    if (isNaN(shares) || shares <= 0) {
+      purchaseSharesError.value = '请输入有效的正数份额'
+      isValid = false
+    } else if (shares > 10000000) {
+      purchaseSharesError.value = '份额不能超过1000万份'
+      isValid = false
+    }
+  }
+  
+  return isValid
+}
+
 // 异步获取基金信息（不阻塞UI）
 const fetchAndEnrichFundInfo = async (newHolding: FundHolding) => {
   try {
     logAction('基金查询', `后台查询基金信息: ${newHolding.fundCode}`, 'info')
-    const fundInfo = await fundService.fetchFundInfo(newHolding.fundCode) 
+    const fundInfo = await fundService.fetchFundInfo(newHolding.fundCode)
     
     if (fundInfo && fundInfo.name) {
       const existingHoldingIndex = dataStore.holdings.value.findIndex(h => h.id === newHolding.id)
@@ -434,7 +495,7 @@ const fetchAndEnrichFundInfo = async (newHolding: FundHolding) => {
           fundName: fundInfo.name,
           currentNav: fundInfo.nav,
           navDate: new Date(fundInfo.navDate),
-          isValid: true 
+          isValid: true
         })
         logAction('基金查询', `持仓 ${newHolding.fundCode} 信息更新成功: ${fundInfo.name}`, 'success')
       }
@@ -457,19 +518,16 @@ const fetchAndEnrichFundInfo = async (newHolding: FundHolding) => {
 // 保存持仓
 const saveHolding = async () => {
   // 1. 验证所有必填字段
-  const isClientNameValid = validateClientName()
-  const isFundCodeValid = validateFundCode()
-  const isAmountValid = validatePurchaseAmount()
-  const isSharesValid = validatePurchaseShares()
+  const isFormValid = validateForm()
   
-  if (!isClientNameValid || !isFundCodeValid || !isAmountValid || !isSharesValid) {
+  if (!isFormValid) {
     showValidationSummary.value = true
     showToastMessage('请检查表单中的错误', 'warning')
     return
   }
   showValidationSummary.value = false
   
-  // 2. 检查免费用户限制 
+  // 2. 检查免费用户限制
   if (isFreeUser.value) {
     const clientNameTrimmed = clientName.value.trim()
     const existingClientNames = new Set(dataStore.holdings.value.map(h => h.clientName))
@@ -501,8 +559,8 @@ const saveHolding = async () => {
       // 初始数据设置为待定/空
       fundName: '正在获取信息...',
       currentNav: 0,
-      navDate: new Date(0), 
-      isValid: true, 
+      navDate: new Date(0),
+      isValid: true,
       isPinned: false,
       pinnedTimestamp: undefined,
       navReturn1m: undefined,
@@ -524,8 +582,8 @@ const saveHolding = async () => {
     
     // 延迟跳转，确保用户看到成功消息
     setTimeout(() => {
-      // 实际应用中：router.push('/holdings/manage')
-      console.log("跳转到持仓管理页面")
+      // 返回到持仓管理页面
+      router.push('/holdings/manage')
     }, 1500)
     
   } catch (error: any) {
@@ -545,6 +603,7 @@ const resetForm = () => {
   purchaseDate.value = getTodayDate()
   remarks.value = ''
   
+  // 清除所有错误
   clientNameError.value = ''
   fundCodeError.value = ''
   purchaseAmountError.value = ''
@@ -577,7 +636,7 @@ onMounted(() => {
 .add-holding-view {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   height: 100vh; /* 明确设置高度为视口高度 */
-  min-height: 100vh; 
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -587,7 +646,7 @@ onMounted(() => {
 }
 
 .top-actions {
-  padding: 16px 16px 0; 
+  padding: 16px 16px 0;
   margin-bottom: 8px;
   flex-shrink: 0; /* 顶部区域不随内容滚动而收缩 */
 }
@@ -606,7 +665,7 @@ onMounted(() => {
 }
 
 .config-content {
-  padding: 0 0 100px; 
+  padding: 0 0 100px;
 }
 
 
@@ -660,7 +719,7 @@ onMounted(() => {
 }
 
 .form-section {
-  margin-bottom: 20px; /* 间距优化: 略微减小底部边距 */
+  margin-bottom: 16px; /* 间距优化: 减小底部边距 */
   background: var(--bg-card);
   border-radius: 12px;
   padding: 16px;
@@ -701,12 +760,12 @@ onMounted(() => {
   border: 0;
   height: 1px;
   background: var(--border-color);
-  margin: 16px 0; /* 从 30px 0 减少到 16px 0 */
+  margin: 8px 0; /* 进一步减小到 8px 0 */
 }
 
 /* 输入框组 */
 .input-group {
-  margin-bottom: 20px;
+  margin-bottom: 16px; /* 减小输入框之间的间距 */
   position: relative;
 }
 
@@ -719,7 +778,8 @@ onMounted(() => {
   border-radius: 10px;
   background: var(--bg-hover-light);
   transition: all 0.2s ease;
-  padding: 0 16px 0 8px; 
+  padding: 0 16px 0 8px;
+  min-height: 48px; /* 确保所有输入框高度一致 */
 }
 
 .input-icon-wrapper-textarea {
@@ -730,7 +790,7 @@ onMounted(() => {
   background: var(--bg-hover-light);
   transition: all 0.2s ease;
   padding: 10px 16px 10px 8px;
-  align-items: flex-start; 
+  align-items: flex-start;
 }
 
 
@@ -747,7 +807,7 @@ onMounted(() => {
 }
 
 .input-icon {
-  flex-shrink: 0; 
+  flex-shrink: 0;
   color: var(--accent-color);
   margin-right: 8px;
 }
@@ -758,13 +818,14 @@ onMounted(() => {
 
 .form-input {
   flex-grow: 1;
-  padding: 12px 0; 
-  border: none; 
+  padding: 12px 0;
+  border: none;
   font-size: 16px;
   color: var(--text-primary);
-  background: transparent; 
+  background: transparent;
   outline: none;
   box-sizing: border-box;
+  min-height: 24px; /* 确保输入框内容区域高度一致 */
 }
 
 :root.dark .form-input {
@@ -793,7 +854,7 @@ onMounted(() => {
   color: #ff416c;
   margin: 4px 0 0 0;
   font-weight: 500;
-  padding-left: 28px; 
+  padding-left: 28px;
 }
 
 /* 日期输入框 wrapper 样式 */
@@ -806,7 +867,8 @@ onMounted(() => {
   border-radius: 10px;
   background: var(--bg-hover-light);
   transition: all 0.2s ease;
-  padding: 0 16px 0 8px; 
+  padding: 0 16px 0 8px;
+  min-height: 48px; /* 确保日期选择器高度与其他输入框一致 */
 }
 
 .date-input-native-styled {
@@ -815,19 +877,22 @@ onMounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  opacity: 0; 
+  opacity: 0;
   cursor: pointer;
   z-index: 2;
-  padding: 0; 
+  padding: 0;
 }
 
 .date-display {
   flex: 1;
-  padding: 12px 0 12px 0; 
+  padding: 12px 0 12px 0;
   font-size: 16px;
   color: var(--text-primary);
   z-index: 1;
-  margin-left: 8px; 
+  margin-left: 8px;
+  min-height: 24px; /* 确保日期显示区域高度一致 */
+  display: flex;
+  align-items: center;
 }
 
 .date-select-arrow {
@@ -841,14 +906,14 @@ onMounted(() => {
 /* 文本域 (调整以适应 input-icon-wrapper-textarea) */
 .form-textarea {
   flex-grow: 1;
-  padding: 0 0 0 8px; 
+  padding: 0 0 0 8px;
   border: none;
   font-size: 16px;
   color: var(--text-primary);
   background: transparent;
   transition: all 0.2s ease;
   resize: vertical;
-  min-height: 50px; 
+  min-height: 50px;
   max-height: 150px;
   font-family: inherit;
   box-sizing: border-box;
@@ -873,7 +938,7 @@ onMounted(() => {
   border: 2px solid rgba(33, 150, 243, 0.3);
   border-radius: 12px;
   padding: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px; /* 减小底部边距 */
 }
 
 :root.dark .user-limit-card {
@@ -935,7 +1000,7 @@ onMounted(() => {
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 165, 0, 0.1));
   border: 2px solid rgba(255, 215, 0, 0.3);
   border-radius: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 16px; /* 减小底部边距 */
 }
 
 :root.dark .validation-summary {
@@ -958,12 +1023,12 @@ onMounted(() => {
 }
 
 
-/* 按钮区域 (保持不变) */
+/* 按钮区域 */
 .form-actions {
   display: flex;
   gap: 12px;
-  padding: 0 0 32px;
-  margin-top: 20px;
+  padding: 0 0 24px; /* 减小底部padding */
+  margin-top: 16px; /* 减小顶部边距 */
 }
 
 .form-button {
@@ -1074,7 +1139,7 @@ onMounted(() => {
 }
 
 .form-spacer {
-  height: 60px;
+  height: 40px; /* 减小底部空白 */
 }
 
 /* 移动端优化 */
@@ -1095,24 +1160,25 @@ onMounted(() => {
   
   .form-section {
     padding: 12px;
-    margin-bottom: 16px; /* 间距优化 */
+    margin-bottom: 12px; /* 进一步减小移动端底部边距 */
   }
   
   .section-divider {
-    margin: 12px 0; /* 间距优化 */
+    margin: 6px 0; /* 移动端进一步减小 */
   }
 
   .form-input,
   .date-display,
   .form-textarea {
-    padding: 10px 0; 
+    padding: 10px 0;
     font-size: 15px;
   }
   
   .input-icon-wrapper,
   .input-icon-wrapper-textarea,
   .date-input-wrapper {
-    padding: 0 14px 0 8px; 
+    padding: 0 14px 0 8px;
+    min-height: 44px; /* 移动端调整高度 */
   }
 
   .date-display {
@@ -1123,6 +1189,7 @@ onMounted(() => {
     flex-direction: column;
     gap: 8px;
     padding: 0 0 16px;
+    margin-top: 12px;
   }
   
   .form-button {
