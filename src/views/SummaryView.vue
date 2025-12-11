@@ -47,9 +47,10 @@ const sortKeyFullDisplay = computed(() => {
   return map[selectedSortKey.value]
 })
 
+// 修改：简化颜色，确保激活状态有足够对比度
 const sortKeyColor = computed(() => {
   const map = {
-    none: '#666',
+    none: '#666666',
     navReturn1m: '#3b82f6',
     navReturn3m: '#8b5cf6',
     navReturn6m: '#f97316',
@@ -58,13 +59,14 @@ const sortKeyColor = computed(() => {
   return map[selectedSortKey.value]
 })
 
-const sortButtonIcon = computed(() => {
+// 修改：排序按钮显示文字和方向图标
+const sortButtonText = computed(() => {
   const map = {
-    none: '⇅',
-    navReturn1m: '📅',
-    navReturn3m: '📆',
-    navReturn6m: '🗓️',
-    navReturn1y: '⏰'
+    none: '无排序',
+    navReturn1m: '近1月',
+    navReturn3m: '近3月',
+    navReturn6m: '近6月',
+    navReturn1y: '近1年'
   }
   return map[selectedSortKey.value]
 })
@@ -184,35 +186,35 @@ const updatingText = computed(() => {
   return baseText + dots
 })
 
-const getFundHash = (fundName: string): number => {
+// 修改：更简单的hash函数用于生成颜色
+const getFundHash = (fundCode: string): number => {
   let hash = 0
-  for (let i = 0; i < fundName.length; i++) {
-    hash = ((hash << 5) - hash) + fundName.charCodeAt(i)
+  for (let i = 0; i < fundCode.length; i++) {
+    hash = ((hash << 5) - hash) + fundCode.charCodeAt(i)
     hash |= 0
   }
   return Math.abs(hash)
 }
 
-const getFundGradient = (fundName: string): string => {
-  const hash = getFundHash(fundName)
+// 修改：生成基金药丸渐变背景色
+const getFundPillGradient = (fundCode: string): string => {
+  const hash = getFundHash(fundCode)
   const hue = hash % 360
-  const saturationLight = hash % 31 + 60
+  const saturation = 65 + (hash % 25)  // 65-90%饱和度
+  const lightnessLight = 88 + (hash % 7)  // 88-95%亮度（浅色模式）
+  const lightnessDark = 28 + (hash % 7)   // 28-35%亮度（深色模式）
   
   const lightGradient = `linear-gradient(90deg,
-    hsl(${hue}, ${saturationLight}%, 85%) 0%,
-    hsl(${hue}, ${saturationLight}%, 92%) 25%,
-    hsl(${hue}, ${saturationLight}%, 96%) 50%,
-    hsl(${hue}, ${saturationLight}%, 98%) 75%,
-    white 100%)`
+    hsl(${hue}, ${saturation}%, ${lightnessLight}%) 0%,
+    hsl(${hue}, ${saturation}%, 94%) 50%,
+    hsl(${hue}, ${saturation}%, 98%) 100%)`
   
   const darkGradient = `linear-gradient(90deg,
-    hsl(${hue}, ${saturationLight - 20}%, 18%) 0%,
-    hsl(${hue}, ${saturationLight - 20}%, 22%) 25%,
-    hsl(${hue}, ${saturationLight - 20}%, 25%) 50%,
-    hsl(${hue}, ${saturationLight - 20}%, 28%) 75%,
-    var(--bg-card) 100%)`
+    hsl(${hue}, ${saturation - 15}%, ${lightnessDark}%) 0%,
+    hsl(${hue}, ${saturation - 15}%, 32%) 50%,
+    hsl(${hue}, ${saturation - 15}%, 36%) 100%)`
   
-  return `var(--fund-gradient-light, ${lightGradient}) var(--fund-gradient-dark, ${darkGradient})`
+  return `var(--fund-pill-light, ${lightGradient}) var(--fund-pill-dark, ${darkGradient})`
 }
 
 const getCurrentSortReturn = (fundCode: string) => {
@@ -275,9 +277,25 @@ const toggleFundCard = (fundCode: string) => {
   }
 }
 
-const getFundName = (fundCode: string) => {
+// 修改：获取基金显示名称，包含截断逻辑
+const getFundDisplayName = (fundCode: string) => {
   const fund = groupedByFund.value[fundCode]?.[0]
-  return fund?.fundName || (fundCode ? `未加载(${fundCode})` : '未加载')
+  if (!fund?.fundName) {
+    return `未加载(${fundCode})`
+  }
+  
+  const fundName = fund.fundName
+  // 截断基金名称到8个字符
+  if (fundName.length > 8) {
+    return fundName.substring(0, 8) + '...'
+  }
+  return fundName
+}
+
+// 修改：获取完整的基金名称（用于展开时显示）
+const getFullFundName = (fundCode: string) => {
+  const fund = groupedByFund.value[fundCode]?.[0]
+  return fund?.fundName || `未加载(${fundCode})`
 }
 
 const getClientCountColor = (count: number) => {
@@ -322,23 +340,25 @@ const processClientName = (name: string) => {
   return name.charAt(0) + '*'.repeat(name.length - 2) + name.charAt(name.length - 1)
 }
 
-const getFundDisplayName = (name: string) => {
-  if (!name) return '未加载'
-  if (name.length <= 8) return name
-  return name.substring(0, 8) + '...'
-}
-
 const isSameDay = (date1: Date, date2: Date) => {
   return date1.getFullYear() === date2.getFullYear() &&
          date1.getMonth() === date2.getMonth() &&
          date1.getDate() === date2.getDate()
 }
 
+// 修复：点击状态按钮后自动隐藏刷新按钮
 const onStatusTextTap = () => {
   if (holdings.value.length === 0) return
   
   dataStore.updateUserPreferences({ showRefreshButton: true })
   
+  // 清除之前的定时器
+  if (autoHideTimer.value) {
+    clearTimeout(autoHideTimer.value)
+    autoHideTimer.value = null
+  }
+  
+  // 设置新的定时器，5秒后隐藏刷新按钮
   autoHideTimer.value = setTimeout(() => {
     if (!isRefreshing.value) {
       dataStore.updateUserPreferences({ showRefreshButton: false })
@@ -346,6 +366,7 @@ const onStatusTextTap = () => {
   }, 5000) as unknown as number
 }
 
+// 修改：刷新时使用天天基金获取收益数据
 const handleRefresh = async () => {
   if (isRefreshing.value) return
   
@@ -370,21 +391,26 @@ const handleRefresh = async () => {
       const holding = holdings.value[i]
       
       try {
+        // 1. 使用当前API设置获取基本基金信息（净值、名称等）
         const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
         
-        if (fundInfo.name && fundInfo.nav > 0) {
-          await dataStore.updateHolding(holding.id, {
-            fundName: fundInfo.name,
-            currentNav: fundInfo.nav,
-            navDate: new Date(fundInfo.navDate),
-            isValid: true,
-            navReturn1m: fundInfo.returns?.navReturn1m,
-            navReturn3m: fundInfo.returns?.navReturn3m,
-            navReturn6m: fundInfo.returns?.navReturn6m,
-            navReturn1y: fundInfo.returns?.navReturn1y
-          })
-        }
+        // 2. 使用天天基金接口获取收益数据
+        const eastmoneyDetails = await fundService.fetchFundDetailsFromEastmoney(holding.fundCode)
+        
+        // 合并数据：基本信息 + 天天基金的收益数据
+        await dataStore.updateHolding(holding.id, {
+          fundName: fundInfo.name,
+          currentNav: fundInfo.nav,
+          navDate: new Date(fundInfo.navDate),
+          isValid: true,
+          // 只使用天天基金的收益数据
+          navReturn1m: eastmoneyDetails.returns?.navReturn1m,
+          navReturn3m: eastmoneyDetails.returns?.navReturn3m,
+          navReturn6m: eastmoneyDetails.returns?.navReturn6m,
+          navReturn1y: eastmoneyDetails.returns?.navReturn1y
+        })
       } catch (error) {
+        console.error('刷新基金数据失败:', error)
       }
       
       dataStore.updateRefreshProgress(i + 1)
@@ -397,6 +423,7 @@ const handleRefresh = async () => {
     
     refreshKey.value = Date.now()
     
+    // 修复：刷新完成后隐藏刷新按钮，显示状态按钮
     setTimeout(() => {
       dataStore.updateUserPreferences({ showRefreshButton: false })
     }, 1000)
@@ -577,9 +604,9 @@ onMounted(() => {
               class="sort-btn"
               @click="cycleSortKey"
               :title="selectedSortKey !== 'none' ? `按${sortKeyFullDisplay}排序` : '无排序'"
-              :style="{ color: sortKeyColor }"
+              :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
             >
-              <span class="sort-icon">{{ sortButtonIcon }}</span>
+              <span class="sort-text">{{ sortButtonText }}</span>
             </button>
             
             <button
@@ -587,24 +614,24 @@ onMounted(() => {
               class="sort-order-btn"
               @click="toggleSortOrder"
               :title="`${sortOrder === 'ascending' ? '升序' : '降序'}排序`"
-              :style="{ color: sortKeyColor }"
+              :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
             >
               <span class="sort-order-icon">
-                {{ sortOrder === 'ascending' ? '▲' : '▼' }}
+                {{ sortOrder === 'ascending' ? '↑' : '↓' }}
               </span>
             </button>
           </div>
         </div>
         
         <div class="status-pill-group">
-          <div
+          <button
             v-if="!showRefreshButton"
             class="status-pill"
             @click="onStatusTextTap"
             :class="{ 'status-latest': hasLatestNavDate }"
           >
             <span class="status-text">{{ statusText }}</span>
-          </div>
+          </button>
           
           <button
             v-if="showRefreshButton"
@@ -614,7 +641,7 @@ onMounted(() => {
             :title="isRefreshing ? '刷新中...' : '刷新数据'"
           >
             <span v-if="isRefreshing" class="spinner-small"></span>
-            <span v-else class="refresh-icon">🔄</span>
+            <span v-else class="refresh-icon">⟳</span>
           </button>
         </div>
       </div>
@@ -659,82 +686,83 @@ onMounted(() => {
           :key="fundCode"
           class="fund-card-wrapper"
         >
+          <!-- 修改：基金药丸形状卡片 -->
           <div
-            class="fund-card"
+            class="fund-pill-card"
             :class="{ expanded: expandedFundCodes.has(fundCode) }"
             @click="toggleFundCard(fundCode)"
-            :style="{ '--fund-gradient': getFundGradient(getFundName(fundCode)) }"
+            :style="{ '--fund-pill-gradient': getFundPillGradient(fundCode) }"
           >
-            <div class="fund-bar-background"></div>
-            
-            <div class="fund-header">
-              <div class="fund-info-single-line">
-                <div class="fund-name-id-wrapper">
-                  <h3 class="fund-name-single">
-                    <span class="fund-name-text">{{ getFundName(fundCode) }}</span>
-                    <span class="fund-code-text-single">({{ fundCode }})</span>
-                  </h3>
+            <div class="fund-pill-content">
+              <div class="fund-pill-info">
+                <div class="fund-name-code">
+                  <span class="fund-name">{{ getFundDisplayName(fundCode) }}</span>
+                  <span class="fund-code">({{ fundCode }})</span>
                 </div>
                 
-                <div
-                  v-if="selectedSortKey !== 'none'"
-                  class="current-sort-return"
-                  :style="{ color: getReturnColor(getCurrentSortReturn(fundCode)) }"
-                >
-                  {{ formatReturn(getCurrentSortReturn(fundCode)) }}
+                <!-- 修复：排序收益显示在基金条右端，避免另起一行 -->
+                <div class="fund-right-stats">
+                  <div
+                    v-if="selectedSortKey !== 'none'"
+                    class="current-sort-return"
+                    :style="{ color: getReturnColor(getCurrentSortReturn(fundCode)) }"
+                  >
+                    {{ formatReturn(getCurrentSortReturn(fundCode)) }}
+                  </div>
+                  
+                  <div v-if="!isPrivacyMode" class="client-count">
+                    <span
+                      class="count-value"
+                      :style="{ color: getClientCountColor(groupedByFund[fundCode].length) }"
+                    >
+                      {{ groupedByFund[fundCode].length }}人
+                    </span>
+                  </div>
                 </div>
               </div>
               
-              <div v-if="!isPrivacyMode" class="client-count">
-                <span class="count-label">持有人数:</span>
-                <span
-                  class="count-value"
-                  :style="{ color: getClientCountColor(groupedByFund[fundCode].length) }"
-                >
-                  {{ groupedByFund[fundCode].length }}
-                </span>
-                <span class="count-unit">人</span>
-              </div>
-            </div>
-            
-            <div v-if="expandedFundCodes.has(fundCode)" class="expanded-content">
-              <div class="fund-details">
-                <div class="returns-grid">
-                  <div class="return-item">
-                    <span class="return-label">近1月:</span>
-                    <span
-                      class="return-value"
-                      :style="{ color: getReturnColor(getFundReturn(fundCode, '1m')) }"
-                    >
-                      {{ formatReturn(getFundReturn(fundCode, '1m')) }}
-                    </span>
+              <div v-if="expandedFundCodes.has(fundCode)" class="expanded-details">
+                <!-- 修改：收益数据改为两行，每行两个，标签和数值在同一行 -->
+                <div class="returns-grid-compact">
+                  <div class="returns-row">
+                    <div class="return-item">
+                      <span class="return-label">近1月:</span>
+                      <span
+                        class="return-value"
+                        :style="{ color: getReturnColor(getFundReturn(fundCode, '1m')) }"
+                      >
+                        {{ formatReturn(getFundReturn(fundCode, '1m')) }}
+                      </span>
+                    </div>
+                    <div class="return-item">
+                      <span class="return-label">近3月:</span>
+                      <span
+                        class="return-value"
+                        :style="{ color: getReturnColor(getFundReturn(fundCode, '3m')) }"
+                      >
+                        {{ formatReturn(getFundReturn(fundCode, '3m')) }}
+                      </span>
+                    </div>
                   </div>
-                  <div class="return-item">
-                    <span class="return-label">近3月:</span>
-                    <span
-                      class="return-value"
-                      :style="{ color: getReturnColor(getFundReturn(fundCode, '3m')) }"
-                    >
-                      {{ formatReturn(getFundReturn(fundCode, '3m')) }}
-                    </span>
-                  </div>
-                  <div class="return-item">
-                    <span class="return-label">近6月:</span>
-                    <span
-                      class="return-value"
-                      :style="{ color: getReturnColor(getFundReturn(fundCode, '6m')) }"
-                    >
-                      {{ formatReturn(getFundReturn(fundCode, '6m')) }}
-                    </span>
-                  </div>
-                  <div class="return-item">
-                    <span class="return-label">近1年:</span>
-                    <span
-                      class="return-value"
-                      :style="{ color: getReturnColor(getFundReturn(fundCode, '1y')) }"
-                    >
-                      {{ formatReturn(getFundReturn(fundCode, '1y')) }}
-                    </span>
+                  <div class="returns-row">
+                    <div class="return-item">
+                      <span class="return-label">近6月:</span>
+                      <span
+                        class="return-value"
+                        :style="{ color: getReturnColor(getFundReturn(fundCode, '6m')) }"
+                      >
+                        {{ formatReturn(getFundReturn(fundCode, '6m')) }}
+                      </span>
+                    </div>
+                    <div class="return-item">
+                      <span class="return-label">近1年:</span>
+                      <span
+                        class="return-value"
+                        :style="{ color: getReturnColor(getFundReturn(fundCode, '1y')) }"
+                      >
+                        {{ formatReturn(getFundReturn(fundCode, '1y')) }}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
@@ -813,7 +841,7 @@ onMounted(() => {
             :key="fundCode"
             class="toast-item"
           >
-            {{ getFundDisplayName(fundName) }} [{{ fundCode }}]
+            {{ getFundDisplayName(fundCode) }} [{{ fundCode }}]
           </div>
           <div v-if="outdatedFundCodes.length > 5" class="toast-more">
             ... 还有{{ outdatedFundCodes.length - 5 }}支
@@ -889,7 +917,7 @@ onMounted(() => {
 
 .sort-btn {
   height: 36px;
-  border: 1px solid var(--border-color);
+  border: 1px solid;
   border-radius: 18px;
   background: var(--bg-card);
   font-size: 14px;
@@ -899,29 +927,27 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  padding: 0 12px;
+  padding: 0 16px;
   gap: 6px;
-  min-width: 36px;
   font-weight: 500;
+  min-width: 70px;
 }
 
 .sort-btn:hover {
-  border-color: var(--accent-color);
   background: var(--accent-color);
   color: white;
+  border-color: var(--accent-color) !important;
 }
 
-.sort-icon {
+.sort-text {
   font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  font-weight: 500;
 }
 
 .sort-order-btn {
   height: 36px;
   min-width: 36px;
-  border: 1px solid var(--border-color);
+  border: 1px solid;
   border-radius: 18px;
   background: var(--bg-card);
   font-size: 16px;
@@ -936,13 +962,13 @@ onMounted(() => {
 }
 
 .sort-order-btn:hover {
-  border-color: var(--accent-color);
   background: var(--accent-color);
   color: white;
+  border-color: var(--accent-color) !important;
 }
 
 .sort-order-icon {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: bold;
 }
 
@@ -952,28 +978,30 @@ onMounted(() => {
   align-items: center;
 }
 
+/* 修改：药丸形状的状态按钮 */
 .status-pill {
   height: 36px;
+  padding: 8px 16px;
+  background: var(--bg-hover);
   border: 1px solid var(--border-color);
   border-radius: 18px;
-  padding: 0 16px;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 14px;
+  gap: 6px;
   font-weight: 500;
+  white-space: nowrap;
   min-width: 80px;
-  text-align: center;
-  background: var(--bg-card);
-  color: var(--text-primary);
 }
 
 .status-pill:hover {
-  border-color: var(--accent-color);
   background: var(--accent-color);
   color: white;
+  border-color: var(--accent-color);
 }
 
 .status-pill.status-latest {
@@ -988,15 +1016,13 @@ onMounted(() => {
   border-color: #065f46;
 }
 
-.status-text {
-  white-space: nowrap;
-}
-
+/* 修改：药丸形状的刷新按钮，使用与navbar相同的色系 */
 .refresh-pill {
   height: 36px;
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
+  padding: 8px 16px;
   background: var(--accent-color);
+  border: 1px solid var(--accent-color);
+  border-radius: 18px;
   color: white;
   font-size: 14px;
   cursor: pointer;
@@ -1004,13 +1030,14 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  padding: 0 16px;
   gap: 6px;
   font-weight: 500;
+  min-width: 36px;
 }
 
 .refresh-pill:hover:not(:disabled) {
   background: #2563eb;
+  border-color: #2563eb;
   transform: translateY(-1px);
 }
 
@@ -1020,9 +1047,13 @@ onMounted(() => {
 }
 
 .refresh-icon {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  font-size: 20px;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+}
+
+.refresh-pill:hover:not(:disabled) .refresh-icon {
+  transform: rotate(90deg);
 }
 
 .spinner-small {
@@ -1145,127 +1176,125 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.fund-card {
+/* 修改：基金药丸形状卡片 - 减小高度 */
+.fund-pill-card {
   background: var(--bg-card);
-  border-radius: 8px;
-  padding: 0;
+  border-radius: 24px;
   cursor: pointer;
   transition: all 0.3s ease;
   border: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.fund-card:hover {
+.fund-pill-card:hover {
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.fund-pill-card.expanded {
+  background: var(--bg-hover);
+  border-radius: 24px 24px 12px 12px;
   border-color: var(--accent-color);
 }
 
-.fund-bar-background {
+.fund-pill-card::before {
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 36px;
-  background: var(--fund-gradient);
+  bottom: 0;
+  background: var(--fund-pill-gradient);
   opacity: 0.7;
   z-index: 0;
   transition: opacity 0.3s ease;
+  border-radius: 24px;
 }
 
-.fund-card:hover .fund-bar-background {
+.fund-pill-card:hover::before {
   opacity: 0.8;
 }
 
-.fund-card.expanded .fund-bar-background {
+.fund-pill-card.expanded::before {
   opacity: 0.6;
+  border-radius: 24px 24px 12px 12px;
 }
 
-.fund-card.expanded {
-  background: var(--bg-hover);
-}
-
-.fund-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+.fund-pill-content {
   position: relative;
   z-index: 1;
-  padding: 8px 16px;
-  min-height: 36px;
 }
 
-.fund-info-single-line {
+/* 修改：减小基金药丸卡片的高度 */
+.fund-pill-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px; /* 减小上下内边距 */
+  min-height: 42px; /* 减小最小高度 */
+}
+
+.fund-name-code {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 4px 0; /* 减小内边距 */
 }
 
-.fund-name-id-wrapper {
-  flex: 1;
-  min-width: 0;
-}
-
-.fund-name-single {
-  font-size: 14px;
+.fund-name {
+  font-size: 14px; /* 稍微减小字体大小 */
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  line-height: 1.3;
+  max-width: 60%;
 }
 
-.fund-name-text {
-  display: inline-block;
-  max-width: 70%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fund-code-text-single {
-  font-size: 12px;
+.fund-code {
+  font-size: 12px; /* 稍微减小字体大小 */
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
   font-weight: normal;
+}
+
+.fund-right-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   flex-shrink: 0;
 }
 
 .current-sort-return {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 14px; /* 稍微减小字体大小 */
+  font-weight: 700;
   white-space: nowrap;
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 6px;
+  padding: 5px 10px; /* 减小内边距 */
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
   backdrop-filter: blur(4px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+  min-width: 65px; /* 稍微减小最小宽度 */
+  text-align: center;
 }
 
 .client-count {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  font-size: 12px; /* 稍微减小字体大小 */
   color: var(--text-secondary);
-  margin-right: 8px;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.7);
-  padding: 2px 6px;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px; /* 减小内边距 */
+  border-radius: 16px;
   backdrop-filter: blur(4px);
-}
-
-.count-label {
-  opacity: 0.8;
+  flex-shrink: 0;
 }
 
 .count-value {
@@ -1273,7 +1302,7 @@ onMounted(() => {
   font-style: italic;
 }
 
-.expanded-content {
+.expanded-details {
   margin-top: 0;
   padding: 16px;
   border-top: 1px solid var(--border-color);
@@ -1288,34 +1317,40 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.fund-details {
-  background: var(--bg-card);
-  border-radius: 8px;
-  padding: 0;
-  border: none;
-}
-
-.returns-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+/* 修改：紧凑型收益网格布局 */
+.returns-grid-compact {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.returns-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
 .return-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-hover);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
 }
 
 .return-label {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 .return-value {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .clients-section {
@@ -1345,7 +1380,7 @@ onMounted(() => {
   justify-content: space-between;
   padding: 8px;
   background: var(--bg-hover);
-  border-radius: 6px;
+  border-radius: 10px;
   border: 1px solid var(--border-color);
   position: relative;
   min-height: 40px;
@@ -1396,7 +1431,7 @@ onMounted(() => {
   top: 50%;
   transform: translateY(-50%);
   background: var(--bg-card);
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 2px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -1404,7 +1439,7 @@ onMounted(() => {
 .client-action-btn {
   font-size: 11px;
   padding: 4px 8px;
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid var(--border-color);
   background: var(--bg-card);
   color: var(--text-primary);
@@ -1542,23 +1577,50 @@ onMounted(() => {
     min-height: calc(100vh - 130px);
   }
   
-  .returns-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
+  .fund-pill-info {
+    padding: 8px 12px; /* 移动端更紧凑 */
+    min-height: 38px; /* 移动端更小高度 */
   }
   
-  .fund-info-single-line {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+  .fund-name-code {
+    padding: 3px 0;
   }
   
-  .fund-name-text, .fund-code-text-single {
-    width: 100%;
+  .fund-name {
+    max-width: 50%;
+    font-size: 13px; /* 移动端更小字体 */
+  }
+  
+  .fund-code {
+    font-size: 11px; /* 移动端更小字体 */
+  }
+  
+  .fund-right-stats {
+    gap: 8px;
   }
   
   .current-sort-return {
-    align-self: flex-start;
+    font-size: 13px; /* 移动端更小字体 */
+    padding: 4px 8px; /* 移动端更小内边距 */
+    min-width: 55px; /* 移动端更小宽度 */
+  }
+  
+  .client-count {
+    font-size: 11px; /* 移动端更小字体 */
+    padding: 3px 6px; /* 移动端更小内边距 */
+  }
+  
+  .returns-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  
+  .return-item {
+    padding: 8px 10px;
+  }
+  
+  .return-label, .return-value {
+    font-size: 13px;
   }
   
   .outdated-toast {
@@ -1568,23 +1630,30 @@ onMounted(() => {
   }
   
   .sort-btn {
-    min-width: auto;
-    padding: 0 8px;
+    padding: 0 12px;
+    font-size: 13px;
+    min-width: 60px;
+  }
+  
+  .sort-text {
+    font-size: 13px;
   }
   
   .sort-order-btn {
-    min-width: 28px;
-    height: 28px;
+    min-width: 32px;
+    height: 32px;
   }
   
+  .status-pill,
   .refresh-pill {
-    min-width: 36px;
-    padding: 0;
+    height: 32px;
+    padding: 6px 12px;
+    font-size: 13px;
+    min-width: 60px;
   }
   
-  .status-pill {
-    min-width: 60px;
-    padding: 0 12px;
+  .refresh-icon {
+    font-size: 18px;
   }
   
   .client-item-with-actions {
@@ -1614,9 +1683,11 @@ onMounted(() => {
   }
 }
 
+/* 深色模式适配 - 修复颜色对比度 */
 :root.dark .status-pill {
-  background: var(--bg-card);
+  background: var(--bg-hover);
   border-color: var(--border-color);
+  color: var(--text-primary);
 }
 
 :root.dark .status-pill.status-latest {
@@ -1631,29 +1702,84 @@ onMounted(() => {
   border-color: #4ade80;
 }
 
-:root.dark .sort-btn,
-:root.dark .sort-order-btn {
-  background: var(--bg-card);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
-:root.dark .sort-btn:hover,
-:root.dark .sort-order-btn:hover {
-  background: var(--accent-color);
-  color: white;
-}
-
 :root.dark .refresh-pill {
   background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
 }
 
 :root.dark .refresh-pill:hover:not(:disabled) {
   background: #2563eb;
+  border-color: #2563eb;
+  color: white;
 }
 
-:root.dark .client-action-btn {
+/* 修复：排序按钮在激活状态下的颜色 - 确保足够的对比度 */
+.sort-btn:hover,
+.sort-order-btn:hover {
+  background-color: var(--accent-color);
+  color: white !important; /* 强制白色文字，确保对比度 */
+}
+
+.action-btn.active,
+.sort-btn:hover,
+.sort-order-btn:hover {
+  background-color: var(--accent-color);
+  color: white !important;
+  border-color: var(--accent-color) !important;
+}
+
+/* 深色模式下的排序按钮激活状态 */
+:root.dark .action-btn.active,
+:root.dark .sort-btn:hover,
+:root.dark .sort-order-btn:hover {
+  background-color: var(--accent-color);
+  color: white !important;
+  border-color: var(--accent-color) !important;
+}
+
+/* 确保深色模式下排序按钮文字在非激活状态下可见 */
+:root.dark .sort-btn,
+:root.dark .sort-order-btn {
   background: var(--bg-card);
-  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* 确保深色模式下收益值文字颜色有足够对比度 */
+:root.dark .current-sort-return,
+:root.dark .client-count {
+  background: rgba(30, 41, 59, 0.9);
+}
+
+:root.dark .return-item {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+:root.dark .return-label,
+:root.dark .return-value {
+  color: var(--text-primary);
+}
+
+/* 确保深色模式下基金名称和代码有足够对比度 */
+:root.dark .fund-name {
+  color: var(--text-primary);
+}
+
+:root.dark .fund-code {
+  color: var(--text-secondary);
+}
+
+/* 确保深色模式下收益百分比颜色有足够对比度 */
+:root.dark .return-value[style*="color: #ef4444"] {
+  color: #f87171 !important; /* 更亮的红色 */
+}
+
+:root.dark .return-value[style*="color: #10b981"] {
+  color: #34d399 !important; /* 更亮的绿色 */
+}
+
+:root.dark .return-value[style*="color: #666"] {
+  color: #9ca3af !important; /* 更亮的灰色 */
 }
 </style>
