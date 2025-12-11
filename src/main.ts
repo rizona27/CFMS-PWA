@@ -5,6 +5,10 @@ import router from './router'
 
 // 导入全局样式
 import './style.css'
+// 🚀 核心修复：添加对 main.css 的导入。
+// 根据您的路径信息 (main.css 在 src/assets 下)，相对路径为 './assets/main.css'
+import './assets/main.css'
+
 
 const app = createApp(App)
 
@@ -38,21 +42,14 @@ const initApp = () => {
   const validPaths = [
     '/', '/auth', '/config', '/summary', '/client', '/ranking', '/about', '/logs', '/debug',
     // 持仓管理相关路径
-    '/holdings', '/holdings/manage', '/holdings/add', '/holdings/edit', '/holdings/import', 
+    '/holdings', '/holdings/manage', '/holdings/add', '/holdings/edit', '/holdings/import',
     '/holdings/export', '/holdings/clear'
   ]
   
-  // 检查是否为有效路径（支持动态参数）
-  const isValidPath = validPaths.some(path => {
-    if (path.includes('/:')) {
-      // 处理动态路由，如 /holdings/edit/:id
-      const basePath = path.split('/:')[0]
-      return currentPath.startsWith(basePath)
-    }
-    return path === currentPath
-  })
+  // 检查当前路径是否在有效路径中
+  const isValidPath = validPaths.some(p => currentPath === p || currentPath.startsWith(p + '/'))
   
-  if (!isValidPath && currentPath !== '/') {
+  if (!isValidPath && currentPath !== '/auth' && currentPath !== '/404') {
     console.log('路径无效，重定向到 auth')
     router.push('/auth')
   }
@@ -98,22 +95,13 @@ if (isDebugMode) {
   // 添加调试工具
   const debugInfo = {
     version: '1.0.0',
-    environment: import.meta.env.MODE,
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent
+    env: import.meta.env.MODE,
+    isPWA: window.matchMedia('(display-mode: standalone)').matches,
+    isMobile: /Mobi|Android/i.test(navigator.userAgent),
   }
   
-  console.log('调试信息:', debugInfo)
+  console.log('Debug Info:', debugInfo)
   
-  // 允许所有CORS请求（仅用于开发）
-  if (typeof window !== 'undefined') {
-    // 添加调试快捷键
-    document.addEventListener('keydown', (e) => {
-      // Ctrl+Shift+D 打开调试面板
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        console.log('调试快捷键激活')
-        // 这里可以添加打开调试面板的逻辑
-      }
-    })
-  }
+  // 方便在控制台调用
+  ;(window as any).debugInfo = debugInfo
 }

@@ -47,7 +47,6 @@ const sortKeyFullDisplay = computed(() => {
   return map[selectedSortKey.value]
 })
 
-// 修改：简化颜色，确保激活状态有足够对比度
 const sortKeyColor = computed(() => {
   const map = {
     none: '#666666',
@@ -59,7 +58,6 @@ const sortKeyColor = computed(() => {
   return map[selectedSortKey.value]
 })
 
-// 修改：排序按钮显示文字和方向图标
 const sortButtonText = computed(() => {
   const map = {
     none: '无排序',
@@ -186,7 +184,6 @@ const updatingText = computed(() => {
   return baseText + dots
 })
 
-// 修改：更简单的hash函数用于生成颜色
 const getFundHash = (fundCode: string): number => {
   let hash = 0
   for (let i = 0; i < fundCode.length; i++) {
@@ -196,7 +193,6 @@ const getFundHash = (fundCode: string): number => {
   return Math.abs(hash)
 }
 
-// 修改：生成基金药丸渐变背景色
 const getFundPillGradient = (fundCode: string): string => {
   const hash = getFundHash(fundCode)
   const hue = hash % 360
@@ -277,7 +273,6 @@ const toggleFundCard = (fundCode: string) => {
   }
 }
 
-// 修改：获取基金显示名称，包含截断逻辑
 const getFundDisplayName = (fundCode: string) => {
   const fund = groupedByFund.value[fundCode]?.[0]
   if (!fund?.fundName) {
@@ -285,14 +280,12 @@ const getFundDisplayName = (fundCode: string) => {
   }
   
   const fundName = fund.fundName
-  // 截断基金名称到8个字符
   if (fundName.length > 8) {
     return fundName.substring(0, 8) + '...'
   }
   return fundName
 }
 
-// 修改：获取完整的基金名称（用于展开时显示）
 const getFullFundName = (fundCode: string) => {
   const fund = groupedByFund.value[fundCode]?.[0]
   return fund?.fundName || `未加载(${fundCode})`
@@ -346,19 +339,16 @@ const isSameDay = (date1: Date, date2: Date) => {
          date1.getDate() === date2.getDate()
 }
 
-// 修复：点击状态按钮后自动隐藏刷新按钮
 const onStatusTextTap = () => {
   if (holdings.value.length === 0) return
   
   dataStore.updateUserPreferences({ showRefreshButton: true })
   
-  // 清除之前的定时器
   if (autoHideTimer.value) {
     clearTimeout(autoHideTimer.value)
     autoHideTimer.value = null
   }
   
-  // 设置新的定时器，5秒后隐藏刷新按钮
   autoHideTimer.value = setTimeout(() => {
     if (!isRefreshing.value) {
       dataStore.updateUserPreferences({ showRefreshButton: false })
@@ -366,7 +356,6 @@ const onStatusTextTap = () => {
   }, 5000) as unknown as number
 }
 
-// 修改：刷新时使用天天基金获取收益数据
 const handleRefresh = async () => {
   if (isRefreshing.value) return
   
@@ -391,19 +380,14 @@ const handleRefresh = async () => {
       const holding = holdings.value[i]
       
       try {
-        // 1. 使用当前API设置获取基本基金信息（净值、名称等）
         const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
-        
-        // 2. 使用天天基金接口获取收益数据
         const eastmoneyDetails = await fundService.fetchFundDetailsFromEastmoney(holding.fundCode)
         
-        // 合并数据：基本信息 + 天天基金的收益数据
         await dataStore.updateHolding(holding.id, {
           fundName: fundInfo.name,
           currentNav: fundInfo.nav,
           navDate: new Date(fundInfo.navDate),
           isValid: true,
-          // 只使用天天基金的收益数据
           navReturn1m: eastmoneyDetails.returns?.navReturn1m,
           navReturn3m: eastmoneyDetails.returns?.navReturn3m,
           navReturn6m: eastmoneyDetails.returns?.navReturn6m,
@@ -423,7 +407,6 @@ const handleRefresh = async () => {
     
     refreshKey.value = Date.now()
     
-    // 修复：刷新完成后隐藏刷新按钮，显示状态按钮
     setTimeout(() => {
       dataStore.updateUserPreferences({ showRefreshButton: false })
     }, 1000)
@@ -544,7 +527,7 @@ ${holding.fundName || `未加载(${holding.fundCode})`} | ${holding.fundCode}
 }
 
 const handleThemeChange = (event: any) => {
-  const { mode } = event.detail
+  const { isDark } = event.detail
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
@@ -565,248 +548,251 @@ onMounted(() => {
     checkAndShowOutdatedToast()
   }, 1000)
   
-  window.addEventListener('theme-mode-changed', handleThemeChange)
+  window.addEventListener('theme-changed', handleThemeChange)
   
   onUnmounted(() => {
     updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
     autoHideTimer.value !== null && clearTimeout(autoHideTimer.value)
     
-    window.removeEventListener('theme-mode-changed', handleThemeChange)
+    window.removeEventListener('theme-changed', handleThemeChange)
   })
 })
 </script>
 
 <template>
   <div class="summary-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <div class="header-section">
-      <div class="header-row">
-        <div class="action-buttons">
-          <button
-            class="action-btn"
-            :class="{ active: areAnyCardsExpanded }"
-            @click="toggleAllCards"
-            :title="areAnyCardsExpanded ? '折叠所有' : '展开所有'"
-          >
-            {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
-          </button>
-          
-          <button
-            class="action-btn"
-            :class="{ active: isSearchExpanded }"
-            @click="toggleSearch"
-            :title="isSearchExpanded ? '隐藏搜索' : '显示搜索'"
-          >
-            🔍
-          </button>
-          
-          <div class="sort-group">
+    <!-- 完全固定的顶部工具栏 -->
+    <div class="fixed-header">
+      <div class="header-section">
+        <div class="header-row">
+          <div class="action-buttons">
             <button
-              class="sort-btn"
-              @click="cycleSortKey"
-              :title="selectedSortKey !== 'none' ? `按${sortKeyFullDisplay}排序` : '无排序'"
-              :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
+              class="action-btn"
+              :class="{ active: areAnyCardsExpanded }"
+              @click="toggleAllCards"
+              :title="areAnyCardsExpanded ? '折叠所有' : '展开所有'"
             >
-              <span class="sort-text">{{ sortButtonText }}</span>
+              {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
             </button>
             
             <button
-              v-if="selectedSortKey !== 'none'"
-              class="sort-order-btn"
-              @click="toggleSortOrder"
-              :title="`${sortOrder === 'ascending' ? '升序' : '降序'}排序`"
-              :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
+              class="action-btn"
+              :class="{ active: isSearchExpanded }"
+              @click="toggleSearch"
+              :title="isSearchExpanded ? '隐藏搜索' : '显示搜索'"
             >
-              <span class="sort-order-icon">
-                {{ sortOrder === 'ascending' ? '↑' : '↓' }}
-              </span>
+              🔍
+            </button>
+            
+            <div class="sort-group">
+              <button
+                class="sort-btn"
+                @click="cycleSortKey"
+                :title="selectedSortKey !== 'none' ? `按${sortKeyFullDisplay}排序` : '无排序'"
+                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
+              >
+                <span class="sort-text">{{ sortButtonText }}</span>
+              </button>
+              
+              <button
+                v-if="selectedSortKey !== 'none'"
+                class="sort-order-btn"
+                @click="toggleSortOrder"
+                :title="`${sortOrder === 'ascending' ? '升序' : '降序'}排序`"
+                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
+              >
+                <span class="sort-order-icon">
+                  {{ sortOrder === 'ascending' ? '↑' : '↓' }}
+                </span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="status-pill-group">
+            <button
+              v-if="!showRefreshButton"
+              class="status-pill"
+              @click="onStatusTextTap"
+              :class="{ 'status-latest': hasLatestNavDate }"
+            >
+              <span class="status-text">{{ statusText }}</span>
+            </button>
+            
+            <button
+              v-if="showRefreshButton"
+              class="refresh-pill"
+              @click.stop="handleRefresh"
+              :disabled="isRefreshing"
+              :title="isRefreshing ? '刷新中...' : '刷新数据'"
+            >
+              <span v-if="isRefreshing" class="spinner-small"></span>
+              <span v-else class="refresh-icon">⟳</span>
             </button>
           </div>
         </div>
         
-        <div class="status-pill-group">
-          <button
-            v-if="!showRefreshButton"
-            class="status-pill"
-            @click="onStatusTextTap"
-            :class="{ 'status-latest': hasLatestNavDate }"
-          >
-            <span class="status-text">{{ statusText }}</span>
-          </button>
-          
-          <button
-            v-if="showRefreshButton"
-            class="refresh-pill"
-            @click.stop="handleRefresh"
-            :disabled="isRefreshing"
-            :title="isRefreshing ? '刷新中...' : '刷新数据'"
-          >
-            <span v-if="isRefreshing" class="spinner-small"></span>
-            <span v-else class="refresh-icon">⟳</span>
-          </button>
-        </div>
-      </div>
-      
-      <div v-if="isSearchExpanded" class="search-box">
-        <div class="search-input-wrapper">
-          <span class="search-icon">🔍</span>
-          <input
-            v-model="searchText"
-            type="text"
-            placeholder="输入客户名、基金代码、基金名称..."
-            class="search-input"
-            @input="performSearch(searchText)"
-          />
-          <button
-            v-if="searchText"
-            class="clear-search"
-            @click="clearSearch"
-          >
-            ×
-          </button>
+        <div v-if="isSearchExpanded" class="search-box">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input
+              v-model="searchText"
+              type="text"
+              placeholder="输入客户名、基金代码、基金名称..."
+              class="search-input"
+              @input="performSearch(searchText)"
+            />
+            <button
+              v-if="searchText"
+              class="clear-search"
+              @click="clearSearch"
+            >
+              ×
+            </button>
+          </div>
         </div>
       </div>
     </div>
     
-    <div class="content-area">
-      <div v-if="holdings.length === 0" class="empty-state">
-        <div class="empty-icon">📊</div>
-        <h3>当前没有数据</h3>
-        <p>请导入数据开始使用</p>
-      </div>
-      
-      <div v-else-if="filteredHoldings.length === 0 && searchText" class="empty-state">
-        <div class="empty-icon">🔍</div>
-        <h3>未找到匹配的内容</h3>
-        <p>请尝试其他搜索关键词</p>
-      </div>
-      
-      <div v-else class="funds-container">
-        <div
-          v-for="fundCode in sortedFundCodes"
-          :key="fundCode"
-          class="fund-card-wrapper"
-        >
-          <!-- 修改：基金药丸形状卡片 -->
+    <!-- 可独立滚动的下方内容区域 -->
+    <div class="content-wrapper">
+      <div class="content-area">
+        <div v-if="holdings.length === 0" class="empty-state">
+          <div class="empty-icon">📊</div>
+          <h3>当前没有数据</h3>
+          <p>请导入数据开始使用</p>
+        </div>
+        
+        <div v-else-if="filteredHoldings.length === 0 && searchText" class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>未找到匹配的内容</h3>
+          <p>请尝试其他搜索关键词</p>
+        </div>
+        
+        <div v-else class="funds-container">
           <div
-            class="fund-pill-card"
-            :class="{ expanded: expandedFundCodes.has(fundCode) }"
-            @click="toggleFundCard(fundCode)"
-            :style="{ '--fund-pill-gradient': getFundPillGradient(fundCode) }"
+            v-for="fundCode in sortedFundCodes"
+            :key="fundCode"
+            class="fund-card-wrapper"
           >
-            <div class="fund-pill-content">
-              <div class="fund-pill-info">
-                <div class="fund-name-code">
-                  <span class="fund-name">{{ getFundDisplayName(fundCode) }}</span>
-                  <span class="fund-code">({{ fundCode }})</span>
-                </div>
-                
-                <!-- 修复：排序收益显示在基金条右端，避免另起一行 -->
-                <div class="fund-right-stats">
-                  <div
-                    v-if="selectedSortKey !== 'none'"
-                    class="current-sort-return"
-                    :style="{ color: getReturnColor(getCurrentSortReturn(fundCode)) }"
-                  >
-                    {{ formatReturn(getCurrentSortReturn(fundCode)) }}
+            <div
+              class="fund-pill-card"
+              :class="{ expanded: expandedFundCodes.has(fundCode) }"
+              @click="toggleFundCard(fundCode)"
+              :style="{ '--fund-pill-gradient': getFundPillGradient(fundCode) }"
+            >
+              <div class="fund-pill-content">
+                <div class="fund-pill-info">
+                  <div class="fund-name-code">
+                    <span class="fund-name">{{ getFundDisplayName(fundCode) }}</span>
+                    <span class="fund-code">({{ fundCode }})</span>
                   </div>
                   
-                  <div v-if="!isPrivacyMode" class="client-count">
-                    <span
-                      class="count-value"
-                      :style="{ color: getClientCountColor(groupedByFund[fundCode].length) }"
+                  <div class="fund-right-stats">
+                    <div
+                      v-if="selectedSortKey !== 'none'"
+                      class="current-sort-return"
+                      :style="{ color: getReturnColor(getCurrentSortReturn(fundCode)) }"
                     >
-                      {{ groupedByFund[fundCode].length }}人
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div v-if="expandedFundCodes.has(fundCode)" class="expanded-details">
-                <!-- 修改：收益数据改为两行，每行两个，标签和数值在同一行 -->
-                <div class="returns-grid-compact">
-                  <div class="returns-row">
-                    <div class="return-item">
-                      <span class="return-label">近1月:</span>
-                      <span
-                        class="return-value"
-                        :style="{ color: getReturnColor(getFundReturn(fundCode, '1m')) }"
-                      >
-                        {{ formatReturn(getFundReturn(fundCode, '1m')) }}
-                      </span>
+                      {{ formatReturn(getCurrentSortReturn(fundCode)) }}
                     </div>
-                    <div class="return-item">
-                      <span class="return-label">近3月:</span>
+                    
+                    <div v-if="!isPrivacyMode" class="client-count">
                       <span
-                        class="return-value"
-                        :style="{ color: getReturnColor(getFundReturn(fundCode, '3m')) }"
+                        class="count-value"
+                        :style="{ color: getClientCountColor(groupedByFund[fundCode].length) }"
                       >
-                        {{ formatReturn(getFundReturn(fundCode, '3m')) }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="returns-row">
-                    <div class="return-item">
-                      <span class="return-label">近6月:</span>
-                      <span
-                        class="return-value"
-                        :style="{ color: getReturnColor(getFundReturn(fundCode, '6m')) }"
-                      >
-                        {{ formatReturn(getFundReturn(fundCode, '6m')) }}
-                      </span>
-                    </div>
-                    <div class="return-item">
-                      <span class="return-label">近1年:</span>
-                      <span
-                        class="return-value"
-                        :style="{ color: getReturnColor(getFundReturn(fundCode, '1y')) }"
-                      >
-                        {{ formatReturn(getFundReturn(fundCode, '1y')) }}
+                        {{ groupedByFund[fundCode].length }}人
                       </span>
                     </div>
                   </div>
                 </div>
                 
-                <div v-if="expandedFundCodes.has(fundCode) && !isPrivacyMode" class="clients-section">
-                  <div class="clients-header">
-                    <span class="clients-label">持有客户:</span>
-                  </div>
-                  <div class="clients-list">
-                    <div
-                      v-for="(holding, index) in groupedByFund[fundCode]"
-                      :key="holding.id"
-                      class="client-item-with-actions"
-                    >
-                      <div class="client-info">
-                        <div class="client-name-id-display">
-                          <span class="client-name-text">{{ processClientName(holding.clientName) }}</span>
-                          <span v-if="holding.clientID" class="client-id-text">({{ holding.clientID }})</span>
-                        </div>
+                <div v-if="expandedFundCodes.has(fundCode)" class="expanded-details">
+                  <div class="returns-grid-compact">
+                    <div class="returns-row">
+                      <div class="return-item">
+                        <span class="return-label">近1月:</span>
                         <span
-                          v-if="getHoldingReturn(holding) !== null"
-                          class="client-return"
-                          :style="{ color: getReturnColor(getHoldingReturn(holding)) }"
+                          class="return-value"
+                          :style="{ color: getReturnColor(getFundReturn(fundCode, '1m')) }"
                         >
-                          ({{ formatReturn(getHoldingReturn(holding)) }})
+                          {{ formatReturn(getFundReturn(fundCode, '1m')) }}
                         </span>
-                        <span v-else class="client-return">(/)</span>
                       </div>
-                      <div class="client-actions" v-if="holding.clientID">
-                        <button
-                          class="client-action-btn copy-btn"
-                          @click.stop="copyClientID(holding.clientID, holding.clientName)"
-                          title="复制客户号"
+                      <div class="return-item">
+                        <span class="return-label">近3月:</span>
+                        <span
+                          class="return-value"
+                          :style="{ color: getReturnColor(getFundReturn(fundCode, '3m')) }"
                         >
-                          复制客户号
-                        </button>
-                        <button
-                          class="client-action-btn report-btn"
-                          @click.stop="generateReport(holding)"
-                          title="生成报告"
-                        >
-                          复制报告
-                        </button>
+                          {{ formatReturn(getFundReturn(fundCode, '3m')) }}
+                        </span>
                       </div>
-                      <span v-if="index < groupedByFund[fundCode].length - 1" class="separator">、</span>
+                    </div>
+                    <div class="returns-row">
+                      <div class="return-item">
+                        <span class="return-label">近6月:</span>
+                        <span
+                          class="return-value"
+                          :style="{ color: getReturnColor(getFundReturn(fundCode, '6m')) }"
+                        >
+                          {{ formatReturn(getFundReturn(fundCode, '6m')) }}
+                        </span>
+                      </div>
+                      <div class="return-item">
+                        <span class="return-label">近1年:</span>
+                        <span
+                          class="return-value"
+                          :style="{ color: getReturnColor(getFundReturn(fundCode, '1y')) }"
+                        >
+                          {{ formatReturn(getFundReturn(fundCode, '1y')) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div v-if="expandedFundCodes.has(fundCode) && !isPrivacyMode" class="clients-section">
+                    <div class="clients-header">
+                      <span class="clients-label">持有客户:</span>
+                    </div>
+                    <div class="clients-list">
+                      <div
+                        v-for="(holding, index) in groupedByFund[fundCode]"
+                        :key="holding.id"
+                        class="client-item-with-actions"
+                      >
+                        <div class="client-info">
+                          <div class="client-name-id-display">
+                            <span class="client-name-text">{{ processClientName(holding.clientName) }}</span>
+                            <span v-if="holding.clientID" class="client-id-text">({{ holding.clientID }})</span>
+                          </div>
+                          <span
+                            v-if="getHoldingReturn(holding) !== null"
+                            class="client-return"
+                            :style="{ color: getReturnColor(getHoldingReturn(holding)) }"
+                          >
+                            ({{ formatReturn(getHoldingReturn(holding)) }})
+                          </span>
+                          <span v-else class="client-return">(/)</span>
+                        </div>
+                        <div class="client-actions" v-if="holding.clientID">
+                          <button
+                            class="client-action-btn copy-btn"
+                            @click.stop="copyClientID(holding.clientID, holding.clientName)"
+                            title="复制客户号"
+                          >
+                            复制客户号
+                          </button>
+                          <button
+                            class="client-action-btn report-btn"
+                            @click.stop="generateReport(holding)"
+                            title="生成报告"
+                          >
+                            复制报告
+                          </button>
+                        </div>
+                        <span v-if="index < groupedByFund[fundCode].length - 1" class="separator">、</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -854,26 +840,49 @@ onMounted(() => {
 
 <style scoped>
 .summary-view {
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: var(--bg-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   transition: background-color 0.3s ease;
-  overflow-x: hidden;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 完全固定的顶部区域 - 永远不滚动 */
+.fixed-header {
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  z-index: 100;
+  position: relative;
+  /* 修复：统一的安全区域处理 */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: 0;
+  /* 确保背景延伸到状态栏 */
+  background: var(--bg-primary);
 }
 
 .header-section {
-  background: var(--bg-primary);
-  padding: 20px 16px 16px;
+  padding: 12px 16px 12px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  background: var(--bg-primary);
+  position: relative;
+  z-index: 100;
 }
 
 .header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   gap: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .action-buttons {
@@ -978,7 +987,6 @@ onMounted(() => {
   align-items: center;
 }
 
-/* 修改：药丸形状的状态按钮 */
 .status-pill {
   height: 36px;
   padding: 8px 16px;
@@ -1016,7 +1024,6 @@ onMounted(() => {
   border-color: #065f46;
 }
 
-/* 修改：药丸形状的刷新按钮，使用与navbar相同的色系 */
 .refresh-pill {
   height: 36px;
   padding: 8px 16px;
@@ -1124,12 +1131,27 @@ onMounted(() => {
   background: var(--text-primary);
 }
 
+/* 关键：独立的滚动内容区域 */
+.content-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  /* 修复：移除底部安全区域padding，由App.vue统一处理 */
+  padding-bottom: 0;
+}
+
 .content-area {
-  padding: 16px;
-  min-height: calc(100vh - 150px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px 16px;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
+  overscroll-behavior: contain;
 }
 
 .empty-state {
@@ -1164,7 +1186,7 @@ onMounted(() => {
 .funds-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
 }
 
 .fund-card-wrapper {
@@ -1176,7 +1198,6 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 修改：基金药丸形状卡片 - 减小高度 */
 .fund-pill-card {
   background: var(--bg-card);
   border-radius: 24px;
@@ -1228,13 +1249,12 @@ onMounted(() => {
   z-index: 1;
 }
 
-/* 修改：减小基金药丸卡片的高度 */
 .fund-pill-info {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px; /* 减小上下内边距 */
-  min-height: 42px; /* 减小最小高度 */
+  padding: 8px 16px;
+  min-height: 38px;
 }
 
 .fund-name-code {
@@ -1243,11 +1263,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 0; /* 减小内边距 */
+  padding: 2px 0;
 }
 
 .fund-name {
-  font-size: 14px; /* 稍微减小字体大小 */
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -1257,7 +1277,7 @@ onMounted(() => {
 }
 
 .fund-code {
-  font-size: 12px; /* 稍微减小字体大小 */
+  font-size: 13px;
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
   font-weight: normal;
@@ -1271,27 +1291,27 @@ onMounted(() => {
 }
 
 .current-sort-return {
-  font-size: 14px; /* 稍微减小字体大小 */
+  font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
-  padding: 5px 10px; /* 减小内边距 */
+  padding: 4px 10px;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
   backdrop-filter: blur(4px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
-  min-width: 65px; /* 稍微减小最小宽度 */
+  min-width: 65px;
   text-align: center;
 }
 
 .client-count {
   display: flex;
   align-items: center;
-  font-size: 12px; /* 稍微减小字体大小 */
+  font-size: 13px;
   color: var(--text-secondary);
   white-space: nowrap;
   background: rgba(255, 255, 255, 0.9);
-  padding: 4px 8px; /* 减小内边距 */
+  padding: 4px 8px;
   border-radius: 16px;
   backdrop-filter: blur(4px);
   flex-shrink: 0;
@@ -1317,7 +1337,6 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 修改：紧凑型收益网格布局 */
 .returns-grid-compact {
   display: flex;
   flex-direction: column;
@@ -1505,7 +1524,7 @@ onMounted(() => {
 
 .outdated-toast {
   position: fixed;
-  bottom: 100px;
+  bottom: max(100px, env(safe-area-inset-bottom, 0px) + 60px);
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: var(--bg-card);
@@ -1569,17 +1588,20 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .header-section {
-    padding: 15px 12px 12px;
+    padding: 10px 12px 10px;
   }
   
   .content-area {
-    padding: 12px;
-    min-height: calc(100vh - 130px);
+    padding: 10px 12px 12px;
+  }
+  
+  .funds-container {
+    gap: 3px;
   }
   
   .fund-pill-info {
-    padding: 8px 12px; /* 移动端更紧凑 */
-    min-height: 38px; /* 移动端更小高度 */
+    padding: 6px 12px;
+    min-height: 36px;
   }
   
   .fund-name-code {
@@ -1588,11 +1610,11 @@ onMounted(() => {
   
   .fund-name {
     max-width: 50%;
-    font-size: 13px; /* 移动端更小字体 */
+    font-size: 14px;
   }
   
   .fund-code {
-    font-size: 11px; /* 移动端更小字体 */
+    font-size: 12px;
   }
   
   .fund-right-stats {
@@ -1600,14 +1622,14 @@ onMounted(() => {
   }
   
   .current-sort-return {
-    font-size: 13px; /* 移动端更小字体 */
-    padding: 4px 8px; /* 移动端更小内边距 */
-    min-width: 55px; /* 移动端更小宽度 */
+    font-size: 14px;
+    padding: 3px 8px;
+    min-width: 55px;
   }
   
   .client-count {
-    font-size: 11px; /* 移动端更小字体 */
-    padding: 3px 6px; /* 移动端更小内边距 */
+    font-size: 12px;
+    padding: 3px 6px;
   }
   
   .returns-row {
@@ -1626,7 +1648,7 @@ onMounted(() => {
   .outdated-toast {
     max-width: 320px;
     padding: 14px;
-    bottom: 80px;
+    bottom: max(80px, env(safe-area-inset-bottom, 0px) + 40px);
   }
   
   .sort-btn {
@@ -1683,7 +1705,26 @@ onMounted(() => {
   }
 }
 
-/* 深色模式适配 - 修复颜色对比度 */
+/* === iOS PWA 特定修复 === */
+@media screen and (max-width: 768px) {
+  .summary-view {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .fixed-header {
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    background: var(--bg-primary);
+  }
+  
+  .header-section {
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    background: var(--bg-primary);
+  }
+}
+
+/* 深色模式适配 */
 :root.dark .status-pill {
   background: var(--bg-hover);
   border-color: var(--border-color);
@@ -1714,11 +1755,10 @@ onMounted(() => {
   color: white;
 }
 
-/* 修复：排序按钮在激活状态下的颜色 - 确保足够的对比度 */
 .sort-btn:hover,
 .sort-order-btn:hover {
   background-color: var(--accent-color);
-  color: white !important; /* 强制白色文字，确保对比度 */
+  color: white !important;
 }
 
 .action-btn.active,
@@ -1729,7 +1769,6 @@ onMounted(() => {
   border-color: var(--accent-color) !important;
 }
 
-/* 深色模式下的排序按钮激活状态 */
 :root.dark .action-btn.active,
 :root.dark .sort-btn:hover,
 :root.dark .sort-order-btn:hover {
@@ -1738,14 +1777,12 @@ onMounted(() => {
   border-color: var(--accent-color) !important;
 }
 
-/* 确保深色模式下排序按钮文字在非激活状态下可见 */
 :root.dark .sort-btn,
 :root.dark .sort-order-btn {
   background: var(--bg-card);
   color: var(--text-primary);
 }
 
-/* 确保深色模式下收益值文字颜色有足够对比度 */
 :root.dark .current-sort-return,
 :root.dark .client-count {
   background: rgba(30, 41, 59, 0.9);
@@ -1761,7 +1798,6 @@ onMounted(() => {
   color: var(--text-primary);
 }
 
-/* 确保深色模式下基金名称和代码有足够对比度 */
 :root.dark .fund-name {
   color: var(--text-primary);
 }
@@ -1770,16 +1806,23 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
-/* 确保深色模式下收益百分比颜色有足够对比度 */
 :root.dark .return-value[style*="color: #ef4444"] {
-  color: #f87171 !important; /* 更亮的红色 */
+  color: #f87171 !important;
 }
 
 :root.dark .return-value[style*="color: #10b981"] {
-  color: #34d399 !important; /* 更亮的绿色 */
+  color: #34d399 !important;
 }
 
 :root.dark .return-value[style*="color: #666"] {
-  color: #9ca3af !important; /* 更亮的灰色 */
+  color: #9ca3af !important;
+}
+
+:root {
+  --bg-primary-rgb: 248, 250, 252;
+}
+
+:root.dark {
+  --bg-primary-rgb: 15, 23, 42;
 }
 </style>

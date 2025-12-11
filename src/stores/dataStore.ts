@@ -174,6 +174,8 @@
       const isRefreshing = ref(false)
       const refreshProgress = reactive({ current: 0, total: 0 })
       const toastMessage = ref('')
+      const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
+      const toastIcon = ref('')
       const showToast = ref(false)
       const showRefreshButton = ref(false)
       
@@ -501,12 +503,12 @@
           
           addLog(`添加新持仓: ${newHolding.clientName} - ${newHolding.fundCode}`, 'info')
           
-          showToastMessage('持仓添加成功')
+          showToastMessage('持仓添加成功', 'success')
           
           return newHolding
         } catch (error: any) {
           console.error('添加持仓失败:', error)
-          showToastMessage(`添加失败: ${error.message}`)
+          showToastMessage(`添加失败: ${error.message}`, 'error')
           throw error
         }
       }
@@ -533,12 +535,12 @@
           
           addLog(`更新持仓: ${updatedHolding.clientName} - ${updatedHolding.fundCode}`, 'info')
           
-          showToastMessage('持仓更新成功')
+          showToastMessage('持仓更新成功', 'success')
           
           return updatedHolding
         } catch (error: any) {
           console.error('更新持仓失败:', error)
-          showToastMessage(`更新失败: ${error.message}`)
+          showToastMessage(`更新失败: ${error.message}`, 'error')
           throw error
         }
       }
@@ -557,10 +559,10 @@
           addLog(`删除持仓: ${holding.clientName} - ${holding.fundCode}`, 'warning')
           
           console.log('删除持仓:', holdingId)
-          showToastMessage('持仓删除成功')
+          showToastMessage('持仓删除成功', 'success')
         } catch (error: any) {
           console.error('删除持仓失败:', error)
-          showToastMessage(`删除失败: ${error.message}`)
+          showToastMessage(`删除失败: ${error.message}`, 'error')
           throw error
         }
       }
@@ -572,12 +574,12 @@
           saveData()
           
           addLog(`清空所有持仓数据，共${count}条记录`, 'warning')
-          showToastMessage(`已清空${count}条持仓记录`)
+          showToastMessage(`已清空${count}条持仓记录`, 'info')
           
           return count
         } catch (error: any) {
           console.error('清空持仓失败:', error)
-          showToastMessage(`清空失败: ${error.message}`)
+          showToastMessage(`清空失败: ${error.message}`, 'error')
           throw error
         }
       }
@@ -616,7 +618,7 @@
           
           addLog(`切换置顶状态: ${holding.fundCode} - ${holding.isPinned ? '置顶' : '取消置顶'}`, 'info')
           
-          showToastMessage(`${holding.fundCode} ${holding.isPinned ? '已置顶' : '已取消置顶'}`)
+          showToastMessage(`${holding.fundCode} ${holding.isPinned ? '已置顶' : '已取消置顶'}`, 'info')
         }
       }
 
@@ -640,11 +642,13 @@
       const clearLogs = () => {
         logMessages.value = []
         saveData()
-        showToastMessage('日志已清空')
+        showToastMessage('日志已清空', 'info')
       }
 
-      const showToastMessage = (message: string) => {
+      const showToastMessage = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info', icon?: string) => {
         toastMessage.value = message
+        toastType.value = type
+        toastIcon.value = icon || ''
         showToast.value = true
         
         setTimeout(() => {
@@ -670,7 +674,7 @@
         refreshProgress.total = 0
         
         addLog('持仓数据刷新完成', 'success')
-        showToastMessage('数据刷新完成')
+        showToastMessage('数据刷新完成', 'success')
       }
 
       const getClientDisplayName = (clientName: string, clientID?: string): string => {
@@ -732,6 +736,8 @@
         isRefreshing,
         refreshProgress,
         toastMessage,
+        toastType,
+        toastIcon,
         showToast,
         showRefreshButton,
         userPreferences,

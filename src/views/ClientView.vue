@@ -1,266 +1,333 @@
 <template>
   <div class="client-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <div class="header-section">
-      <div class="header-row">
-        <div class="action-buttons">
-          <button
-            class="action-btn"
-            :class="{ active: areAnyCardsExpanded }"
-            @click="expandedClients.size > 0 ? expandedClients.clear() : groupedHoldingsByClientName.forEach(g => expandedClients.add(g.id))"
-            :title="areAnyCardsExpanded ? '折叠所有' : '展开所有'"
-          >
-            {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
-          </button>
-          
-          <button
-            class="action-btn"
-            :class="{ active: isSearchExpanded }"
-            @click="isSearchExpanded = !isSearchExpanded"
-            :title="isSearchExpanded ? '隐藏搜索' : '显示搜索'"
-          >
-            🔍
-          </button>
-        </div>
-        
-        <div class="status-pill-group">
-          <div
-            v-if="!showRefreshButton"
-            class="status-pill"
-            @click="onStatusTextTap"
-            :class="{ 'status-latest': hasLatestNavDate }"
-          >
-            <span class="status-text">{{ statusText }}</span>
+    <!-- 完全固定的顶部工具栏 -->
+    <div class="fixed-header">
+      <div class="header-section">
+        <div class="header-row">
+          <div class="action-buttons">
+            <button
+              class="action-btn"
+              :class="{ active: areAnyCardsExpanded }"
+              @click="expandedClients.size > 0 ? expandedClients.clear() : groupedHoldingsByClientName.forEach(g => expandedClients.add(g.id))"
+              :title="areAnyCardsExpanded ? '折叠所有' : '展开所有'"
+            >
+              {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
+            </button>
+            
+            <button
+              class="action-btn"
+              :class="{ active: isSearchExpanded }"
+              @click="isSearchExpanded = !isSearchExpanded"
+              :title="isSearchExpanded ? '隐藏搜索' : '显示搜索'"
+            >
+              🔍
+            </button>
           </div>
           
-          <button
-            v-if="showRefreshButton"
-            class="refresh-pill"
-            @click.stop="handleRefresh"
-            :disabled="isRefreshing"
-            :title="isRefreshing ? '刷新中...' : '刷新数据'"
-          >
-            <span v-if="isRefreshing" class="spinner-small"></span>
-            <span v-else class="refresh-icon">🔄</span>
-          </button>
+          <div class="status-pill-group">
+            <div
+              v-if="!showRefreshButton"
+              class="status-pill"
+              @click="onStatusTextTap"
+              :class="{ 'status-latest': hasLatestNavDate }"
+            >
+              <span class="status-text">{{ statusText }}</span>
+            </div>
+            
+            <button
+              v-if="showRefreshButton"
+              class="refresh-pill"
+              @click.stop="handleRefresh"
+              :disabled="isRefreshing"
+              :title="isRefreshing ? '刷新中...' : '刷新数据'"
+            >
+              <span v-if="isRefreshing" class="spinner-small"></span>
+              <span v-else class="refresh-icon">⟳</span>
+            </button>
+          </div>
         </div>
-      </div>
-      
-      <div v-if="isSearchExpanded" class="search-box">
-        <div class="search-input-wrapper">
-          <span class="search-icon">🔍</span>
-          <input
-            v-model="searchText"
-            type="text"
-            placeholder="输入客户名、基金代码、基金名称..."
-            class="search-input"
-          />
-          <button
-            v-if="searchText"
-            class="clear-search"
-            @click="searchText = ''"
-          >
-            ×
-          </button>
+        
+        <div v-if="isSearchExpanded" class="search-box">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input
+              v-model="searchText"
+              type="text"
+              placeholder="输入客户名、基金代码、基金名称..."
+              class="search-input"
+            />
+            <button
+              v-if="searchText"
+              class="clear-search"
+              @click="searchText = ''"
+            >
+              ×
+            </button>
+          </div>
         </div>
       </div>
     </div>
     
-    <div class="content-area">
-      <div v-if="searchText" class="search-results">
-        <div v-if="searchResults.length === 0" class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <h3>未找到匹配的内容</h3>
-          <p>请尝试其他搜索关键词</p>
-        </div>
-        
-        <div v-else class="search-results-list">
-          <div
-            v-for="holding in searchResults.slice(0, loadedSearchResultCount)"
-            :key="holding.id"
-            class="holding-card-compact"
-          >
-            <div class="holding-header-compact">
-              <div class="holding-info-compact">
-                <div class="fund-name-row">
-                  <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
-                </div>
-                <div class="client-info-row">
-                  <div class="client-name-id-display">
-                    <span class="client-name-text">{{ getClientDisplayName(holding.clientName, holding.clientID).name }}</span>
-                    <span v-if="holding.clientID" class="client-id-text">({{ holding.clientID }})</span>
-                  </div>
-                </div>
-              </div>
-              <div class="nav-info-single-line">
-                <span class="nav-with-date">
-                  {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
-                </span>
-              </div>
-            </div>
-            
-            <div class="holding-details-compact">
-              <div class="detail-row">
-                <span class="detail-label">金额:</span>
-                <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                <span class="detail-label" style="margin-left: 8px;">份额:</span>
-                <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
-              </div>
-              
-              <div class="detail-row">
-                <span class="detail-label">收益:</span>
-                <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
-                  {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
-                </span>
-                <span class="detail-label" style="margin-left: 8px;">收益率:</span>
-                <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
-                  {{ formatPercentage(calculateProfit(holding).annualized) }}
-                </span>
-              </div>
-              
-              <div class="detail-row date-actions-row">
-                <div class="date-info">
-                  <span class="detail-label">购买日期:</span>
-                  <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
-                  <span class="detail-label" style="margin-left: 8px;">持有天数:</span>
-                  <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
-                </div>
-                <div class="holding-actions">
-                  <button
-                    class="holding-action-btn copy-btn"
-                    @click.stop="copyClientID(holding.clientID, holding.clientName)"
-                    :disabled="!holding.clientID"
-                    :title="holding.clientID ? '复制客户号' : '无客户号'"
-                  >
-                    复制客户号
-                  </button>
-                  <button
-                    class="holding-action-btn report-btn"
-                    @click.stop="generateReport(holding)"
-                    title="生成报告"
-                  >
-                    复制报告
-                  </button>
-                </div>
-              </div>
-              
-              <div v-if="holding.remarks" class="detail-row">
-                <span class="detail-label">备注:</span>
-                <span class="detail-value">{{ holding.remarks }}</span>
-              </div>
-            </div>
+    <!-- 可独立滚动的下方内容区域 -->
+    <div class="content-wrapper">
+      <div class="content-area">
+        <div v-if="searchText" class="search-results">
+          <div v-if="searchResults.length === 0" class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <h3>未找到匹配的内容</h3>
+            <p>请尝试其他搜索关键词</p>
           </div>
           
-          <div v-if="loadedSearchResultCount < searchResults.length" class="load-more">
-            <button @click="loadedSearchResultCount += 10">加载更多</button>
-          </div>
-        </div>
-      </div>
-      
-      <div v-else class="client-groups">
-        <div v-if="holdings.length === 0" class="empty-state">
-          <div class="empty-icon">📊</div>
-          <h3>当前没有数据</h3>
-          <p>请导入数据开始使用</p>
-        </div>
-        
-        <div v-else class="clients-container">
-          <div
-            v-for="clientGroup in groupedHoldingsByClientName"
-            :key="clientGroup.id"
-            class="client-group-single"
-          >
+          <div v-else class="search-results-list">
             <div
-              class="group-header-single"
-              @click="expandedClients.has(clientGroup.id) ? expandedClients.delete(clientGroup.id) : expandedClients.add(clientGroup.id)"
+              v-for="holding in searchResults.slice(0, loadedSearchResultCount)"
+              :key="holding.id"
+              class="holding-card-compact"
             >
-              <div class="header-content-single">
-                <div class="client-info-single">
-                  <div class="client-name-id-display-single">
-                    <span class="client-name-text-single">{{ getClientDisplayName(clientGroup.clientName, clientGroup.clientID).name }}</span>
-                    <span v-if="clientGroup.clientID" class="client-id-text-single">({{ clientGroup.clientID }})</span>
+              <div class="holding-header-compact">
+                <div class="holding-info-compact">
+                  <div class="fund-name-row">
+                    <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}</h4>
+                    <span class="fund-code-inline">({{ holding.fundCode }})</span>
+                  </div>
+                  <div class="client-info-row">
+                    <div class="client-name-id-display">
+                      <span class="client-name-text">{{ getClientDisplayName(holding.clientName, holding.clientID).name }}</span>
+                      <span v-if="holding.clientID" class="client-id-text">({{ holding.clientID }})</span>
+                    </div>
                   </div>
                 </div>
-                <div class="header-right-section">
-                  <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
-                    持仓数: <i>{{ clientGroup.holdings.length }}</i> 支
+                <div class="nav-info-top-right">
+                  <span class="nav-with-date">
+                    {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
                   </span>
                 </div>
               </div>
-            </div>
-            
-            <div v-if="expandedClients.has(clientGroup.id)" class="group-content-single">
-              <div
-                v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
-                :key="holding.id"
-                class="holding-card-compact"
-              >
-                <div class="holding-header-compact">
-                  <div class="holding-info-compact">
-                    <div class="fund-name-row">
-                      <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}<span class="fund-code-inline">({{ holding.fundCode }})</span></h4>
-                    </div>
-                  </div>
-                  <div class="nav-info-single-line">
-                    <span class="nav-with-date">
-                      {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
-                    </span>
+              
+              <div class="holding-details-compact">
+                <div class="detail-row detail-row-two-items">
+                  <span class="detail-label">购买金额:</span>
+                  <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
+                  <span class="detail-label detail-label-spacer">份额:</span>
+                  <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
+                </div>
+                
+                <div class="detail-row">
+                  <span class="detail-label">收益:</span>
+                  <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
+                    {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
+                  </span>
+                </div>
+                
+                <div class="detail-row">
+                  <span class="detail-label">收益率:</span>
+                  <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
+                    {{ formatPercentage(calculateProfit(holding).annualized) }}
+                  </span>
+                  <span class="detail-label-inline">[年化]</span>
+                  <span class="detail-value" :style="{ color: getReturnColor(absoluteReturnPercentage(holding)) }" style="margin-left: 8px;">
+                    {{ formatPercentage(absoluteReturnPercentage(holding)) }}
+                  </span>
+                  <span class="detail-label-inline">[绝对]</span>
+                </div>
+                
+                <div class="detail-row date-info-row detail-row-two-items">
+                  <span class="detail-label">购买日期:</span>
+                  <span class="detail-value">{{ formatPurchaseDate(new Date(holding.purchaseDate)) }}</span>
+                  <span class="detail-label detail-label-spacer">持有天数:</span>
+                  <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                </div>
+                
+                <div v-if="holding.remarks" class="detail-row remarks-with-actions">
+                  <span class="detail-label">备注:</span>
+                  <span class="detail-value remarks-text">{{ holding.remarks }}</span>
+                  <div class="inline-actions">
+                    <button
+                      class="holding-action-btn copy-btn"
+                      @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                      :disabled="!holding.clientID"
+                      :title="holding.clientID ? '复制客户号' : '无客户号'"
+                    >
+                      复制客户号
+                    </button>
+                    <button
+                      class="holding-action-btn report-btn"
+                      @click.stop="generateReport(holding)"
+                      title="生成报告"
+                    >
+                      复制报告
+                    </button>
                   </div>
                 </div>
                 
-                <div class="holding-details-compact">
-                  <div class="detail-row">
-                    <span class="detail-label">金额:</span>
-                    <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                    <span class="detail-label" style="margin-left: 8px;">份额:</span>
-                    <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
+                <div v-else class="detail-row remarks-with-actions">
+                  <span class="detail-label placeholder-label"></span>
+                  <span class="detail-value placeholder-value"></span>
+                  <div class="inline-actions">
+                    <button
+                      class="holding-action-btn copy-btn"
+                      @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                      :disabled="!holding.clientID"
+                      :title="holding.clientID ? '复制客户号' : '无客户号'"
+                    >
+                      复制客户号
+                    </button>
+                    <button
+                      class="holding-action-btn report-btn"
+                      @click.stop="generateReport(holding)"
+                      title="生成报告"
+                    >
+                      复制报告
+                    </button>
                   </div>
-                  
-                  <div class="detail-row">
-                    <span class="detail-label">收益:</span>
-                    <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
-                      {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
-                    </span>
-                    <span class="detail-label" style="margin-left: 8px;">收益率:</span>
-                    <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
-                      {{ formatPercentage(calculateProfit(holding).annualized) }}
-                    </span>
-                  </div>
-                  
-                  <div class="detail-row date-actions-row">
-                    <div class="date-info">
-                      <span class="detail-label">购买日期:</span>
-                      <span class="detail-value">{{ new Date(holding.purchaseDate).toLocaleDateString('zh-CN', { year: '2-digit', month: '2-digit', day: '2-digit' }) }}</span>
-                      <span class="detail-label" style="margin-left: 8px;">持有天数:</span>
-                      <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                </div>
+              </div>
+            </div>
+            
+            <div v-if="loadedSearchResultCount < searchResults.length" class="load-more">
+              <button @click="loadedSearchResultCount += 10">加载更多</button>
+            </div>
+          </div>
+        </div>
+        
+        <div v-else class="client-groups">
+          <div v-if="holdings.length === 0" class="empty-state">
+            <div class="empty-icon">📊</div>
+            <h3>当前没有数据</h3>
+            <p>请导入数据开始使用</p>
+          </div>
+          
+          <div v-else class="clients-container">
+            <div
+              v-for="clientGroup in groupedHoldingsByClientName"
+              :key="clientGroup.id"
+              class="client-group-single"
+              :class="{ expanded: expandedClients.has(clientGroup.id) }"
+            >
+              <div
+                class="client-pill-card"
+                @click="expandedClients.has(clientGroup.id) ? expandedClients.delete(clientGroup.id) : expandedClients.add(clientGroup.id)"
+                :style="{ '--client-pill-gradient': getClientPillGradient(clientGroup.clientName) }"
+              >
+                <div class="client-pill-content">
+                  <div class="client-pill-info">
+                    <div class="client-name-id-display-single">
+                      <span class="client-name-text-single">{{ getClientDisplayName(clientGroup.clientName, clientGroup.clientID).name }}</span>
+                      <span v-if="clientGroup.clientID" class="client-id-text-single">({{ clientGroup.clientID }})</span>
                     </div>
-                    <div class="holding-actions">
-                      <button
-                        class="holding-action-btn copy-btn"
-                        @click.stop="copyClientID(holding.clientID, holding.clientName)"
-                        :disabled="!holding.clientID"
-                        :title="holding.clientID ? '复制客户号' : '无客户号'"
-                      >
-                        复制客户号
-                      </button>
-                      <button
-                        class="holding-action-btn report-btn"
-                        @click.stop="generateReport(holding)"
-                        title="生成报告"
-                      >
-                        复制报告
-                      </button>
+                    
+                    <div class="client-right-stats">
+                      <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
+                        {{ clientGroup.holdings.length }}支
+                      </span>
                     </div>
-                  </div>
-                  
-                  <div v-if="holding.remarks" class="detail-row">
-                    <span class="detail-label">备注:</span>
-                    <span class="detail-value">{{ holding.remarks }}</span>
                   </div>
                 </div>
               </div>
               
-              <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
-                <button @click="loadedGroupedClientCount += 10">加载更多</button>
+              <div v-if="expandedClients.has(clientGroup.id)" class="group-content-single">
+                <div
+                  v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
+                  :key="holding.id"
+                  class="holding-card-compact"
+                >
+                  <div class="holding-header-compact">
+                    <div class="holding-info-compact">
+                      <div class="fund-name-row">
+                        <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}</h4>
+                        <span class="fund-code-inline">({{ holding.fundCode }})</span>
+                      </div>
+                    </div>
+                    <div class="nav-info-top-right">
+                      <span class="nav-with-date">
+                        {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div class="holding-details-compact">
+                    <div class="detail-row detail-row-two-items">
+                      <span class="detail-label">购买金额:</span>
+                      <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
+                      <span class="detail-label detail-label-spacer">份额:</span>
+                      <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <span class="detail-label">收益:</span>
+                      <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
+                        {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
+                      </span>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <span class="detail-label">收益率:</span>
+                      <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
+                        {{ formatPercentage(calculateProfit(holding).annualized) }}
+                      </span>
+                      <span class="detail-label-inline">[年化]</span>
+                      <span class="detail-value" :style="{ color: getReturnColor(absoluteReturnPercentage(holding)) }" style="margin-left: 8px;">
+                        {{ formatPercentage(absoluteReturnPercentage(holding)) }}
+                      </span>
+                      <span class="detail-label-inline">[绝对]</span>
+                    </div>
+                    
+                    <div class="detail-row date-info-row detail-row-two-items">
+                      <span class="detail-label">购买日期:</span>
+                      <span class="detail-value">{{ formatPurchaseDate(new Date(holding.purchaseDate)) }}</span>
+                      <span class="detail-label detail-label-spacer">持有天数:</span>
+                      <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                    </div>
+                    
+                    <div v-if="holding.remarks" class="detail-row remarks-with-actions">
+                      <span class="detail-label">备注:</span>
+                      <span class="detail-value remarks-text">{{ holding.remarks }}</span>
+                      <div class="inline-actions">
+                        <button
+                          class="holding-action-btn copy-btn"
+                          @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                          :disabled="!holding.clientID"
+                          :title="holding.clientID ? '复制客户号' : '无客户号'"
+                        >
+                          复制客户号
+                        </button>
+                        <button
+                          class="holding-action-btn report-btn"
+                          @click.stop="generateReport(holding)"
+                          title="生成报告"
+                        >
+                          复制报告
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div v-else class="detail-row remarks-with-actions">
+                      <span class="detail-label placeholder-label"></span>
+                      <span class="detail-value placeholder-value"></span>
+                      <div class="inline-actions">
+                        <button
+                          class="holding-action-btn copy-btn"
+                          @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                          :disabled="!holding.clientID"
+                          :title="holding.clientID ? '复制客户号' : '无客户号'"
+                        >
+                          复制客户号
+                        </button>
+                        <button
+                          class="holding-action-btn report-btn"
+                          @click.stop="generateReport(holding)"
+                          title="生成报告"
+                        >
+                          复制报告
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
+                  <button @click="loadedGroupedClientCount += 10">加载更多</button>
+                </div>
               </div>
             </div>
           </div>
@@ -278,6 +345,13 @@
         </div>
       </div>
     </div>
+    
+    <ToastMessage
+      v-model:show="dataStore.showToast"
+      :message="dataStore.toastMessage"
+      :type="dataStore.toastType"
+      :icon="dataStore.toastIcon"
+    />
   </div>
 </template>
 
@@ -285,10 +359,13 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
+import { useAuthStore } from '@/stores/authStore'
 import { fundService } from '@/services/fundService'
+import ToastMessage from '@/components/common/ToastMessage.vue'
 
 const router = useRouter()
 const dataStore = useDataStore()
+const authStore = useAuthStore()
 
 const refreshKey = ref(0)
 const privacyKey = ref(0)
@@ -307,6 +384,7 @@ const holdings = computed(() => dataStore.holdings)
 const isPrivacyMode = computed(() => dataStore.isPrivacyMode)
 const showRefreshButton = computed(() => dataStore.showRefreshButton)
 const refreshProgress = computed(() => dataStore.refreshProgress)
+const currentUser = computed(() => authStore.currentUser)
 
 watch(isPrivacyMode, (newValue) => {
   privacyKey.value = Date.now()
@@ -436,6 +514,34 @@ const getClientDisplayName = (clientName: string, clientID: string) => {
   }
 }
 
+// 生成客户药丸渐变背景色
+const getClientPillGradient = (clientName: string): string => {
+  // 简单的hash函数生成颜色
+  let hash = 0
+  for (let i = 0; i < clientName.length; i++) {
+    hash = ((hash << 5) - hash) + clientName.charCodeAt(i)
+    hash |= 0
+  }
+  hash = Math.abs(hash)
+  
+  const hue = hash % 360
+  const saturation = 65 + (hash % 25)  // 65-90%饱和度
+  const lightnessLight = 88 + (hash % 7)  // 88-95%亮度（浅色模式）
+  const lightnessDark = 28 + (hash % 7)   // 28-35%亮度（深色模式）
+  
+  const lightGradient = `linear-gradient(90deg,
+    hsl(${hue}, ${saturation}%, ${lightnessLight}%) 0%,
+    hsl(${hue}, ${saturation}%, 94%) 50%,
+    hsl(${hue}, ${saturation}%, 98%) 100%)`
+  
+  const darkGradient = `linear-gradient(90deg,
+    hsl(${hue}, ${saturation - 15}%, ${lightnessDark}%) 0%,
+    hsl(${hue}, ${saturation - 15}%, 32%) 50%,
+    hsl(${hue}, ${saturation - 15}%, 36%) 100%)`
+  
+  return `var(--client-pill-light, ${lightGradient}) var(--client-pill-dark, ${darkGradient})`
+}
+
 const colorForHoldingCount = (count: number) => {
   if (count === 1) return '#eab308'
   if (count <= 3) return '#f97316'
@@ -445,8 +551,14 @@ const colorForHoldingCount = (count: number) => {
 const calculateHoldingDays = (holding: any) => {
   const endDate = new Date(holding.navDate)
   const startDate = new Date(holding.purchaseDate)
+  
+  // 如果购买日期晚于净值日期，则持有天数为0
+  if (startDate > endDate) return 0
+  
   const timeDiff = Math.abs(endDate.getTime() - startDate.getTime())
-  return Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1
+  // 使用 Math.floor 而不是 Math.ceil，并且不加1
+  const days = Math.floor(timeDiff / (1000 * 3600 * 24))
+  return days > 0 ? days : 0
 }
 
 const calculateProfit = (holding: any) => {
@@ -454,9 +566,27 @@ const calculateProfit = (holding: any) => {
   const currentValue = holding.currentNav * holding.purchaseShares
   const absoluteProfit = currentValue - holding.purchaseAmount
   const holdingDays = calculateHoldingDays(holding)
-  const absoluteReturnPercentage = (absoluteProfit / holding.purchaseAmount) * 100
-  const annualizedReturn = holdingDays > 0 ? (Math.pow(1 + absoluteReturnPercentage / 100, 365 / holdingDays) - 1) * 100 : 0
+  const absoluteReturnPercentage = (absoluteProfit / holding.purchaseAmount)
+  
+  let annualizedReturn = 0
+  if (holdingDays > 0) {
+    // 增加检查以防止极端幂运算导致数值溢出
+    if (holdingDays < 0.1) { // 极小天数（应不可能发生）
+        annualizedReturn = absoluteReturnPercentage * 365 * 100 // 简化处理，或返回0
+    } else {
+        // 公式: ( (1 + 绝对收益率)^ (365 / 持有天数) - 1 ) * 100
+        annualizedReturn = (Math.pow(1 + absoluteReturnPercentage, 365 / holdingDays) - 1) * 100
+    }
+  }
+  
   return { absolute: absoluteProfit, annualized: annualizedReturn }
+}
+
+// 计算绝对收益率
+const absoluteReturnPercentage = (holding: any) => {
+  if (!holding.isValid || holding.purchaseAmount <= 0) return 0
+  const profit = calculateProfit(holding)
+  return (profit.absolute / holding.purchaseAmount) * 100
 }
 
 const formatCurrency = (amount: number) => {
@@ -466,6 +596,10 @@ const formatCurrency = (amount: number) => {
 }
 
 const formatPercentage = (value: number) => {
+  // 检查是否为极大的科学计数法，如果是则显示为 'ERR' 或 'N/A'
+  if (!isFinite(value) || Math.abs(value) > 1e100) {
+    return 'N/A'
+  }
   if (value > 0) return `+${value.toFixed(2)}%`
   else if (value < 0) return `${value.toFixed(2)}%`
   else return '0.00%'
@@ -481,6 +615,13 @@ const formatNavDate = (date: Date) => {
   const month = date.getMonth() + 1
   const day = date.getDate()
   return `${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`
+}
+
+const formatPurchaseDate = (date: Date) => {
+  const year = date.getFullYear() % 100
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  return `${year.toString().padStart(2, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
 }
 
 const isSameDay = (date1: Date, date2: Date) => {
@@ -504,6 +645,7 @@ const handleRefresh = async () => {
   isRefreshing.value = true
   startUpdatingTextAnimation()
   dataStore.startRefresh()
+  dataStore.showToastMessage('开始刷新数据，请稍候...', 'info')
   dataStore.addLog('开始刷新基金数据', 'info')
   
   const total = holdings.value.length
@@ -525,6 +667,7 @@ const handleRefresh = async () => {
           })
         }
       } catch (error) {
+        console.error('刷新基金数据失败:', error)
       }
       dataStore.updateRefreshProgress(i + 1)
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -534,6 +677,7 @@ const handleRefresh = async () => {
     isRefreshing.value = false
     stopUpdatingTextAnimation()
     dataStore.addLog('基金数据刷新完成', 'success')
+    dataStore.showToastMessage('数据刷新完成！', 'success')
     refreshKey.value = Date.now()
     setTimeout(() => {
       dataStore.updateUserPreferences({ showRefreshButton: false })
@@ -555,75 +699,79 @@ const stopUpdatingTextAnimation = () => {
   }
 }
 
-const copyClientID = (clientID: string, clientName: string) => {
+const handleCopyClientID = (clientID: string, clientName: string) => {
+  // 检查权限 - 需要客户分层权限
+  if (!currentUser.value || currentUser.value.user_type === 'free') {
+    dataStore.showToastMessage('不支持基础用户使用此功能', 'warning')
+    return
+  }
+  
   if (!hasLatestNavDate.value) {
-    dataStore.showToastMessage('数据未更新，请先刷新数据')
+    dataStore.showToastMessage('数据未更新，请先刷新数据', 'warning')
     return
   }
   
   if (!clientID || clientID.trim() === '') {
-    dataStore.showToastMessage('客户号为空')
+    dataStore.showToastMessage('客户号为空', 'error')
     return
   }
   
   navigator.clipboard.writeText(clientID)
     .then(() => {
-      dataStore.showToastMessage('客户号已复制到剪贴板')
+      dataStore.showToastMessage('客户号已复制到剪贴板', 'success')
     })
     .catch(err => {
-      dataStore.showToastMessage('复制失败，请重试')
+      dataStore.showToastMessage('复制失败，请重试', 'error')
     })
 }
 
 const generateReport = (holding: any) => {
+  // 检查权限 - 需要客户分层权限
+  if (!currentUser.value || currentUser.value.user_type === 'free') {
+    dataStore.showToastMessage('不支持基础用户使用此功能', 'warning')
+    return
+  }
+  
   if (!hasLatestNavDate.value) {
-    dataStore.showToastMessage('数据未更新，请先刷新数据')
+    dataStore.showToastMessage('数据未更新，请先刷新数据', 'warning')
     return
   }
   
   const profit = calculateProfit(holding).absolute
   const annualizedReturn = calculateProfit(holding).annualized
+  const absoluteReturn = absoluteReturnPercentage(holding)
   const purchaseAmount = holding.purchaseAmount
   const purchaseShares = holding.purchaseShares
   const currentNav = holding.currentNav
   const navDate = new Date(holding.navDate)
   const purchaseDate = new Date(holding.purchaseDate)
   
-  const formatter = new Intl.DateTimeFormat('zh-CN', {
-    year: '2-digit',
-    month: '2-digit',
-    day: '2-digit'
-  })
-  
-  const purchaseDateStr = formatter.format(purchaseDate)
-  const navDateStr = formatter.format(navDate)
+  const purchaseDateStr = formatPurchaseDate(purchaseDate)
+  const navDateStr = formatNavDate(navDate)
   
   const holdingDays = calculateHoldingDays(holding)
   
-  const reportContent = `
-${getFundDisplayName(holding.fundName, holding.fundCode)} | ${holding.fundCode}
-├ 客户: ${holding.clientName} (${holding.clientID || '无客户号'})
-├ 购买日期: ${purchaseDateStr}
-├ 持有天数: ${holdingDays}天
-├ 购买金额: ${formatCurrency(purchaseAmount)}
-├ 购买份额: ${purchaseShares.toFixed(2)}份
-├ 最新净值: ${currentNav.toFixed(4)} | ${navDateStr}
-├ 收益: ${profit > 0 ? '+' : ''}${profit.toFixed(2)}元
-├ 收益率: ${formatPercentage(annualizedReturn)} (年化)
-└ 持有天数: ${holdingDays}天
-`
+  // 严格按照Swift格式生成报告
+  const reportContent = `${holding.fundName || `未加载(${holding.fundCode})`} | ${holding.fundCode}
+├ 购买日期:${purchaseDateStr}
+├ 持有天数:${holdingDays}天
+├ 购买金额:${formatCurrency(purchaseAmount)}
+├ 最新净值:${currentNav.toFixed(4)} | ${navDateStr}
+├ 收益:${profit > 0 ? '+' : ''}${profit.toFixed(2)}元
+├ 收益率:${formatPercentage(annualizedReturn)}(年化)
+└ 收益率:${formatPercentage(absoluteReturn)}(绝对)`
   
   navigator.clipboard.writeText(reportContent)
     .then(() => {
-      dataStore.showToastMessage('报告已复制到剪贴板')
+      dataStore.showToastMessage('报告已复制到剪贴板', 'success')
     })
     .catch(err => {
-      dataStore.showToastMessage('生成报告失败，请重试')
+      dataStore.showToastMessage('生成报告失败，请重试', 'error')
     })
 }
 
 const handleThemeChange = (event: any) => {
-  const { mode } = event.detail
+  const { isDark } = event.detail
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
@@ -637,7 +785,7 @@ watch(holdings, () => {
 onMounted(() => {
   dataStore.init()
   
-  window.addEventListener('theme-mode-changed', handleThemeChange)
+  window.addEventListener('theme-changed', handleThemeChange)
   
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   const handleSystemThemeChange = (e: MediaQueryListEvent) => {
@@ -652,7 +800,7 @@ onMounted(() => {
     updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
     autoHideTimer.value !== null && clearTimeout(autoHideTimer.value)
     
-    window.removeEventListener('theme-mode-changed', handleThemeChange)
+    window.removeEventListener('theme-changed', handleThemeChange)
     mediaQuery.removeEventListener('change', handleSystemThemeChange)
   })
 })
@@ -660,29 +808,49 @@ onMounted(() => {
 
 <style scoped>
 .client-view {
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: var(--bg-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   transition: background-color 0.3s ease;
-  overflow-x: hidden;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 完全固定的顶部区域 - 永远不滚动 */
+.fixed-header {
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  z-index: 100;
+  position: relative;
+  /* 修复：统一的安全区域处理 */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: 0;
+  /* 确保背景延伸到状态栏 */
+  background: var(--bg-primary);
 }
 
 .header-section {
-  background: var(--bg-primary);
-  padding: 20px 16px 16px;
+  padding: 12px 16px 12px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  background: var(--bg-primary);
+  position: relative;
+  z-index: 100;
 }
 
 .header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   gap: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .action-buttons {
@@ -728,7 +896,7 @@ onMounted(() => {
   height: 36px;
   border: 1px solid var(--border-color);
   border-radius: 18px;
-  padding: 0 16px;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -738,7 +906,7 @@ onMounted(() => {
   font-weight: 500;
   min-width: 80px;
   text-align: center;
-  background: var(--bg-card);
+  background: var(--bg-hover);
   color: var(--text-primary);
 }
 
@@ -766,9 +934,10 @@ onMounted(() => {
 
 .refresh-pill {
   height: 36px;
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
+  padding: 8px 16px;
   background: var(--accent-color);
+  border: 1px solid var(--accent-color);
+  border-radius: 18px;
   color: white;
   font-size: 14px;
   cursor: pointer;
@@ -776,13 +945,14 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  padding: 0 16px;
   gap: 6px;
   font-weight: 500;
+  min-width: 36px;
 }
 
 .refresh-pill:hover:not(:disabled) {
   background: #2563eb;
+  border-color: #2563eb;
   transform: translateY(-1px);
 }
 
@@ -792,9 +962,13 @@ onMounted(() => {
 }
 
 .refresh-icon {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  font-size: 20px;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+}
+
+.refresh-pill:hover:not(:disabled) .refresh-icon {
+  transform: rotate(90deg);
 }
 
 .spinner-small {
@@ -865,12 +1039,27 @@ onMounted(() => {
   background: var(--text-primary);
 }
 
+/* 关键：独立的滚动内容区域 */
+.content-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  /* 修复：移除底部安全区域padding，由App.vue统一处理 */
+  padding-bottom: 0;
+}
+
 .content-area {
-  padding: 16px;
-  min-height: calc(100vh - 150px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px 16px;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
+  overscroll-behavior: contain;
 }
 
 .empty-state {
@@ -908,6 +1097,146 @@ onMounted(() => {
   gap: 8px;
 }
 
+.clients-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.client-group-single {
+  margin-bottom: 4px;
+  border-radius: 24px;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.client-group-single.expanded {
+  border: 1px solid var(--accent-color);
+  border-radius: 24px;
+  background: var(--bg-hover);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 1;
+}
+
+.client-pill-card {
+  background: var(--bg-card);
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.client-group-single.expanded .client-pill-card {
+  border-radius: 24px 24px 0 0;
+  border-color: transparent;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+.client-pill-card:hover {
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.client-pill-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--client-pill-gradient);
+  opacity: 0.7;
+  z-index: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 24px;
+}
+
+.client-pill-card:hover::before {
+  opacity: 0.8;
+}
+
+.client-group-single.expanded .client-pill-card::before {
+  opacity: 0.6;
+  border-radius: 24px 24px 0 0;
+}
+
+.client-pill-content {
+  position: relative;
+  z-index: 1;
+}
+
+.client-pill-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  min-height: 38px;
+}
+
+.client-name-id-display-single {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.client-name-text-single {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+.client-id-text-single {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-weight: normal;
+}
+
+.client-right-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.holdings-count-single {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+  min-width: 65px;
+  text-align: center;
+}
+
+.group-content-single {
+  padding: 8px;
+  background: var(--bg-hover);
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .holding-card-compact {
   background: var(--bg-card);
   border-radius: 8px;
@@ -915,10 +1244,24 @@ onMounted(() => {
   border: 1px solid var(--border-color);
   transition: all 0.2s ease;
   margin-bottom: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .holding-card-compact:hover {
   border-color: var(--accent-color);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.client-group-single.expanded .holding-card-compact {
+  border-color: var(--border-color);
+  margin-left: 8px;
+  margin-right: 8px;
+  width: calc(100% - 16px);
+}
+
+.client-group-single.expanded .holding-card-compact:hover {
+  border-color: var(--border-color);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
 }
 
 .holding-header-compact {
@@ -986,14 +1329,13 @@ onMounted(() => {
   font-weight: normal;
 }
 
-.nav-info-single-line {
+.nav-info-top-right {
   text-align: right;
   min-width: 100px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .nav-with-date {
@@ -1016,7 +1358,7 @@ onMounted(() => {
 .holding-details-compact {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   padding-top: 8px;
   border-top: 1px solid var(--bg-hover);
 }
@@ -1029,24 +1371,23 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.date-actions-row {
-  display: flex;
-  justify-content: space-between;
+.detail-row-two-items {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
   align-items: center;
-  margin-top: 4px;
+  gap: 4px;
 }
 
-.date-info {
+.detail-label-spacer {
+  margin-left: 8px;
+}
+
+.date-info-row {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
-}
-
-.holding-actions {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
+  margin-top: 4px;
+  color: var(--text-secondary);
 }
 
 .detail-label {
@@ -1056,10 +1397,48 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.detail-label-inline {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: normal;
+  font-style: italic;
+}
+
 .detail-value {
   font-weight: 500;
   color: var(--text-primary);
   font-size: 11px;
+}
+
+.remarks-with-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bg-hover);
+  flex-wrap: nowrap;
+}
+
+.remarks-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placeholder-label,
+.placeholder-value {
+  flex: 1;
+  min-width: 0;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .holding-action-btn {
@@ -1073,6 +1452,7 @@ onMounted(() => {
   transition: all 0.2s ease;
   font-weight: 500;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .holding-action-btn.copy-btn:hover:not(:disabled) {
@@ -1112,103 +1492,6 @@ onMounted(() => {
   background: #2563eb;
 }
 
-.clients-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.client-group-single {
-  background: var(--bg-card);
-  border-radius: 8px;
-  overflow: hidden;
-  transition: all 0.2s ease;
-  border: 1px solid var(--border-color);
-}
-
-.group-header-single {
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.group-header-single:hover {
-  background: var(--bg-hover);
-}
-
-.header-content-single {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 10px;
-}
-
-.client-info-single {
-  flex: 1;
-  min-width: 0;
-}
-
-.client-name-id-display-single {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-}
-
-.client-name-text-single {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-}
-
-.client-id-text-single {
-  font-size: 12px;
-  color: var(--text-secondary);
-  opacity: 0.7;
-  font-weight: normal;
-  white-space: nowrap;
-}
-
-.header-right-section {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.holdings-count-single {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 8px;
-  background: rgba(var(--accent-color-rgb), 0.1);
-  white-space: nowrap;
-}
-
-.holdings-count-single i {
-  font-style: italic;
-  font-weight: 600;
-}
-
-.group-content-single {
-  padding: 8px;
-  background: var(--bg-hover);
-  border-top: 1px solid var(--border-color);
-  animation: slideDown 0.2s ease;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .refresh-overlay {
   position: fixed;
   top: 0;
@@ -1245,28 +1528,56 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .header-section {
-    padding: 15px 12px 12px;
+    padding: 10px 12px 10px;
   }
   
   .content-area {
-    padding: 12px;
-    min-height: calc(100vh - 130px);
+    padding: 10px 12px 12px;
+  }
+  
+  .clients-container {
+    gap: 3px;
+  }
+  
+  .client-pill-info {
+    padding: 6px 12px;
+    min-height: 36px;
+  }
+  
+  .client-name-text-single {
+    max-width: 50%;
+    font-size: 14px;
+  }
+  
+  .client-id-text-single {
+    font-size: 12px;
+  }
+  
+  .holdings-count-single {
+    font-size: 14px;
+    padding: 3px 8px;
+    min-width: 55px;
   }
   
   .holding-header-compact {
-    flex-direction: column;
-    gap: 6px;
+    flex-direction: row;
+    align-items: flex-start;
   }
   
-  .nav-info-single-line {
-    width: 100%;
+  .nav-info-top-right {
+    min-width: auto;
+    width: auto;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
   }
   
   .detail-row {
     font-size: 11px;
+  }
+  
+  .detail-row-two-items {
+    grid-template-columns: auto 1fr auto 1fr;
   }
   
   .detail-label {
@@ -1278,33 +1589,14 @@ onMounted(() => {
     font-size: 10px;
   }
   
-  .client-name-text-single {
-    font-size: 13px;
+  .inline-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   
-  .client-id-text-single {
-    font-size: 11px;
-  }
-  
-  .holdings-count-single {
+  .holding-action-btn {
     font-size: 10px;
-    padding: 2px 6px;
-  }
-  
-  .fund-name {
-    font-size: 13px;
-  }
-  
-  .fund-code-inline {
-    font-size: 11px;
-  }
-  
-  .nav-with-date {
-    font-size: 13px;
-  }
-  
-  .nav-date-inline {
-    font-size: 10px;
+    padding: 3px 6px;
   }
   
   .empty-state {
@@ -1323,62 +1615,65 @@ onMounted(() => {
     font-size: 13px;
   }
   
-  .status-pill {
-    min-width: 60px;
-    padding: 0 12px;
-  }
-  
+  .status-pill,
   .refresh-pill {
-    min-width: 36px;
-    padding: 0;
+    min-width: 60px;
+    padding: 6px 12px;
+    font-size: 13px;
   }
   
-  .holding-action-btn {
-    font-size: 10px;
-    padding: 3px 6px;
+  .refresh-icon {
+    font-size: 18px;
   }
   
-  .date-actions-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .holding-actions {
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-end;
+  .client-group-single.expanded .holding-card-compact {
+    margin-left: 4px;
+    margin-right: 4px;
+    width: calc(100% - 8px);
   }
 }
 
 @media (max-width: 480px) {
   .content-area {
-    padding: 10px;
+    padding: 8px 10px 10px;
   }
   
   .clients-container {
-    gap: 6px;
+    gap: 3px;
   }
   
   .client-group-single {
-    border-radius: 6px;
+    border-radius: 20px;
   }
   
-  .group-header-single {
-    padding: 10px;
+  .client-group-single.expanded {
+    border-radius: 20px;
+  }
+  
+  .client-pill-card {
+    border-radius: 20px;
+  }
+  
+  .client-group-single.expanded .client-pill-card {
+    border-radius: 20px 20px 0 0;
+  }
+  
+  .client-pill-info {
+    padding: 5px 10px;
+    min-height: 34px;
   }
   
   .client-name-text-single {
-    font-size: 12px;
+    font-size: 13px;
   }
   
   .client-id-text-single {
-    font-size: 10px;
+    font-size: 11px;
   }
   
   .holdings-count-single {
-    font-size: 9px;
-    padding: 1px 5px;
+    font-size: 13px;
+    padding: 2px 6px;
   }
   
   .holding-card-compact {
@@ -1413,10 +1708,26 @@ onMounted(() => {
   .nav-date-inline {
     font-size: 9px;
   }
+  
+  .inline-actions {
+    flex-direction: row;
+    gap: 4px;
+    width: auto;
+  }
+  
+  .holding-action-btn {
+    width: auto;
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  
+  .remarks-text {
+    max-width: 60%;
+  }
 }
 
 @media (hover: none) and (pointer: coarse) {
-  .group-header-single:active {
+  .client-pill-card:active {
     background: var(--bg-hover);
   }
   
@@ -1425,9 +1736,30 @@ onMounted(() => {
   }
 }
 
+/* === iOS PWA 特定修复 === */
+@media screen and (max-width: 768px) {
+  .client-view {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .fixed-header {
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    background: var(--bg-primary);
+  }
+  
+  .header-section {
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    background: var(--bg-primary);
+  }
+}
+
+/* 深色模式适配 */
 :root.dark .status-pill {
-  background: var(--bg-card);
+  background: var(--bg-hover);
   border-color: var(--border-color);
+  color: var(--text-primary);
 }
 
 :root.dark .status-pill.status-latest {
@@ -1444,10 +1776,14 @@ onMounted(() => {
 
 :root.dark .refresh-pill {
   background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
 }
 
 :root.dark .refresh-pill:hover:not(:disabled) {
   background: #2563eb;
+  border-color: #2563eb;
+  color: white;
 }
 
 :root.dark .clear-search {
@@ -1463,5 +1799,36 @@ onMounted(() => {
 :root.dark .holding-action-btn {
   background: var(--bg-card);
   border-color: var(--border-color);
+}
+
+:root.dark .holdings-count-single {
+  background: rgba(30, 41, 59, 0.9);
+  color: var(--text-primary);
+}
+
+:root.dark .client-pill-card::before {
+  opacity: 0.8;
+}
+
+:root.dark .client-pill-card:hover::before {
+  opacity: 0.9;
+}
+
+:root.dark .client-group-single.expanded .client-pill-card::before {
+  opacity: 0.7;
+}
+
+:root.dark .client-group-single.expanded {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: var(--accent-color);
+}
+
+/* 为深色模式添加RGB值变量 */
+:root {
+  --bg-primary-rgb: 248, 250, 252; /* #f8fafc */
+}
+
+:root.dark {
+  --bg-primary-rgb: 15, 23, 42; /* #0f172a */
 }
 </style>
