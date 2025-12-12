@@ -1,6 +1,5 @@
 <template>
   <div class="client-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <!-- 完全固定的顶部工具栏 -->
     <div class="fixed-header">
       <div class="header-section">
         <div class="header-row">
@@ -68,7 +67,6 @@
       </div>
     </div>
     
-    <!-- 可独立滚动的下方内容区域 -->
     <div class="content-wrapper">
       <div class="content-area">
         <div v-if="searchText" class="search-results">
@@ -201,11 +199,11 @@
             <div
               v-for="clientGroup in groupedHoldingsByClientName"
               :key="clientGroup.id"
-              class="client-group-single"
-              :class="{ expanded: expandedClients.has(clientGroup.id) }"
+              class="client-card-wrapper"
             >
               <div
                 class="client-pill-card"
+                :class="{ expanded: expandedClients.has(clientGroup.id) }"
                 @click="expandedClients.has(clientGroup.id) ? expandedClients.delete(clientGroup.id) : expandedClients.add(clientGroup.id)"
                 :style="{ '--client-pill-gradient': getClientPillGradient(clientGroup.clientName) }"
               >
@@ -216,117 +214,117 @@
                       <span v-if="clientGroup.clientID" class="client-id-text-single">({{ clientGroup.clientID }})</span>
                     </div>
                     
-                    <div class="client-right-stats">
+                    <div v-if="!isPrivacyMode" class="client-right-stats">
                       <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
                         {{ clientGroup.holdings.length }}支
                       </span>
                     </div>
                   </div>
-                </div>
-              </div>
-              
-              <div v-if="expandedClients.has(clientGroup.id)" class="group-content-single">
-                <div
-                  v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
-                  :key="holding.id"
-                  class="holding-card-compact"
-                >
-                  <div class="holding-header-compact">
-                    <div class="holding-info-compact">
-                      <div class="fund-name-row">
-                        <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}</h4>
-                        <span class="fund-code-inline">({{ holding.fundCode }})</span>
-                      </div>
-                    </div>
-                    <div class="nav-info-top-right">
-                      <span class="nav-with-date">
-                        {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
-                      </span>
-                    </div>
-                  </div>
                   
-                  <div class="holding-details-compact">
-                    <div class="detail-row detail-row-two-items">
-                      <span class="detail-label">购买金额:</span>
-                      <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                      <span class="detail-label detail-label-spacer">份额:</span>
-                      <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                      <span class="detail-label">收益:</span>
-                      <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
-                        {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
-                      </span>
-                    </div>
-                    
-                    <div class="detail-row">
-                      <span class="detail-label">收益率:</span>
-                      <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
-                        {{ formatPercentage(calculateProfit(holding).annualized) }}
-                      </span>
-                      <span class="detail-label-inline">[年化]</span>
-                      <span class="detail-value" :style="{ color: getReturnColor(absoluteReturnPercentage(holding)) }" style="margin-left: 8px;">
-                        {{ formatPercentage(absoluteReturnPercentage(holding)) }}
-                      </span>
-                      <span class="detail-label-inline">[绝对]</span>
-                    </div>
-                    
-                    <div class="detail-row date-info-row detail-row-two-items">
-                      <span class="detail-label">购买日期:</span>
-                      <span class="detail-value">{{ formatPurchaseDate(new Date(holding.purchaseDate)) }}</span>
-                      <span class="detail-label detail-label-spacer">持有天数:</span>
-                      <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
-                    </div>
-                    
-                    <div v-if="holding.remarks" class="detail-row remarks-with-actions">
-                      <span class="detail-label">备注:</span>
-                      <span class="detail-value remarks-text">{{ holding.remarks }}</span>
-                      <div class="inline-actions">
-                        <button
-                          class="holding-action-btn copy-btn"
-                          @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
-                          :disabled="!holding.clientID"
-                          :title="holding.clientID ? '复制客户号' : '无客户号'"
-                        >
-                          复制客户号
-                        </button>
-                        <button
-                          class="holding-action-btn report-btn"
-                          @click.stop="generateReport(holding)"
-                          title="生成报告"
-                        >
-                          复制报告
-                        </button>
+                  <div v-if="expandedClients.has(clientGroup.id)" class="group-content-single">
+                    <div
+                      v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
+                      :key="holding.id"
+                      class="holding-card-compact"
+                    >
+                      <div class="holding-header-compact">
+                        <div class="holding-info-compact">
+                          <div class="fund-name-row">
+                            <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}</h4>
+                            <span class="fund-code-inline">({{ holding.fundCode }})</span>
+                          </div>
+                        </div>
+                        <div class="nav-info-top-right">
+                          <span class="nav-with-date">
+                            {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div class="holding-details-compact">
+                        <div class="detail-row detail-row-two-items">
+                          <span class="detail-label">购买金额:</span>
+                          <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
+                          <span class="detail-label detail-label-spacer">份额:</span>
+                          <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                          <span class="detail-label">收益:</span>
+                          <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
+                            {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
+                          </span>
+                        </div>
+                        
+                        <div class="detail-row">
+                          <span class="detail-label">收益率:</span>
+                          <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
+                            {{ formatPercentage(calculateProfit(holding).annualized) }}
+                          </span>
+                          <span class="detail-label-inline">[年化]</span>
+                          <span class="detail-value" :style="{ color: getReturnColor(absoluteReturnPercentage(holding)) }" style="margin-left: 8px;">
+                            {{ formatPercentage(absoluteReturnPercentage(holding)) }}
+                          </span>
+                          <span class="detail-label-inline">[绝对]</span>
+                        </div>
+                        
+                        <div class="detail-row date-info-row detail-row-two-items">
+                          <span class="detail-label">购买日期:</span>
+                          <span class="detail-value">{{ formatPurchaseDate(new Date(holding.purchaseDate)) }}</span>
+                          <span class="detail-label detail-label-spacer">持有天数:</span>
+                          <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                        </div>
+                        
+                        <div v-if="holding.remarks" class="detail-row remarks-with-actions">
+                          <span class="detail-label">备注:</span>
+                          <span class="detail-value remarks-text">{{ holding.remarks }}</span>
+                          <div class="inline-actions">
+                            <button
+                              class="holding-action-btn copy-btn"
+                              @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                              :disabled="!holding.clientID"
+                              :title="holding.clientID ? '复制客户号' : '无客户号'"
+                            >
+                              复制客户号
+                            </button>
+                            <button
+                              class="holding-action-btn report-btn"
+                              @click.stop="generateReport(holding)"
+                              title="生成报告"
+                            >
+                              复制报告
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div v-else class="detail-row remarks-with-actions">
+                          <span class="detail-label placeholder-label"></span>
+                          <span class="detail-value placeholder-value"></span>
+                          <div class="inline-actions">
+                            <button
+                              class="holding-action-btn copy-btn"
+                              @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                              :disabled="!holding.clientID"
+                              :title="holding.clientID ? '复制客户号' : '无客户号'"
+                            >
+                              复制客户号
+                            </button>
+                            <button
+                              class="holding-action-btn report-btn"
+                              @click.stop="generateReport(holding)"
+                              title="生成报告"
+                            >
+                              复制报告
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
-                    <div v-else class="detail-row remarks-with-actions">
-                      <span class="detail-label placeholder-label"></span>
-                      <span class="detail-value placeholder-value"></span>
-                      <div class="inline-actions">
-                        <button
-                          class="holding-action-btn copy-btn"
-                          @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
-                          :disabled="!holding.clientID"
-                          :title="holding.clientID ? '复制客户号' : '无客户号'"
-                        >
-                          复制客户号
-                        </button>
-                        <button
-                          class="holding-action-btn report-btn"
-                          @click.stop="generateReport(holding)"
-                          title="生成报告"
-                        >
-                          复制报告
-                        </button>
-                      </div>
+                    <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
+                      <button @click="loadedGroupedClientCount += 10">加载更多</button>
                     </div>
                   </div>
-                </div>
-                
-                <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
-                  <button @click="loadedGroupedClientCount += 10">加载更多</button>
                 </div>
               </div>
             </div>
@@ -514,9 +512,7 @@ const getClientDisplayName = (clientName: string, clientID: string) => {
   }
 }
 
-// 生成客户药丸渐变背景色
 const getClientPillGradient = (clientName: string): string => {
-  // 简单的hash函数生成颜色
   let hash = 0
   for (let i = 0; i < clientName.length; i++) {
     hash = ((hash << 5) - hash) + clientName.charCodeAt(i)
@@ -525,9 +521,9 @@ const getClientPillGradient = (clientName: string): string => {
   hash = Math.abs(hash)
   
   const hue = hash % 360
-  const saturation = 65 + (hash % 25)  // 65-90%饱和度
-  const lightnessLight = 88 + (hash % 7)  // 88-95%亮度（浅色模式）
-  const lightnessDark = 28 + (hash % 7)   // 28-35%亮度（深色模式）
+  const saturation = 65 + (hash % 25)
+  const lightnessLight = 88 + (hash % 7)
+  const lightnessDark = 28 + (hash % 7)
   
   const lightGradient = `linear-gradient(90deg,
     hsl(${hue}, ${saturation}%, ${lightnessLight}%) 0%,
@@ -552,11 +548,9 @@ const calculateHoldingDays = (holding: any) => {
   const endDate = new Date(holding.navDate)
   const startDate = new Date(holding.purchaseDate)
   
-  // 如果购买日期晚于净值日期，则持有天数为0
   if (startDate > endDate) return 0
   
   const timeDiff = Math.abs(endDate.getTime() - startDate.getTime())
-  // 使用 Math.floor 而不是 Math.ceil，并且不加1
   const days = Math.floor(timeDiff / (1000 * 3600 * 24))
   return days > 0 ? days : 0
 }
@@ -570,22 +564,17 @@ const calculateProfit = (holding: any) => {
   
   let annualizedReturn = 0
   if (holdingDays > 0) {
-    // 防止极端幂运算导致数值溢出，添加限制条件
-    if (holdingDays < 30) { // 持有天数小于30天
-        // 对于极短期持有，使用简单的年化计算，防止指数爆炸
+    if (holdingDays < 30) {
         annualizedReturn = absoluteReturnPercentage * (365 / holdingDays) * 100
     } else {
-        // 正常计算年化收益率
-        // 添加安全检查：如果指数过大，使用对数计算
         const exponent = 365 / holdingDays
-        if (exponent > 10) { // 指数过大时，使用近似计算
+        if (exponent > 10) {
             annualizedReturn = absoluteReturnPercentage * 365 * 100 / holdingDays
         } else {
             annualizedReturn = (Math.pow(1 + absoluteReturnPercentage, exponent) - 1) * 100
         }
     }
     
-    // 限制年化收益率在合理范围内（-1000% 到 1000%）
     if (annualizedReturn > 1000) annualizedReturn = 1000
     if (annualizedReturn < -1000) annualizedReturn = -1000
   }
@@ -593,7 +582,6 @@ const calculateProfit = (holding: any) => {
   return { absolute: absoluteProfit, annualized: annualizedReturn }
 }
 
-// 计算绝对收益率
 const absoluteReturnPercentage = (holding: any) => {
   if (!holding.isValid || holding.purchaseAmount <= 0) return 0
   const profit = calculateProfit(holding)
@@ -607,12 +595,10 @@ const formatCurrency = (amount: number) => {
 }
 
 const formatPercentage = (value: number) => {
-  // 检查是否为极大的科学计数法，如果是则显示为 'ERR' 或 'N/A'
   if (!isFinite(value) || Math.abs(value) > 1e100) {
     return 'N/A'
   }
   
-  // 限制小数位数为2位
   const roundedValue = Math.round(value * 100) / 100
   
   if (roundedValue > 0) return `+${roundedValue.toFixed(2)}%`
@@ -715,7 +701,6 @@ const stopUpdatingTextAnimation = () => {
 }
 
 const handleCopyClientID = (clientID: string, clientName: string) => {
-  // 检查权限 - 需要客户分层权限
   if (!currentUser.value || currentUser.value.user_type === 'free') {
     dataStore.showToastMessage('不支持基础用户使用此功能', 'warning')
     return
@@ -741,7 +726,6 @@ const handleCopyClientID = (clientID: string, clientName: string) => {
 }
 
 const generateReport = (holding: any) => {
-  // 检查权限 - 需要客户分层权限
   if (!currentUser.value || currentUser.value.user_type === 'free') {
     dataStore.showToastMessage('不支持基础用户使用此功能', 'warning')
     return
@@ -766,7 +750,6 @@ const generateReport = (holding: any) => {
   
   const holdingDays = calculateHoldingDays(holding)
   
-  // 严格按照Swift格式生成报告
   const reportContent = `${holding.fundName || `未加载(${holding.fundCode})`} | ${holding.fundCode}
 ├ 购买日期:${purchaseDateStr}
 ├ 持有天数:${holdingDays}天
@@ -836,21 +819,18 @@ onMounted(() => {
   flex-direction: column;
 }
 
-/* 完全固定的顶部区域 - 永远不滚动 */
 .fixed-header {
   flex-shrink: 0;
   background: var(--bg-primary);
   z-index: 100;
   position: relative;
-  /* 修复：统一的安全区域处理 */
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: 0;
-  /* 确保背景延伸到状态栏 */
   background: var(--bg-primary);
 }
 
 .header-section {
-  padding: 12px 16px 12px;
+  padding: 8px 16px 8px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
   background: var(--bg-primary);
@@ -862,7 +842,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   gap: 8px;
   position: relative;
   z-index: 2;
@@ -874,19 +854,19 @@ onMounted(() => {
 }
 
 .action-btn {
-  height: 36px;
+  height: 32px;
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--bg-card);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  min-width: 36px;
-  padding: 0 12px;
+  min-width: 32px;
+  padding: 0 10px;
 }
 
 .action-btn:hover {
@@ -908,18 +888,18 @@ onMounted(() => {
 }
 
 .status-pill {
-  height: 36px;
+  height: 32px;
   border: 1px solid var(--border-color);
-  border-radius: 18px;
-  padding: 8px 16px;
+  border-radius: 16px;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  min-width: 80px;
+  min-width: 70px;
   text-align: center;
   background: var(--bg-hover);
   color: var(--text-primary);
@@ -943,26 +923,22 @@ onMounted(() => {
   border-color: #065f46;
 }
 
-.status-text {
-  white-space: nowrap;
-}
-
 .refresh-pill {
-  height: 36px;
-  padding: 8px 16px;
+  height: 32px;
+  padding: 6px 12px;
   background: var(--accent-color);
   border: 1px solid var(--accent-color);
-  border-radius: 18px;
+  border-radius: 16px;
   color: white;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  gap: 6px;
+  gap: 4px;
   font-weight: 500;
-  min-width: 36px;
+  min-width: 32px;
 }
 
 .refresh-pill:hover:not(:disabled) {
@@ -987,8 +963,8 @@ onMounted(() => {
 }
 
 .spinner-small {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;
@@ -1000,7 +976,7 @@ onMounted(() => {
 }
 
 .search-box {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .search-input-wrapper {
@@ -1013,15 +989,15 @@ onMounted(() => {
   position: absolute;
   left: 12px;
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .search-input {
   width: 100%;
-  padding: 10px 40px 10px 36px;
+  padding: 8px 36px 8px 32px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.2s ease;
   background: var(--bg-card);
@@ -1039,11 +1015,11 @@ onMounted(() => {
   color: white;
   border: none;
   border-radius: 50%;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   padding: 0;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1054,12 +1030,10 @@ onMounted(() => {
   background: var(--text-primary);
 }
 
-/* 关键：独立的滚动内容区域 */
 .content-wrapper {
   flex: 1;
   position: relative;
   overflow: hidden;
-  /* 修复：为导航栏添加底部间距，防止内容被遮挡 */
   padding-bottom: 100px;
 }
 
@@ -1071,11 +1045,10 @@ onMounted(() => {
   bottom: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 12px 16px 16px;
+  padding: 8px 16px 16px;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
   overscroll-behavior: contain;
-  /* 修复：添加底部内边距确保内容不会被导航栏遮挡 */
   padding-bottom: 120px;
 }
 
@@ -1117,24 +1090,16 @@ onMounted(() => {
 .clients-container {
   display: flex;
   flex-direction: column;
-  gap: 4px; /* 进一步减小间距使其更紧凑 */
+  gap: 4px;
 }
 
-.client-group-single {
-  margin-bottom: 4px;
-  border-radius: 24px;
-  border: 1px solid transparent;
-  transition: all 0.3s ease;
-  overflow: hidden;
+.client-card-wrapper {
+  animation: fadeIn 0.3s ease;
 }
 
-.client-group-single.expanded {
-  border: 1px solid var(--accent-color);
-  border-radius: 24px;
-  background: var(--bg-hover);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  position: relative;
-  z-index: 1;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .client-pill-card {
@@ -1145,22 +1110,20 @@ onMounted(() => {
   border: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
-  /* 添加阴影效果以匹配SummaryView */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   min-height: 48px;
-}
-
-.client-group-single.expanded .client-pill-card {
-  border-radius: 24px 24px 0 0;
-  border-color: transparent;
-  border-bottom: none;
-  box-shadow: none;
 }
 
 .client-pill-card:hover {
   border-color: var(--accent-color);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.client-pill-card.expanded {
+  background: var(--bg-hover);
+  border-radius: 24px;
+  border-color: var(--accent-color);
 }
 
 .client-pill-card::before {
@@ -1181,9 +1144,9 @@ onMounted(() => {
   opacity: 0.8;
 }
 
-.client-group-single.expanded .client-pill-card::before {
+.client-pill-card.expanded::before {
   opacity: 0.6;
-  border-radius: 24px 24px 0 0;
+  border-radius: 24px;
 }
 
 .client-pill-content {
@@ -1196,7 +1159,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  min-height: 48px; /* 增加高度使其更匹配SummaryView */
+  min-height: 48px;
 }
 
 .client-name-id-display-single {
@@ -1209,7 +1172,7 @@ onMounted(() => {
 }
 
 .client-name-text-single {
-  font-size: 16px; /* 增大字体大小 */
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -1219,7 +1182,7 @@ onMounted(() => {
 }
 
 .client-id-text-single {
-  font-size: 14px; /* 增大字体大小 */
+  font-size: 14px;
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
   font-weight: normal;
@@ -1232,27 +1195,30 @@ onMounted(() => {
 }
 
 .holdings-count-single {
-  font-size: 16px; /* 增大字体大小 */
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: italic;
+  color: var(--text-secondary);
   white-space: nowrap;
-  padding: 6px 12px; /* 增加内边距使其更显眼 */
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 16px;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  padding: 2px 0;
   flex-shrink: 0;
-  min-width: 65px;
-  text-align: center;
+  min-width: 45px;
+  text-align: right;
 }
 
 .group-content-single {
-  padding: 8px;
-  background: var(--bg-hover);
-  animation: slideDown 0.2s ease;
+  margin-top: 0;
+  padding: 8px 16px 16px;
+  border-top: 1px solid var(--border-color);
+  animation: slideDown 0.3s ease;
+  position: relative;
+  z-index: 1;
+  background: var(--bg-card);
+  border-radius: 0 0 24px 24px;
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-5px); }
+  from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -1271,14 +1237,14 @@ onMounted(() => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
 }
 
-.client-group-single.expanded .holding-card-compact {
+.group-content-single .holding-card-compact {
   border-color: var(--border-color);
-  margin-left: 8px;
-  margin-right: 8px;
-  width: calc(100% - 16px);
+  margin-left: 0;
+  margin-right: 0;
+  width: 100%;
 }
 
-.client-group-single.expanded .holding-card-compact:hover {
+.group-content-single .holding-card-compact:hover {
   border-color: var(--border-color);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
 }
@@ -1547,36 +1513,36 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .header-section {
-    padding: 10px 12px 10px;
+    padding: 6px 12px 6px;
   }
   
   .content-area {
-    padding: 10px 12px 12px;
-    padding-bottom: 120px; /* 移动端也保持底部间距 */
+    padding: 6px 12px 12px;
+    padding-bottom: 120px;
   }
   
   .clients-container {
-    gap: 3px; /* 移动端间距更小 */
+    gap: 3px;
   }
   
   .client-pill-info {
     padding: 6px 12px;
-    min-height: 44px; /* 移动端稍小 */
+    min-height: 44px;
   }
   
   .client-name-text-single {
     max-width: 50%;
-    font-size: 15px; /* 移动端稍小但保持增大效果 */
+    font-size: 15px;
   }
   
   .client-id-text-single {
-    font-size: 13px; /* 移动端稍小但保持增大效果 */
+    font-size: 13px;
   }
   
   .holdings-count-single {
-    font-size: 15px; /* 移动端稍小但保持增大效果 */
-    padding: 5px 10px;
-    min-width: 55px;
+    font-size: 15px;
+    padding: 2px 0;
+    min-width: 40px;
   }
   
   .holding-header-compact {
@@ -1646,29 +1612,25 @@ onMounted(() => {
     font-size: 18px;
   }
   
-  .client-group-single.expanded .holding-card-compact {
-    margin-left: 4px;
-    margin-right: 4px;
-    width: calc(100% - 8px);
+  .group-content-single .holding-card-compact {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
   }
 }
 
 @media (max-width: 480px) {
   .content-area {
     padding: 8px 10px 10px;
-    padding-bottom: 120px; /* 小屏幕也保持底部间距 */
+    padding-bottom: 120px;
   }
   
   .clients-container {
-    gap: 3px;
+    gap: 2px;
   }
   
-  .client-group-single {
-    border-radius: 20px;
-  }
-  
-  .client-group-single.expanded {
-    border-radius: 20px;
+  .client-card-wrapper {
+    margin-bottom: 1px;
   }
   
   .client-pill-card {
@@ -1676,8 +1638,8 @@ onMounted(() => {
     min-height: 44px;
   }
   
-  .client-group-single.expanded .client-pill-card {
-    border-radius: 20px 20px 0 0;
+  .client-pill-card.expanded {
+    border-radius: 20px;
   }
   
   .client-pill-info {
@@ -1686,16 +1648,16 @@ onMounted(() => {
   }
   
   .client-name-text-single {
-    font-size: 14px; /* 小屏幕稍小 */
+    font-size: 14px;
   }
   
   .client-id-text-single {
-    font-size: 12px; /* 小屏幕稍小 */
+    font-size: 12px;
   }
   
   .holdings-count-single {
-    font-size: 14px; /* 小屏幕稍小 */
-    padding: 4px 8px;
+    font-size: 14px;
+    padding: 2px 0;
   }
   
   .holding-card-compact {
@@ -1704,7 +1666,7 @@ onMounted(() => {
   }
   
   .group-content-single {
-    padding: 6px;
+    padding: 6px 10px 10px;
   }
   
   .fund-name {
@@ -1758,7 +1720,6 @@ onMounted(() => {
   }
 }
 
-/* === iOS PWA 特定修复 === */
 @media screen and (max-width: 768px) {
   .client-view {
     -webkit-tap-highlight-color: transparent;
@@ -1777,7 +1738,6 @@ onMounted(() => {
   }
 }
 
-/* 深色模式适配 */
 :root.dark .status-pill {
   background: var(--bg-hover);
   border-color: var(--border-color);
@@ -1824,8 +1784,7 @@ onMounted(() => {
 }
 
 :root.dark .holdings-count-single {
-  background: rgba(30, 41, 59, 0.9);
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
 :root.dark .client-pill-card::before {
@@ -1836,21 +1795,28 @@ onMounted(() => {
   opacity: 0.9;
 }
 
-:root.dark .client-group-single.expanded .client-pill-card::before {
+:root.dark .client-pill-card.expanded::before {
   opacity: 0.7;
 }
 
-:root.dark .client-group-single.expanded {
+:root.dark .client-pill-card.expanded {
   background: rgba(30, 41, 59, 0.5);
   border-color: var(--accent-color);
 }
 
-/* 为深色模式添加RGB值变量 */
+:root.dark .fund-name {
+  color: var(--text-primary);
+}
+
+:root.dark .fund-code-inline {
+  color: var(--text-secondary);
+}
+
 :root {
-  --bg-primary-rgb: 248, 250, 252; /* #f8fafc */
+  --bg-primary-rgb: 248, 250, 252;
 }
 
 :root.dark {
-  --bg-primary-rgb: 15, 23, 42; /* #0f172a */
+  --bg-primary-rgb: 15, 23, 42;
 }
 </style>

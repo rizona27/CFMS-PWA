@@ -1,8 +1,270 @@
+<template>
+  <div class="summary-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
+    <div class="fixed-header">
+      <div class="header-section">
+        <div class="header-row">
+          <div class="action-buttons">
+            <button
+              class="action-btn"
+              :class="{ active: areAnyCardsExpanded }"
+              @click="toggleAllCards"
+              :title="areAnyCardsExpanded ? '折叠所有' : '展开所有'"
+            >
+              {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
+            </button>
+            
+            <button
+              class="action-btn"
+              :class="{ active: isSearchExpanded }"
+              @click="toggleSearch"
+              :title="isSearchExpanded ? '隐藏搜索' : '显示搜索'"
+            >
+              🔍
+            </button>
+            
+            <div class="sort-group">
+              <button
+                class="sort-btn"
+                @click="cycleSortKey"
+                :title="selectedSortKey !== 'none' ? `按${sortKeyFullDisplay}排序` : '无排序'"
+                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
+              >
+                <span class="sort-text">{{ sortButtonText }}</span>
+              </button>
+              
+              <button
+                v-if="selectedSortKey !== 'none'"
+                class="sort-order-btn"
+                @click="toggleSortOrder"
+                :title="`${sortOrder === 'ascending' ? '升序' : '降序'}排序`"
+                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
+              >
+                <span class="sort-order-icon">
+                  {{ sortOrder === 'ascending' ? '↑' : '↓' }}
+                </span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="status-pill-group">
+            <div
+              v-if="!showRefreshButton"
+              class="status-pill"
+              @click="onStatusTextTap"
+              :class="{ 'status-latest': hasLatestNavDate }"
+            >
+              <span class="status-text">{{ statusText }}</span>
+            </div>
+            
+            <button
+              v-if="showRefreshButton"
+              class="refresh-pill"
+              @click.stop="handleRefresh"
+              :disabled="isRefreshing"
+              :title="isRefreshing ? '刷新中...' : '刷新数据'"
+            >
+              <span v-if="isRefreshing" class="spinner-small"></span>
+              <span v-else class="refresh-icon">⟳</span>
+            </button>
+          </div>
+        </div>
+        
+        <div v-if="isSearchExpanded" class="search-box">
+          <div class="search-input-wrapper">
+            <span class="search-icon">🔍</span>
+            <input
+              v-model="searchText"
+              type="text"
+              placeholder="输入客户名、基金代码、基金名称..."
+              class="search-input"
+              @input="performSearch(searchText)"
+            />
+            <button
+              v-if="searchText"
+              class="clear-search"
+              @click="clearSearch"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="content-wrapper">
+      <div class="content-area">
+        <div v-if="holdings.length === 0" class="empty-state">
+          <div class="empty-icon">📊</div>
+          <h3>当前没有数据</h3>
+          <p>请导入数据开始使用</p>
+        </div>
+        
+        <div v-else-if="filteredHoldings.length === 0 && searchText" class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>未找到匹配的内容</h3>
+          <p>请尝试其他搜索关键词</p>
+        </div>
+        
+        <div v-else class="funds-container">
+          <div
+            v-for="fundCode in sortedFundCodes"
+            :key="fundCode"
+            class="fund-card-wrapper"
+          >
+            <div
+              class="fund-pill-card"
+              :class="{ expanded: expandedFundCodes.has(fundCode) }"
+              @click="toggleFundCard(fundCode)"
+              :style="{ '--fund-pill-gradient': getFundPillGradient(fundCode) }"
+            >
+              <div class="fund-pill-content">
+                <div class="fund-pill-info">
+                  <div class="fund-name-code">
+                    <span class="fund-name">{{ getFundDisplayName(fundCode) }}</span>
+                    <span class="fund-code">({{ fundCode }})</span>
+                  </div>
+                  
+                  <div class="fund-right-stats">
+                    <div
+                      v-if="selectedSortKey !== 'none'"
+                      class="current-sort-return"
+                      :style="{ color: getReturnColor(getCurrentSortReturn(fundCode)) }"
+                    >
+                      {{ formatReturn(getCurrentSortReturn(fundCode)) }}
+                    </div>
+                    
+                    <div v-if="selectedSortKey === 'none' && !isPrivacyMode" class="client-count">
+                      <span
+                        class="count-value"
+                        :style="{ color: getClientCountColor(groupedByFund[fundCode].length) }"
+                      >
+                        {{ groupedByFund[fundCode].length }}人
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-if="expandedFundCodes.has(fundCode)" class="expanded-details">
+                  <div class="returns-grid-compact">
+                    <div class="returns-row">
+                      <div class="return-item">
+                        <span class="return-label">近1月:</span>
+                        <span
+                          class="return-value"
+                          :style="{ color: getReturnColor(getFundReturn(fundCode, '1m')) }"
+                        >
+                          {{ formatReturn(getFundReturn(fundCode, '1m')) }}
+                        </span>
+                      </div>
+                      <div class="return-item">
+                        <span class="return-label">近3月:</span>
+                        <span
+                          class="return-value"
+                          :style="{ color: getReturnColor(getFundReturn(fundCode, '3m')) }"
+                        >
+                          {{ formatReturn(getFundReturn(fundCode, '3m')) }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="returns-row">
+                      <div class="return-item">
+                        <span class="return-label">近6月:</span>
+                        <span
+                          class="return-value"
+                          :style="{ color: getReturnColor(getFundReturn(fundCode, '6m')) }"
+                        >
+                          {{ formatReturn(getFundReturn(fundCode, '6m')) }}
+                        </span>
+                      </div>
+                      <div class="return-item">
+                        <span class="return-label">近1年:</span>
+                        <span
+                          class="return-value"
+                          :style="{ color: getReturnColor(getFundReturn(fundCode, '1y')) }"
+                        >
+                          {{ formatReturn(getFundReturn(fundCode, '1y')) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div v-if="expandedFundCodes.has(fundCode) && !isPrivacyMode" class="clients-section">
+                    <div class="clients-header">
+                      <span class="clients-label">持有客户:</span>
+                    </div>
+                    <div class="clients-list">
+                      <span
+                        v-for="(holding, index) in sortedHoldingsByClientReturn(fundCode)"
+                        :key="holding.id"
+                        class="client-item-simple"
+                      >
+                        <span class="client-name-simple">{{ processClientName(holding.clientName) }}</span>
+                        <span
+                          class="client-return-simple"
+                          :style="{ color: getReturnColor(getHoldingReturn(holding)) }"
+                        >
+                          ({{ formatReturn(getHoldingReturn(holding)) }})
+                        </span>
+                        <span v-if="index < sortedHoldingsByClientReturn(fundCode).length - 1" class="separator-simple">、</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div v-if="isRefreshing" class="refresh-overlay">
+      <div class="refresh-progress">
+        <div class="progress-text">
+          更新中{{ updatingText }}
+        </div>
+        <div class="progress-details">
+          [{{ refreshProgress.current }}/{{ refreshProgress.total }}]
+        </div>
+      </div>
+    </div>
+    
+    <div v-if="showOutdatedToast" class="outdated-toast">
+      <div class="toast-content">
+        <div class="toast-header">
+          非最新日期净值:
+          <span class="outdated-count">{{ outdatedFundCodes.length }}</span>
+          支
+        </div>
+        <div v-if="outdatedFundCodes.length > 0" class="toast-list">
+          <div
+            v-for="[fundCode, fundName] in getSortedUniqueOutdatedFunds().slice(0, 5)"
+            :key="fundCode"
+            class="toast-item"
+          >
+            {{ getFundDisplayName(fundCode) }} [{{ fundCode }}]
+          </div>
+          <div v-if="outdatedFundCodes.length > 5" class="toast-more">
+            ... 还有{{ outdatedFundCodes.length - 5 }}支
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <ToastMessage
+      v-model:show="dataStore.showToast"
+      :message="dataStore.toastMessage"
+      :type="dataStore.toastType"
+      :icon="dataStore.toastIcon"
+    />
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
 import { fundService } from '@/services/fundService'
+import ToastMessage from '@/components/common/ToastMessage.vue'
 
 const router = useRouter()
 const dataStore = useDataStore()
@@ -90,6 +352,17 @@ const groupedByFund = computed(() => {
     groups[holding.fundCode].push(holding)
   })
   return groups
+})
+
+const sortedHoldingsByClientReturn = computed(() => {
+  return (fundCode: string) => {
+    const holdings = groupedByFund.value[fundCode] || []
+    return [...holdings].sort((a, b) => {
+      const returnA = getHoldingReturn(a) || 0
+      const returnB = getHoldingReturn(b) || 0
+      return returnB - returnA
+    })
+  }
 })
 
 const sortedFundCodes = computed(() => {
@@ -196,9 +469,9 @@ const getFundHash = (fundCode: string): number => {
 const getFundPillGradient = (fundCode: string): string => {
   const hash = getFundHash(fundCode)
   const hue = hash % 360
-  const saturation = 65 + (hash % 25)  // 65-90%饱和度
-  const lightnessLight = 88 + (hash % 7)  // 88-95%亮度（浅色模式）
-  const lightnessDark = 28 + (hash % 7)   // 28-35%亮度（深色模式）
+  const saturation = 65 + (hash % 25)
+  const lightnessLight = 88 + (hash % 7)
+  const lightnessDark = 28 + (hash % 7)
   
   const lightGradient = `linear-gradient(90deg,
     hsl(${hue}, ${saturation}%, ${lightnessLight}%) 0%,
@@ -361,7 +634,7 @@ const handleRefresh = async () => {
   
   const token = localStorage.getItem('auth_token')
   if (!token) {
-    dataStore.showToastMessage('请先登录以刷新数据')
+    dataStore.showToastMessage('请先登录以刷新数据', 'warning')
     const event = new CustomEvent('auth-required', {
       detail: { message: '请先登录以刷新基金数据' }
     })
@@ -372,6 +645,7 @@ const handleRefresh = async () => {
   isRefreshing.value = true
   startUpdatingTextAnimation()
   dataStore.startRefresh()
+  dataStore.showToastMessage('开始刷新数据，请稍候...', 'info')
   
   const total = holdings.value.length
   
@@ -404,6 +678,7 @@ const handleRefresh = async () => {
     dataStore.completeRefresh()
     isRefreshing.value = false
     stopUpdatingTextAnimation()
+    dataStore.showToastMessage('数据刷新完成！', 'success')
     
     refreshKey.value = Date.now()
     
@@ -452,27 +727,27 @@ const getSortedUniqueOutdatedFunds = () => {
 
 const copyClientID = (clientID: string, clientName: string) => {
   if (!hasLatestNavDate.value) {
-    dataStore.showToastMessage('数据未更新，请先刷新数据')
+    dataStore.showToastMessage('数据未更新，请先刷新数据', 'warning')
     return
   }
   
   if (!clientID || clientID.trim() === '') {
-    dataStore.showToastMessage('客户号为空')
+    dataStore.showToastMessage('客户号为空', 'error')
     return
   }
   
   navigator.clipboard.writeText(clientID)
     .then(() => {
-      dataStore.showToastMessage('客户号已复制到剪贴板')
+      dataStore.showToastMessage('客户号已复制到剪贴板', 'success')
     })
     .catch(err => {
-      dataStore.showToastMessage('复制失败，请重试')
+      dataStore.showToastMessage('复制失败，请重试', 'error')
     })
 }
 
 const generateReport = (holding: any) => {
   if (!hasLatestNavDate.value) {
-    dataStore.showToastMessage('数据未更新，请先刷新数据')
+    dataStore.showToastMessage('数据未更新，请先刷新数据', 'warning')
     return
   }
   
@@ -519,10 +794,10 @@ ${holding.fundName || `未加载(${holding.fundCode})`} | ${holding.fundCode}
   
   navigator.clipboard.writeText(reportContent)
     .then(() => {
-      dataStore.showToastMessage('报告已复制到剪贴板')
+      dataStore.showToastMessage('报告已复制到剪贴板', 'success')
     })
     .catch(err => {
-      dataStore.showToastMessage('生成报告失败，请重试')
+      dataStore.showToastMessage('生成报告失败，请重试', 'error')
     })
 }
 
@@ -559,285 +834,6 @@ onMounted(() => {
 })
 </script>
 
-<template>
-  <div class="summary-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <!-- 完全固定的顶部工具栏 -->
-    <div class="fixed-header">
-      <div class="header-section">
-        <div class="header-row">
-          <div class="action-buttons">
-            <button
-              class="action-btn"
-              :class="{ active: areAnyCardsExpanded }"
-              @click="toggleAllCards"
-              :title="areAnyCardsExpanded ? '折叠所有' : '展开所有'"
-            >
-              {{ areAnyCardsExpanded ? '⇲' : '⇱' }}
-            </button>
-            
-            <button
-              class="action-btn"
-              :class="{ active: isSearchExpanded }"
-              @click="toggleSearch"
-              :title="isSearchExpanded ? '隐藏搜索' : '显示搜索'"
-            >
-              🔍
-            </button>
-            
-            <div class="sort-group">
-              <button
-                class="sort-btn"
-                @click="cycleSortKey"
-                :title="selectedSortKey !== 'none' ? `按${sortKeyFullDisplay}排序` : '无排序'"
-                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
-              >
-                <span class="sort-text">{{ sortButtonText }}</span>
-              </button>
-              
-              <button
-                v-if="selectedSortKey !== 'none'"
-                class="sort-order-btn"
-                @click="toggleSortOrder"
-                :title="`${sortOrder === 'ascending' ? '升序' : '降序'}排序`"
-                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
-              >
-                <span class="sort-order-icon">
-                  {{ sortOrder === 'ascending' ? '↑' : '↓' }}
-                </span>
-              </button>
-            </div>
-          </div>
-          
-          <div class="status-pill-group">
-            <button
-              v-if="!showRefreshButton"
-              class="status-pill"
-              @click="onStatusTextTap"
-              :class="{ 'status-latest': hasLatestNavDate }"
-            >
-              <span class="status-text">{{ statusText }}</span>
-            </button>
-            
-            <button
-              v-if="showRefreshButton"
-              class="refresh-pill"
-              @click.stop="handleRefresh"
-              :disabled="isRefreshing"
-              :title="isRefreshing ? '刷新中...' : '刷新数据'"
-            >
-              <span v-if="isRefreshing" class="spinner-small"></span>
-              <span v-else class="refresh-icon">⟳</span>
-            </button>
-          </div>
-        </div>
-        
-        <div v-if="isSearchExpanded" class="search-box">
-          <div class="search-input-wrapper">
-            <span class="search-icon">🔍</span>
-            <input
-              v-model="searchText"
-              type="text"
-              placeholder="输入客户名、基金代码、基金名称..."
-              class="search-input"
-              @input="performSearch(searchText)"
-            />
-            <button
-              v-if="searchText"
-              class="clear-search"
-              @click="clearSearch"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 可独立滚动的下方内容区域 -->
-    <div class="content-wrapper">
-      <div class="content-area">
-        <div v-if="holdings.length === 0" class="empty-state">
-          <div class="empty-icon">📊</div>
-          <h3>当前没有数据</h3>
-          <p>请导入数据开始使用</p>
-        </div>
-        
-        <div v-else-if="filteredHoldings.length === 0 && searchText" class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <h3>未找到匹配的内容</h3>
-          <p>请尝试其他搜索关键词</p>
-        </div>
-        
-        <div v-else class="funds-container">
-          <div
-            v-for="fundCode in sortedFundCodes"
-            :key="fundCode"
-            class="fund-card-wrapper"
-          >
-            <div
-              class="fund-pill-card"
-              :class="{ expanded: expandedFundCodes.has(fundCode) }"
-              @click="toggleFundCard(fundCode)"
-              :style="{ '--fund-pill-gradient': getFundPillGradient(fundCode) }"
-            >
-              <div class="fund-pill-content">
-                <div class="fund-pill-info">
-                  <div class="fund-name-code">
-                    <span class="fund-name">{{ getFundDisplayName(fundCode) }}</span>
-                    <span class="fund-code">({{ fundCode }})</span>
-                  </div>
-                  
-                  <div class="fund-right-stats">
-                    <div
-                      v-if="selectedSortKey !== 'none'"
-                      class="current-sort-return"
-                      :style="{ color: getReturnColor(getCurrentSortReturn(fundCode)) }"
-                    >
-                      {{ formatReturn(getCurrentSortReturn(fundCode)) }}
-                    </div>
-                    
-                    <div v-if="!isPrivacyMode" class="client-count">
-                      <span
-                        class="count-value"
-                        :style="{ color: getClientCountColor(groupedByFund[fundCode].length) }"
-                      >
-                        {{ groupedByFund[fundCode].length }}人
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div v-if="expandedFundCodes.has(fundCode)" class="expanded-details">
-                  <div class="returns-grid-compact">
-                    <div class="returns-row">
-                      <div class="return-item">
-                        <span class="return-label">近1月:</span>
-                        <span
-                          class="return-value"
-                          :style="{ color: getReturnColor(getFundReturn(fundCode, '1m')) }"
-                        >
-                          {{ formatReturn(getFundReturn(fundCode, '1m')) }}
-                        </span>
-                      </div>
-                      <div class="return-item">
-                        <span class="return-label">近3月:</span>
-                        <span
-                          class="return-value"
-                          :style="{ color: getReturnColor(getFundReturn(fundCode, '3m')) }"
-                        >
-                          {{ formatReturn(getFundReturn(fundCode, '3m')) }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="returns-row">
-                      <div class="return-item">
-                        <span class="return-label">近6月:</span>
-                        <span
-                          class="return-value"
-                          :style="{ color: getReturnColor(getFundReturn(fundCode, '6m')) }"
-                        >
-                          {{ formatReturn(getFundReturn(fundCode, '6m')) }}
-                        </span>
-                      </div>
-                      <div class="return-item">
-                        <span class="return-label">近1年:</span>
-                        <span
-                          class="return-value"
-                          :style="{ color: getReturnColor(getFundReturn(fundCode, '1y')) }"
-                        >
-                          {{ formatReturn(getFundReturn(fundCode, '1y')) }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div v-if="expandedFundCodes.has(fundCode) && !isPrivacyMode" class="clients-section">
-                    <div class="clients-header">
-                      <span class="clients-label">持有客户:</span>
-                    </div>
-                    <div class="clients-list">
-                      <div
-                        v-for="(holding, index) in groupedByFund[fundCode]"
-                        :key="holding.id"
-                        class="client-item-with-actions"
-                      >
-                        <div class="client-info">
-                          <div class="client-name-id-display">
-                            <span class="client-name-text">{{ processClientName(holding.clientName) }}</span>
-                            <span v-if="holding.clientID" class="client-id-text">({{ holding.clientID }})</span>
-                          </div>
-                          <span
-                            v-if="getHoldingReturn(holding) !== null"
-                            class="client-return"
-                            :style="{ color: getReturnColor(getHoldingReturn(holding)) }"
-                          >
-                            ({{ formatReturn(getHoldingReturn(holding)) }})
-                          </span>
-                          <span v-else class="client-return">(/)</span>
-                        </div>
-                        <div class="client-actions" v-if="holding.clientID">
-                          <button
-                            class="client-action-btn copy-btn"
-                            @click.stop="copyClientID(holding.clientID, holding.clientName)"
-                            title="复制客户号"
-                          >
-                            复制客户号
-                          </button>
-                          <button
-                            class="client-action-btn report-btn"
-                            @click.stop="generateReport(holding)"
-                            title="生成报告"
-                          >
-                            复制报告
-                          </button>
-                        </div>
-                        <span v-if="index < groupedByFund[fundCode].length - 1" class="separator">、</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div v-if="isRefreshing" class="refresh-overlay">
-      <div class="refresh-progress">
-        <div class="progress-text">
-          更新中{{ updatingText }}
-        </div>
-        <div class="progress-details">
-          [{{ refreshProgress.current }}/{{ refreshProgress.total }}]
-        </div>
-      </div>
-    </div>
-    
-    <div v-if="showOutdatedToast" class="outdated-toast">
-      <div class="toast-content">
-        <div class="toast-header">
-          非最新日期净值:
-          <span class="outdated-count">{{ outdatedFundCodes.length }}</span>
-          支
-        </div>
-        <div v-if="outdatedFundCodes.length > 0" class="toast-list">
-          <div
-            v-for="[fundCode, fundName] in getSortedUniqueOutdatedFunds().slice(0, 5)"
-            :key="fundCode"
-            class="toast-item"
-          >
-            {{ getFundDisplayName(fundCode) }} [{{ fundCode }}]
-          </div>
-          <div v-if="outdatedFundCodes.length > 5" class="toast-more">
-            ... 还有{{ outdatedFundCodes.length - 5 }}支
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <style scoped>
 .summary-view {
   position: fixed;
@@ -853,21 +849,18 @@ onMounted(() => {
   flex-direction: column;
 }
 
-/* 完全固定的顶部区域 - 永远不滚动 */
 .fixed-header {
   flex-shrink: 0;
   background: var(--bg-primary);
   z-index: 100;
   position: relative;
-  /* 修复：统一的安全区域处理 */
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: 0;
-  /* 确保背景延伸到状态栏 */
   background: var(--bg-primary);
 }
 
 .header-section {
-  padding: 12px 16px 12px;
+  padding: 8px 16px 8px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
   background: var(--bg-primary);
@@ -879,7 +872,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   gap: 8px;
   position: relative;
   z-index: 2;
@@ -892,19 +885,19 @@ onMounted(() => {
 }
 
 .action-btn {
-  height: 36px;
+  height: 32px;
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--bg-card);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  min-width: 36px;
-  padding: 0 12px;
+  min-width: 32px;
+  padding: 0 10px;
 }
 
 .action-btn:hover {
@@ -925,21 +918,21 @@ onMounted(() => {
 }
 
 .sort-btn {
-  height: 36px;
+  height: 32px;
   border: 1px solid;
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--bg-card);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  padding: 0 16px;
-  gap: 6px;
+  padding: 0 12px;
+  gap: 4px;
   font-weight: 500;
-  min-width: 70px;
+  min-width: 60px;
 }
 
 .sort-btn:hover {
@@ -949,17 +942,17 @@ onMounted(() => {
 }
 
 .sort-text {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .sort-order-btn {
-  height: 36px;
-  min-width: 36px;
+  height: 32px;
+  min-width: 32px;
   border: 1px solid;
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--bg-card);
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -977,7 +970,7 @@ onMounted(() => {
 }
 
 .sort-order-icon {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: bold;
 }
 
@@ -988,22 +981,22 @@ onMounted(() => {
 }
 
 .status-pill {
-  height: 36px;
-  padding: 8px 16px;
+  height: 32px;
+  padding: 6px 12px;
   background: var(--bg-hover);
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: 16px;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   font-weight: 500;
   white-space: nowrap;
-  min-width: 80px;
+  min-width: 70px;
 }
 
 .status-pill:hover {
@@ -1025,21 +1018,21 @@ onMounted(() => {
 }
 
 .refresh-pill {
-  height: 36px;
-  padding: 8px 16px;
+  height: 32px;
+  padding: 6px 12px;
   background: var(--accent-color);
   border: 1px solid var(--accent-color);
-  border-radius: 18px;
+  border-radius: 16px;
   color: white;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  gap: 6px;
+  gap: 4px;
   font-weight: 500;
-  min-width: 36px;
+  min-width: 32px;
 }
 
 .refresh-pill:hover:not(:disabled) {
@@ -1064,8 +1057,8 @@ onMounted(() => {
 }
 
 .spinner-small {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;
@@ -1077,7 +1070,7 @@ onMounted(() => {
 }
 
 .search-box {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .search-input-wrapper {
@@ -1090,15 +1083,15 @@ onMounted(() => {
   position: absolute;
   left: 12px;
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .search-input {
   width: 100%;
-  padding: 10px 40px 10px 36px;
+  padding: 8px 36px 8px 32px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.2s ease;
   background: var(--bg-card);
@@ -1116,11 +1109,11 @@ onMounted(() => {
   color: white;
   border: none;
   border-radius: 50%;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   padding: 0;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1131,12 +1124,10 @@ onMounted(() => {
   background: var(--text-primary);
 }
 
-/* 关键：独立的滚动内容区域 */
 .content-wrapper {
   flex: 1;
   position: relative;
   overflow: hidden;
-  /* 修复：为导航栏添加底部间距，防止内容被遮挡 */
   padding-bottom: 100px;
 }
 
@@ -1148,11 +1139,10 @@ onMounted(() => {
   bottom: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 12px 16px 16px;
+  padding: 8px 16px 16px;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
   overscroll-behavior: contain;
-  /* 修复：添加底部内边距确保内容不会被导航栏遮挡 */
   padding-bottom: 120px;
 }
 
@@ -1220,7 +1210,7 @@ onMounted(() => {
 
 .fund-pill-card.expanded {
   background: var(--bg-hover);
-  border-radius: 24px 24px 12px 12px;
+  border-radius: 24px;
   border-color: var(--accent-color);
 }
 
@@ -1244,7 +1234,7 @@ onMounted(() => {
 
 .fund-pill-card.expanded::before {
   opacity: 0.6;
-  border-radius: 24px 24px 12px 12px;
+  border-radius: 24px;
 }
 
 .fund-pill-content {
@@ -1270,7 +1260,7 @@ onMounted(() => {
 }
 
 .fund-name {
-  font-size: 16px; /* 增大字体大小 */
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -1280,7 +1270,7 @@ onMounted(() => {
 }
 
 .fund-code {
-  font-size: 14px; /* 增大字体大小 */
+  font-size: 14px;
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
   font-weight: normal;
@@ -1294,46 +1284,39 @@ onMounted(() => {
 }
 
 .current-sort-return {
-  font-size: 16px; /* 增大字体大小 */
+  font-size: 16px;
   font-weight: 700;
   white-space: nowrap;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 16px;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  padding: 2px 0;
   flex-shrink: 0;
   min-width: 65px;
-  text-align: center;
+  text-align: right;
 }
 
 .client-count {
   display: flex;
   align-items: center;
-  font-size: 14px; /* 增大字体大小 */
+  font-size: 14px;
   color: var(--text-secondary);
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 6px 12px;
-  border-radius: 16px;
-  backdrop-filter: blur(4px);
   flex-shrink: 0;
 }
 
 .count-value {
-  font-weight: 600;
+  font-weight: normal;
   font-style: italic;
-  font-size: 14px; /* 增大字体大小 */
+  font-size: 16px;
 }
 
 .expanded-details {
   margin-top: 0;
-  padding: 16px;
+  padding: 8px 16px 16px;
   border-top: 1px solid var(--border-color);
   animation: slideDown 0.3s ease;
   position: relative;
   z-index: 1;
   background: var(--bg-card);
+  border-radius: 0 0 24px 24px;
 }
 
 @keyframes slideDown {
@@ -1344,152 +1327,82 @@ onMounted(() => {
 .returns-grid-compact {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .returns-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 8px;
 }
 
 .return-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 8px 10px;
   background: var(--bg-hover);
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid var(--border-color);
 }
 
 .return-label {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--text-primary);
   font-weight: 500;
 }
 
 .return-value {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .clients-section {
   border-top: 1px solid var(--border-color);
-  padding-top: 12px;
+  padding-top: 8px;
 }
 
 .clients-header {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .clients-label {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--text-secondary);
   font-weight: 500;
 }
 
 .clients-list {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.client-item-with-actions {
-  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px;
-  background: var(--bg-hover);
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  position: relative;
-  min-height: 40px;
 }
 
-.client-info {
-  display: flex;
+.client-item-simple {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.client-name-id-display {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-
-.client-name-text {
-  font-size: 13px;
-  font-weight: 500;
+  gap: 2px;
+  font-size: 12px;
   color: var(--text-primary);
-  white-space: nowrap;
+  margin: 0 2px;
 }
 
-.client-id-text {
-  font-size: 12px;
-  color: var(--text-secondary);
-  opacity: 0.7;
-  font-weight: normal;
-}
-
-.client-return {
-  font-size: 12px;
+.client-name-simple {
   font-weight: 500;
-  white-space: nowrap;
-  margin-left: auto;
-  margin-right: 8px;
 }
 
-.client-actions {
-  display: flex;
-  gap: 4px;
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--bg-card);
-  border-radius: 6px;
-  padding: 2px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.client-action-btn {
+.client-return-simple {
+  font-weight: 500;
   font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
 }
 
-.client-action-btn.copy-btn:hover {
-  background: var(--accent-color);
-  color: white;
-  border-color: var(--accent-color);
-}
-
-.client-action-btn.report-btn:hover {
-  background: #10b981;
-  color: white;
-  border-color: #10b981;
-}
-
-.separator {
+.separator-simple {
   color: var(--text-secondary);
-  margin-right: 4px;
-  position: absolute;
-  right: -12px;
-  top: 50%;
-  transform: translateY(-50%);
+  margin-left: 2px;
+  margin-right: 2px;
 }
 
 .refresh-overlay {
@@ -1528,7 +1441,7 @@ onMounted(() => {
 
 .outdated-toast {
   position: fixed;
-  bottom: max(120px, env(safe-area-inset-bottom, 0px) + 80px); /* 调整位置避免与导航栏重叠 */
+  bottom: max(120px, env(safe-area-inset-bottom, 0px) + 80px);
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: var(--bg-card);
@@ -1592,12 +1505,12 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .header-section {
-    padding: 10px 12px 10px;
+    padding: 6px 12px 6px;
   }
   
   .content-area {
-    padding: 10px 12px 12px;
-    padding-bottom: 120px; /* 移动端也保持底部间距 */
+    padding: 6px 12px 12px;
+    padding-bottom: 120px;
   }
   
   .funds-container {
@@ -1615,11 +1528,11 @@ onMounted(() => {
   
   .fund-name {
     max-width: 50%;
-    font-size: 15px; /* 移动端稍小但保持增大效果 */
+    font-size: 15px;
   }
   
   .fund-code {
-    font-size: 13px; /* 移动端稍小但保持增大效果 */
+    font-size: 13px;
   }
   
   .fund-right-stats {
@@ -1627,94 +1540,86 @@ onMounted(() => {
   }
   
   .current-sort-return {
-    font-size: 15px; /* 移动端稍小但保持增大效果 */
-    padding: 5px 10px;
+    font-size: 15px;
+    padding: 2px 0;
     min-width: 55px;
   }
   
   .client-count {
-    font-size: 13px; /* 移动端稍小但保持增大效果 */
-    padding: 5px 10px;
+    font-size: 13px;
   }
   
   .count-value {
-    font-size: 13px; /* 移动端稍小但保持增大效果 */
+    font-size: 15px;
+  }
+  
+  .expanded-details {
+    padding: 6px 12px 12px;
   }
   
   .returns-row {
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 6px;
   }
   
   .return-item {
-    padding: 8px 10px;
+    padding: 6px 8px;
   }
   
   .return-label, .return-value {
-    font-size: 13px;
+    font-size: 11px;
+  }
+  
+  .clients-section {
+    padding-top: 6px;
+  }
+  
+  .clients-label {
+    font-size: 11px;
+  }
+  
+  .client-item-simple {
+    font-size: 11px;
+  }
+  
+  .client-return-simple {
+    font-size: 10px;
   }
   
   .outdated-toast {
     max-width: 320px;
     padding: 14px;
-    bottom: max(100px, env(safe-area-inset-bottom, 0px) + 60px); /* 移动端调整位置 */
+    bottom: max(100px, env(safe-area-inset-bottom, 0px) + 60px);
   }
   
   .sort-btn {
-    padding: 0 12px;
-    font-size: 13px;
-    min-width: 60px;
+    padding: 0 10px;
+    font-size: 12px;
+    min-width: 55px;
   }
   
   .sort-text {
-    font-size: 13px;
+    font-size: 12px;
   }
   
   .sort-order-btn {
-    min-width: 32px;
-    height: 32px;
+    min-width: 30px;
+    height: 30px;
   }
   
   .status-pill,
   .refresh-pill {
-    height: 32px;
-    padding: 6px 12px;
-    font-size: 13px;
-    min-width: 60px;
+    height: 30px;
+    padding: 5px 10px;
+    font-size: 12px;
+    min-width: 55px;
   }
   
   .refresh-icon {
     font-size: 18px;
   }
-  
-  .client-item-with-actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding-bottom: 36px;
-  }
-  
-  .client-actions {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    top: auto;
-    transform: none;
-    flex-wrap: wrap;
-  }
-  
-  .client-action-btn {
-    font-size: 10px;
-    padding: 3px 6px;
-  }
-  
-  .client-return {
-    margin-left: 0;
-    margin-right: 0;
-  }
 }
 
-/* === iOS PWA 特定修复 === */
 @media screen and (max-width: 768px) {
   .summary-view {
     -webkit-tap-highlight-color: transparent;
@@ -1733,7 +1638,6 @@ onMounted(() => {
   }
 }
 
-/* 深色模式适配 */
 :root.dark .status-pill {
   background: var(--bg-hover);
   border-color: var(--border-color);
@@ -1794,7 +1698,7 @@ onMounted(() => {
 
 :root.dark .current-sort-return,
 :root.dark .client-count {
-  background: rgba(30, 41, 59, 0.9);
+  background: transparent;
 }
 
 :root.dark .return-item {
