@@ -570,13 +570,24 @@ const calculateProfit = (holding: any) => {
   
   let annualizedReturn = 0
   if (holdingDays > 0) {
-    // 增加检查以防止极端幂运算导致数值溢出
-    if (holdingDays < 0.1) { // 极小天数（应不可能发生）
-        annualizedReturn = absoluteReturnPercentage * 365 * 100 // 简化处理，或返回0
+    // 防止极端幂运算导致数值溢出，添加限制条件
+    if (holdingDays < 30) { // 持有天数小于30天
+        // 对于极短期持有，使用简单的年化计算，防止指数爆炸
+        annualizedReturn = absoluteReturnPercentage * (365 / holdingDays) * 100
     } else {
-        // 公式: ( (1 + 绝对收益率)^ (365 / 持有天数) - 1 ) * 100
-        annualizedReturn = (Math.pow(1 + absoluteReturnPercentage, 365 / holdingDays) - 1) * 100
+        // 正常计算年化收益率
+        // 添加安全检查：如果指数过大，使用对数计算
+        const exponent = 365 / holdingDays
+        if (exponent > 10) { // 指数过大时，使用近似计算
+            annualizedReturn = absoluteReturnPercentage * 365 * 100 / holdingDays
+        } else {
+            annualizedReturn = (Math.pow(1 + absoluteReturnPercentage, exponent) - 1) * 100
+        }
     }
+    
+    // 限制年化收益率在合理范围内（-1000% 到 1000%）
+    if (annualizedReturn > 1000) annualizedReturn = 1000
+    if (annualizedReturn < -1000) annualizedReturn = -1000
   }
   
   return { absolute: absoluteProfit, annualized: annualizedReturn }
@@ -600,8 +611,12 @@ const formatPercentage = (value: number) => {
   if (!isFinite(value) || Math.abs(value) > 1e100) {
     return 'N/A'
   }
-  if (value > 0) return `+${value.toFixed(2)}%`
-  else if (value < 0) return `${value.toFixed(2)}%`
+  
+  // 限制小数位数为2位
+  const roundedValue = Math.round(value * 100) / 100
+  
+  if (roundedValue > 0) return `+${roundedValue.toFixed(2)}%`
+  else if (roundedValue < 0) return `${roundedValue.toFixed(2)}%`
   else return '0.00%'
 }
 
@@ -1044,8 +1059,8 @@ onMounted(() => {
   flex: 1;
   position: relative;
   overflow: hidden;
-  /* 修复：移除底部安全区域padding，由App.vue统一处理 */
-  padding-bottom: 0;
+  /* 修复：为导航栏添加底部间距，防止内容被遮挡 */
+  padding-bottom: 100px;
 }
 
 .content-area {
@@ -1060,6 +1075,8 @@ onMounted(() => {
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
   overscroll-behavior: contain;
+  /* 修复：添加底部内边距确保内容不会被导航栏遮挡 */
+  padding-bottom: 120px;
 }
 
 .empty-state {
@@ -1100,7 +1117,7 @@ onMounted(() => {
 .clients-container {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 4px; /* 进一步减小间距使其更紧凑 */
 }
 
 .client-group-single {
@@ -1128,7 +1145,9 @@ onMounted(() => {
   border: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
+  /* 添加阴影效果以匹配SummaryView */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 48px;
 }
 
 .client-group-single.expanded .client-pill-card {
@@ -1177,7 +1196,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  min-height: 38px;
+  min-height: 48px; /* 增加高度使其更匹配SummaryView */
 }
 
 .client-name-id-display-single {
@@ -1190,7 +1209,7 @@ onMounted(() => {
 }
 
 .client-name-text-single {
-  font-size: 15px;
+  font-size: 16px; /* 增大字体大小 */
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -1200,7 +1219,7 @@ onMounted(() => {
 }
 
 .client-id-text-single {
-  font-size: 13px;
+  font-size: 14px; /* 增大字体大小 */
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
   font-weight: normal;
@@ -1213,10 +1232,10 @@ onMounted(() => {
 }
 
 .holdings-count-single {
-  font-size: 15px;
+  font-size: 16px; /* 增大字体大小 */
   font-weight: 700;
   white-space: nowrap;
-  padding: 4px 10px;
+  padding: 6px 12px; /* 增加内边距使其更显眼 */
   background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
   backdrop-filter: blur(4px);
@@ -1533,29 +1552,30 @@ onMounted(() => {
   
   .content-area {
     padding: 10px 12px 12px;
+    padding-bottom: 120px; /* 移动端也保持底部间距 */
   }
   
   .clients-container {
-    gap: 3px;
+    gap: 3px; /* 移动端间距更小 */
   }
   
   .client-pill-info {
     padding: 6px 12px;
-    min-height: 36px;
+    min-height: 44px; /* 移动端稍小 */
   }
   
   .client-name-text-single {
     max-width: 50%;
-    font-size: 14px;
+    font-size: 15px; /* 移动端稍小但保持增大效果 */
   }
   
   .client-id-text-single {
-    font-size: 12px;
+    font-size: 13px; /* 移动端稍小但保持增大效果 */
   }
   
   .holdings-count-single {
-    font-size: 14px;
-    padding: 3px 8px;
+    font-size: 15px; /* 移动端稍小但保持增大效果 */
+    padding: 5px 10px;
     min-width: 55px;
   }
   
@@ -1636,6 +1656,7 @@ onMounted(() => {
 @media (max-width: 480px) {
   .content-area {
     padding: 8px 10px 10px;
+    padding-bottom: 120px; /* 小屏幕也保持底部间距 */
   }
   
   .clients-container {
@@ -1652,6 +1673,7 @@ onMounted(() => {
   
   .client-pill-card {
     border-radius: 20px;
+    min-height: 44px;
   }
   
   .client-group-single.expanded .client-pill-card {
@@ -1660,20 +1682,20 @@ onMounted(() => {
   
   .client-pill-info {
     padding: 5px 10px;
-    min-height: 34px;
+    min-height: 42px;
   }
   
   .client-name-text-single {
-    font-size: 13px;
+    font-size: 14px; /* 小屏幕稍小 */
   }
   
   .client-id-text-single {
-    font-size: 11px;
+    font-size: 12px; /* 小屏幕稍小 */
   }
   
   .holdings-count-single {
-    font-size: 13px;
-    padding: 2px 6px;
+    font-size: 14px; /* 小屏幕稍小 */
+    padding: 4px 8px;
   }
   
   .holding-card-compact {

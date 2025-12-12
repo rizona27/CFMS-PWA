@@ -1136,8 +1136,8 @@ onMounted(() => {
   flex: 1;
   position: relative;
   overflow: hidden;
-  /* 修复：移除底部安全区域padding，由App.vue统一处理 */
-  padding-bottom: 0;
+  /* 修复：为导航栏添加底部间距，防止内容被遮挡 */
+  padding-bottom: 100px;
 }
 
 .content-area {
@@ -1152,6 +1152,8 @@ onMounted(() => {
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
   overscroll-behavior: contain;
+  /* 修复：添加底部内边距确保内容不会被导航栏遮挡 */
+  padding-bottom: 120px;
 }
 
 .empty-state {
@@ -1207,6 +1209,7 @@ onMounted(() => {
   position: relative;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 48px;
 }
 
 .fund-pill-card:hover {
@@ -1254,7 +1257,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  min-height: 38px;
+  min-height: 48px;
 }
 
 .fund-name-code {
@@ -1267,7 +1270,7 @@ onMounted(() => {
 }
 
 .fund-name {
-  font-size: 15px;
+  font-size: 16px; /* 增大字体大小 */
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -1277,7 +1280,7 @@ onMounted(() => {
 }
 
 .fund-code {
-  font-size: 13px;
+  font-size: 14px; /* 增大字体大小 */
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
   font-weight: normal;
@@ -1291,10 +1294,10 @@ onMounted(() => {
 }
 
 .current-sort-return {
-  font-size: 15px;
+  font-size: 16px; /* 增大字体大小 */
   font-weight: 700;
   white-space: nowrap;
-  padding: 4px 10px;
+  padding: 6px 12px;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
   backdrop-filter: blur(4px);
@@ -1307,11 +1310,11 @@ onMounted(() => {
 .client-count {
   display: flex;
   align-items: center;
-  font-size: 13px;
+  font-size: 14px; /* 增大字体大小 */
   color: var(--text-secondary);
   white-space: nowrap;
   background: rgba(255, 255, 255, 0.9);
-  padding: 4px 8px;
+  padding: 6px 12px;
   border-radius: 16px;
   backdrop-filter: blur(4px);
   flex-shrink: 0;
@@ -1320,6 +1323,7 @@ onMounted(() => {
 .count-value {
   font-weight: 600;
   font-style: italic;
+  font-size: 14px; /* 增大字体大小 */
 }
 
 .expanded-details {
@@ -1524,7 +1528,7 @@ onMounted(() => {
 
 .outdated-toast {
   position: fixed;
-  bottom: max(100px, env(safe-area-inset-bottom, 0px) + 60px);
+  bottom: max(120px, env(safe-area-inset-bottom, 0px) + 80px); /* 调整位置避免与导航栏重叠 */
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: var(--bg-card);
@@ -1593,6 +1597,7 @@ onMounted(() => {
   
   .content-area {
     padding: 10px 12px 12px;
+    padding-bottom: 120px; /* 移动端也保持底部间距 */
   }
   
   .funds-container {
@@ -1601,7 +1606,7 @@ onMounted(() => {
   
   .fund-pill-info {
     padding: 6px 12px;
-    min-height: 36px;
+    min-height: 44px;
   }
   
   .fund-name-code {
@@ -1610,11 +1615,11 @@ onMounted(() => {
   
   .fund-name {
     max-width: 50%;
-    font-size: 14px;
+    font-size: 15px; /* 移动端稍小但保持增大效果 */
   }
   
   .fund-code {
-    font-size: 12px;
+    font-size: 13px; /* 移动端稍小但保持增大效果 */
   }
   
   .fund-right-stats {
@@ -1622,14 +1627,18 @@ onMounted(() => {
   }
   
   .current-sort-return {
-    font-size: 14px;
-    padding: 3px 8px;
+    font-size: 15px; /* 移动端稍小但保持增大效果 */
+    padding: 5px 10px;
     min-width: 55px;
   }
   
   .client-count {
-    font-size: 12px;
-    padding: 3px 6px;
+    font-size: 13px; /* 移动端稍小但保持增大效果 */
+    padding: 5px 10px;
+  }
+  
+  .count-value {
+    font-size: 13px; /* 移动端稍小但保持增大效果 */
   }
   
   .returns-row {
@@ -1648,7 +1657,7 @@ onMounted(() => {
   .outdated-toast {
     max-width: 320px;
     padding: 14px;
-    bottom: max(80px, env(safe-area-inset-bottom, 0px) + 40px);
+    bottom: max(100px, env(safe-area-inset-bottom, 0px) + 60px); /* 移动端调整位置 */
   }
   
   .sort-btn {
