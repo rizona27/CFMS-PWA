@@ -37,6 +37,7 @@ const precomputedHoldings = ref<Array<{
 }>>([])
 
 const isPrivacyMode = computed(() => dataStore.isPrivacyMode)
+const showRefreshButton = computed(() => dataStore.showRefreshButton)
 
 const selectedSortKey = ref<'none' | 'amount' | 'profit' | 'yield' | 'days'>('none')
 const sortOrder = ref<'ascending' | 'descending'>('descending')
@@ -54,7 +55,7 @@ const sortKeyDisplay = computed(() => {
 
 const sortKeyColor = computed(() => {
   const map = {
-    none: '#666',
+    none: '#666666',
     amount: '#3b82f6',
     profit: '#8b5cf6',
     yield: '#f97316',
@@ -63,18 +64,74 @@ const sortKeyColor = computed(() => {
   return map[selectedSortKey.value]
 })
 
-const sortButtonIcon = computed(() => {
-  const map = {
-    none: '⇅',
-    amount: '💰',
-    profit: '📈',
-    yield: '📊',
-    days: '📅'
-  }
-  return map[selectedSortKey.value]
+const sortButtonText = computed(() => {
+  return sortKeyDisplay.value
 })
 
 const holdings = computed(() => dataStore.holdings)
+
+// 计算最新净值日期状态
+const previousWorkday = computed(() => {
+  const today = new Date()
+  const date = new Date(today)
+  while (true) {
+    date.setDate(date.getDate() - 1)
+    const weekday = date.getDay()
+    if (weekday >= 1 && weekday <= 5) return date
+  }
+})
+
+const latestNavDate = computed(() => {
+  const validHoldings = holdings.value.filter(h => h.isValid)
+  if (validHoldings.length === 0) return null
+  
+  return validHoldings.reduce((latest, holding) => {
+    const date = new Date(holding.navDate)
+    return date > latest ? date : latest
+  }, new Date(0))
+})
+
+const hasLatestNavDate = computed(() => {
+  if (holdings.value.length === 0) return false
+  const prevWorkday = previousWorkday.value
+  
+  return holdings.value.some(holding =>
+    holding.isValid && isSameDay(new Date(holding.navDate), prevWorkday)
+  )
+})
+
+const outdatedLatestDate = computed(() => {
+  if (holdings.value.length === 0 || hasLatestNavDate.value) return null
+  
+  const outdatedHoldings = holdings.value.filter(h => h.isValid)
+  if (outdatedHoldings.length === 0) return null
+  
+  const latest = outdatedHoldings.reduce((latest, holding) => {
+    const date = new Date(holding.navDate)
+    return date > latest ? date : latest
+  }, new Date(0))
+  
+  return latest
+})
+
+const statusText = computed(() => {
+  if (holdings.value.length === 0) return '无数据'
+  
+  const formatter = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' })
+  
+  if (hasLatestNavDate.value) {
+    const prevDateString = formatter.format(previousWorkday.value)
+    return `最新净值: ${prevDateString}`
+  } else {
+    if (outdatedLatestDate.value) {
+      const outdatedDateString = formatter.format(outdatedLatestDate.value)
+      return `待更新: ${outdatedDateString}`
+    } else {
+      const prevDateString = formatter.format(previousWorkday.value)
+      return `待更新: ${prevDateString}`
+    }
+  }
+})
 
 const filteredAndSortedHoldings = computed(() => {
   let results = [...precomputedHoldings.value]
@@ -300,6 +357,13 @@ const getValueColor = (value: number) => {
   return '#666'
 }
 
+// 工具函数
+const isSameDay = (date1: Date, date2: Date) => {
+  return date1.getFullYear() === date2.getFullYear() &&
+         date1.getMonth() === date2.getMonth() &&
+         date1.getDate() === date2.getDate()
+}
+
 // 修复：通过正确的API更新隐私模式
 const handlePrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
@@ -329,8 +393,8 @@ const handleGlobalPrivacyModeChange = (event: any) => {
 
 // 主题变化处理器
 const handleThemeChange = (event: any) => {
-  const { mode } = event.detail
-  console.log(`TopPerformersView: 主题变化到 ${mode}`)
+  const { isDark } = event.detail
+  console.log(`TopPerformersView: 主题变化到 ${isDark ? 'dark' : 'light'}`)
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
@@ -347,6 +411,18 @@ const handleForceThemeSync = () => {
   refreshKey.value = Date.now()
 }
 
+const onStatusTextTap = () => {
+  if (holdings.value.length === 0) return
+  dataStore.updateUserPreferences({ showRefreshButton: true })
+  autoHideTimer.value = setTimeout(() => {
+    if (autoHideTimer.value) {
+      clearTimeout(autoHideTimer.value)
+      autoHideTimer.value = null
+    }
+    dataStore.updateUserPreferences({ showRefreshButton: false })
+  }, 5000) as unknown as number
+}
+
 watch(() => dataStore.isPrivacyMode, (newValue) => {
   console.log(`TopPerformersView: dataStore.isPrivacyMode变化到 ${newValue}`)
   privacyKey.value = Date.now()
@@ -357,6 +433,8 @@ watch(() => dataStore.isPrivacyMode, (newValue) => {
 watch(holdings, () => {
   refreshData()
 })
+
+const autoHideTimer = ref<number | null>(null)
 
 onMounted(() => {
   refreshData()
@@ -376,8 +454,8 @@ onMounted(() => {
   window.addEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.addEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
   
-  // 监听主题变化事件（统一使用 theme-mode-changed）
-  window.addEventListener('theme-mode-changed', handleThemeChange)
+  // 监听主题变化事件（统一使用 theme-changed）
+  window.addEventListener('theme-changed', handleThemeChange)
   
   // 监听强制同步事件
   window.addEventListener('force-privacy-sync', handleForcePrivacySync)
@@ -387,9 +465,14 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.removeEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
-  window.removeEventListener('theme-mode-changed', handleThemeChange)
+  window.removeEventListener('theme-changed', handleThemeChange)
   window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
   window.removeEventListener('force-theme-sync', handleForceThemeSync)
+  
+  if (autoHideTimer.value) {
+    clearTimeout(autoHideTimer.value)
+    autoHideTimer.value = null
+  }
 })
 </script>
 
@@ -406,30 +489,41 @@ onUnmounted(() => {
               @click="toggleFilter"
               :title="isFilterExpanded ? '隐藏筛选' : '显示筛选'"
             >
-              {{ isFilterExpanded ? '✕' : '🔍' }}
+              {{ isFilterExpanded ? '✕' : '⧉' }}
             </button>
             
-            <div class="sort-controls">
+            <div class="sort-group">
               <button
                 class="sort-btn"
-                :class="{ active: selectedSortKey !== 'none' }"
                 @click="cycleSortKey"
-                :style="{ color: selectedSortKey !== 'none' ? sortKeyColor : '' }"
+                :title="selectedSortKey !== 'none' ? `按${sortKeyDisplay}排序` : '无排序'"
+                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
               >
-                <span class="sort-icon">{{ sortButtonIcon }}</span>
-                <span v-if="selectedSortKey !== 'none'" class="sort-label">
-                  {{ sortKeyDisplay }}
-                </span>
+                <span class="sort-text">{{ sortButtonText }}</span>
               </button>
               
               <button
                 v-if="selectedSortKey !== 'none'"
-                class="order-btn"
+                class="sort-order-btn"
                 @click="toggleSortOrder"
-                :style="{ background: sortKeyColor }"
+                :title="`${sortOrder === 'ascending' ? '升序' : '降序'}排序`"
+                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
               >
-                {{ sortOrder === 'ascending' ? '↑' : '↓' }}
+                <span class="sort-order-icon">
+                  {{ sortOrder === 'ascending' ? '↑' : '↓' }}
+                </span>
               </button>
+            </div>
+          </div>
+          
+          <div class="status-pill-group">
+            <div
+              v-if="!showRefreshButton"
+              class="status-pill"
+              @click="onStatusTextTap"
+              :class="{ 'status-latest': hasLatestNavDate }"
+            >
+              <span class="status-text">{{ statusText }}</span>
             </div>
           </div>
           
@@ -622,7 +716,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0;
+  margin-bottom: 8px;
   gap: 8px;
   position: relative;
   z-index: 2;
@@ -635,31 +729,32 @@ onUnmounted(() => {
   flex: 1;
 }
 
-.sort-controls {
+.sort-group {
   display: flex;
-  align-items: center;
   gap: 4px;
+  align-items: center;
 }
 
 .action-btn {
-  width: 36px;
-  height: 36px;
+  height: 32px;
   border: 1px solid var(--border-color);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--bg-card);
-  font-size: 18px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
-  flex-shrink: 0;
+  min-width: 32px;
+  padding: 0 10px;
 }
 
 .action-btn:hover {
   border-color: var(--accent-color);
-  background: var(--bg-hover);
+  background: var(--accent-color);
+  color: white;
 }
 
 .action-btn.active {
@@ -669,66 +764,111 @@ onUnmounted(() => {
 }
 
 .sort-btn {
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 18px;
+  height: 32px;
+  border: 1px solid;
+  border-radius: 16px;
   background: var(--bg-card);
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-primary);
-  white-space: nowrap;
-  flex-shrink: 0;
+  padding: 0 12px;
+  gap: 4px;
+  font-weight: 500;
+  min-width: 60px;
 }
 
 .sort-btn:hover {
-  border-color: var(--accent-color);
-  background: var(--bg-hover);
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color) !important;
 }
 
-.sort-btn.active {
-  border-color: currentColor;
-  background: rgba(var(--accent-color-rgb), 0.1);
-}
-
-.sort-icon {
-  font-size: 16px;
-}
-
-.sort-label {
+.sort-text {
   font-size: 13px;
   font-weight: 500;
 }
 
-.order-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 18px;
-  background: var(--accent-color);
-  color: white;
-  font-size: 16px;
-  font-weight: bold;
+.sort-order-btn {
+  height: 32px;
+  min-width: 32px;
+  border: 1px solid;
+  border-radius: 16px;
+  background: var(--bg-card);
+  font-size: 14px;
   cursor: pointer;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.2s ease;
+  color: var(--text-primary);
+  padding: 0;
+  font-weight: bold;
 }
 
-.order-btn:hover {
-  opacity: 0.9;
+.sort-order-btn:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color) !important;
+}
+
+.sort-order-icon {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.status-pill-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.status-pill {
+  height: 32px;
+  padding: 6px 12px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 70px;
+}
+
+.status-pill:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.status-pill.status-latest {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #065f46;
+}
+
+.status-pill.status-latest:hover {
+  background: #065f46;
+  color: white;
+  border-color: #065f46;
 }
 
 .filter-actions {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .filter-action-btn {
@@ -765,7 +905,7 @@ onUnmounted(() => {
   border-radius: 10px;
   padding: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  margin-top: 8px;
+  margin-top: 0;
   animation: slideDown 0.2s ease;
   border: 1px solid var(--border-color);
 }
@@ -1086,38 +1226,42 @@ onUnmounted(() => {
 /* 响应式调整 */
 @media (max-width: 768px) {
   .header-section {
-    padding: 8px 12px 8px;
+    padding: 6px 12px 6px;
   }
   
   .content-area {
-    padding: 6px 10px 12px;
+    padding: 6px 12px 12px;
     padding-bottom: 120px;
   }
   
   .action-btn {
-    width: 32px;
     height: 32px;
-    font-size: 16px;
+    min-width: 32px;
+    font-size: 13px;
   }
   
   .sort-btn {
     height: 32px;
     padding: 0 10px;
     font-size: 12px;
+    min-width: 55px;
   }
   
-  .order-btn {
-    width: 32px;
+  .sort-order-btn {
+    min-width: 32px;
     height: 32px;
     font-size: 14px;
   }
   
-  .sort-icon {
-    font-size: 14px;
+  .sort-text {
+    font-size: 12px;
   }
   
-  .sort-label {
+  .status-pill {
+    height: 30px;
+    padding: 5px 10px;
     font-size: 12px;
+    min-width: 55px;
   }
   
   .filter-action-btn {
@@ -1127,7 +1271,7 @@ onUnmounted(() => {
   
   .filter-section {
     padding: 8px;
-    margin-top: 6px;
+    margin-top: 0;
   }
   
   .filter-row {
@@ -1201,7 +1345,7 @@ onUnmounted(() => {
     gap: 4px;
   }
   
-  .sort-controls {
+  .sort-group {
     gap: 2px;
   }
   
@@ -1321,7 +1465,8 @@ onUnmounted(() => {
 }
 
 :root.dark .action-btn.active,
-:root.dark .sort-btn:hover {
+:root.dark .sort-btn:hover,
+:root.dark .sort-order-btn:hover {
   background-color: var(--accent-color);
   color: white !important;
   border-color: var(--accent-color) !important;
@@ -1333,9 +1478,22 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
-:root.dark .current-sort-return,
-:root.dark .client-count {
-  background: transparent;
+:root.dark .status-pill {
+  background: var(--bg-hover);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+:root.dark .status-pill.status-latest {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border-color: #4ade80;
+}
+
+:root.dark .status-pill.status-latest:hover {
+  background: #4ade80;
+  color: #1e293b;
+  border-color: #4ade80;
 }
 
 :root.dark .fund-name {

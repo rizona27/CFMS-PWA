@@ -431,13 +431,13 @@ const outdatedLatestDate = computed(() => {
 })
 
 const statusText = computed(() => {
-  if (holdings.value.length === 0) return '暂无数据'
+  if (holdings.value.length === 0) return '无数据'
   
   const formatter = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' })
   
   if (hasLatestNavDate.value) {
     const prevDateString = formatter.format(previousWorkday.value)
-    return `最新: ${prevDateString}`
+    return `最新净值: ${prevDateString}`
   } else {
     if (outdatedLatestDate.value) {
       const outdatedDateString = formatter.format(outdatedLatestDate.value)
@@ -661,10 +661,10 @@ const handleRefresh = async () => {
             currentNav: fundInfo.nav,
             navDate: new Date(fundInfo.navDate),
             isValid: true,
-            navReturn1m: fundInfo.returns?.navReturn1m,
-            navReturn3m: fundInfo.returns?.navReturn3m,
-            navReturn6m: fundInfo.returns?.navReturn6m,
-            navReturn1y: fundInfo.returns?.navReturn1y
+            navReturn1m: fundInfo.returns?.navReturn1m ?? holding.navReturn1m,
+            navReturn3m: fundInfo.returns?.navReturn3m ?? holding.navReturn3m,
+            navReturn6m: fundInfo.returns?.navReturn6m ?? holding.navReturn6m,
+            navReturn1y: fundInfo.returns?.navReturn1y ?? holding.navReturn1y
           })
         }
       } catch (error) {

@@ -433,13 +433,13 @@ const outdatedFundCodes = computed(() => {
 })
 
 const statusText = computed(() => {
-  if (holdings.value.length === 0) return '暂无数据'
+  if (holdings.value.length === 0) return '无数据'
   
   const formatter = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' })
   
   if (hasLatestNavDate.value) {
     const prevDateString = formatter.format(previousWorkday.value)
-    return `最新: ${prevDateString}`
+    return `最新净值: ${prevDateString}`
   } else {
     if (outdatedLatestDate.value) {
       const outdatedDateString = formatter.format(outdatedLatestDate.value)
@@ -1280,7 +1280,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-shrink: 0;
 }
 
 .current-sort-return {
