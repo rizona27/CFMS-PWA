@@ -1,270 +1,172 @@
 <template>
   <div class="edit-holding-form">
-    <!-- 表单头部 -->
-    <div class="form-header">
-      <div class="header-content">
-        <h2 class="form-title">{{ formData.client_name || '新持仓' }}</h2>
-        <p class="form-subtitle" v-if="holding">
-          {{ holding.fund_name }} [{{ holding.fund_code }}]
-        </p>
-      </div>
-      <button class="close-button" @click="handleCancel">
-        <span class="close-icon">×</span>
+    <!-- 固定工具栏 -->
+    <div class="form-toolbar">
+      <button class="back-button-pill" @click="handleCancel">
+        <span class="back-icon">←</span>
+        返回
       </button>
     </div>
     
-    <!-- 表单内容 -->
+    <!-- 表单内容区域（可滚动） -->
     <div class="form-scroll">
       <form @submit.prevent="handleSubmit" class="holding-form">
         <!-- 客户信息部分 -->
         <div class="form-section">
-          <div class="section-header">
-            <div class="section-icon">👤</div>
-            <h3 class="section-title">客户信息</h3>
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label for="clientName" class="form-label">
-                <span class="label-icon">📝</span>
-                客户姓名 *
-              </label>
+          <div class="input-group" :class="{ 'error': errors.client_name }">
+            <div class="input-icon-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C15.3137 2 18 4.68629 18 8C18 11.3137 15.3137 14 12 14C8.68629 14 6 11.3137 6 8C6 4.68629 8.68629 2 12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 21V19C4 17.9391 4.42143 16.9217 5.17157 16.1716C5.92172 15.4214 6.93913 15 8 15H16C17.0609 15 18.0783 15.4214 18.8284 16.1716C19.5786 16.9217 20 17.9391 20 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <input
-                id="clientName"
                 v-model="formData.client_name"
                 type="text"
+                placeholder="客户姓名 (必填, 2-10字符)"
                 class="form-input"
                 :class="{ 'error': errors.client_name }"
-                placeholder="请输入客户姓名"
                 @input="validateClientName"
+                @blur="formatClientName"
+                maxlength="10"
                 required
               />
-              <div v-if="errors.client_name" class="error-message">
-                {{ errors.client_name }}
-              </div>
             </div>
-            
-            <div class="form-group">
-              <label for="clientId" class="form-label">
-                <span class="label-icon">🔢</span>
-                客户编号
-              </label>
+            <p class="error-message" v-if="errors.client_name">{{ errors.client_name }}</p>
+          </div>
+          
+          <div class="input-group" :class="{ 'error': errors.client_id }">
+            <div class="input-icon-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 7C10 8.10457 9.10457 9 8 9C6.89543 9 6 8.10457 6 7C6 5.89543 6.89543 5 8 5C9.10457 5 10 5.89543 10 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 8V14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 11H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <input
-                id="clientId"
                 v-model="formData.client_id"
                 type="text"
+                inputmode="numeric"
+                placeholder="客户号 (选填, 最多12位数字)"
                 class="form-input"
                 :class="{ 'error': errors.client_id }"
-                placeholder="最多12位数字"
                 maxlength="12"
                 @input="validateClientId"
               />
-              <div v-if="errors.client_id" class="error-message">
-                {{ errors.client_id }}
-              </div>
             </div>
+            <p class="error-message" v-if="errors.client_id">{{ errors.client_id }}</p>
           </div>
         </div>
+        
+        <hr class="section-divider" />
         
         <!-- 基金信息部分 -->
         <div class="form-section">
-          <div class="section-header">
-            <div class="section-icon">📈</div>
-            <h3 class="section-title">基金信息</h3>
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label for="fundCode" class="form-label">
-                <span class="label-icon">#️⃣</span>
-                基金代码 *
-              </label>
+          <div class="input-group" :class="{ 'error': errors.fund_code }">
+            <div class="input-icon-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <input
-                id="fundCode"
                 v-model="formData.fund_code"
                 type="text"
+                inputmode="numeric"
+                placeholder="基金代码 (必填, 6位数字)"
                 class="form-input"
                 :class="{ 'error': errors.fund_code }"
-                placeholder="6位数字"
-                maxlength="6"
                 @input="validateFundCode"
+                maxlength="6"
                 required
               />
-              <div v-if="errors.fund_code" class="error-message">
-                {{ errors.fund_code }}
-              </div>
             </div>
-            
-            <div class="form-group">
-              <label for="fundName" class="form-label">
-                <span class="label-icon">🏷️</span>
-                基金名称
-              </label>
+            <p class="error-message" v-if="errors.fund_code">{{ errors.fund_code }}</p>
+          </div>
+          
+          <div class="input-group">
+            <div class="input-icon-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V5C19 3.89543 18.1046 3 17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 13H15M9 9H15M10 17H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <input
-                id="fundName"
                 v-model="formData.fund_name"
                 type="text"
                 class="form-input"
-                :readonly="true"
-                placeholder="自动获取基金名称"
-                style="background-color: var(--bg-hover); cursor: not-allowed;"
+                readonly
+                placeholder="基金名称 (根据基金代码自动获取)"
+                style="color: var(--text-secondary);"
               />
-              <div class="hint-message">
-                基金名称根据基金代码自动获取，不可编辑
-              </div>
+            </div>
+            <div class="hint-message">
+              基金名称根据基金代码自动获取
             </div>
           </div>
         </div>
+        
+        <hr class="section-divider" />
         
         <!-- 购买信息部分 -->
         <div class="form-section">
-          <div class="section-header">
-            <div class="section-icon">💰</div>
-            <h3 class="section-title">购买信息</h3>
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label for="purchaseAmount" class="form-label">
-                <span class="label-icon">💵</span>
-                购买金额 (元) *
-              </label>
+          <div class="input-group" :class="{ 'error': errors.purchase_amount }">
+            <div class="input-icon-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 16V8M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <input
-                id="purchaseAmount"
                 v-model.number="formData.purchase_amount"
                 type="number"
+                inputmode="decimal"
+                placeholder="购买金额 (¥)"
                 class="form-input"
                 :class="{ 'error': errors.purchase_amount }"
-                placeholder="0.00"
-                step="0.01"
-                min="0"
                 @input="validateAmount('purchase_amount')"
+                @blur="formatPurchaseAmount"
+                step="0.01"
+                min="0.01"
                 required
               />
-              <div v-if="errors.purchase_amount" class="error-message">
-                {{ errors.purchase_amount }}
-              </div>
             </div>
-            
-            <div class="form-group">
-              <label for="purchaseShares" class="form-label">
-                <span class="label-icon">📊</span>
-                购买份额 *
-              </label>
+            <p class="error-message" v-if="errors.purchase_amount">{{ errors.purchase_amount }}</p>
+          </div>
+          
+          <div class="input-group" :class="{ 'error': errors.purchase_shares }">
+            <div class="input-icon-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <input
-                id="purchaseShares"
                 v-model.number="formData.purchase_shares"
                 type="number"
+                inputmode="decimal"
+                placeholder="购买份额 (份)"
                 class="form-input"
                 :class="{ 'error': errors.purchase_shares }"
-                placeholder="0.0000"
-                step="0.0001"
-                min="0"
                 @input="validateAmount('purchase_shares')"
+                @blur="formatPurchaseShares"
+                step="0.01"
+                min="0.01"
                 required
               />
-              <div v-if="errors.purchase_shares" class="error-message">
-                {{ errors.purchase_shares }}
-              </div>
             </div>
+            <p class="error-message" v-if="errors.purchase_shares">{{ errors.purchase_shares }}</p>
           </div>
           
-          <div class="form-group">
-            <label for="purchaseDate" class="form-label">
-              <span class="label-icon">📅</span>
-              购买日期 *
-            </label>
-            <input
-              id="purchaseDate"
-              v-model="formData.purchase_date"
-              type="date"
-              class="form-input"
-              :class="{ 'error': errors.purchase_date }"
-              :max="maxDate"
-              @change="validateDate"
-              required
-            />
-            <div v-if="errors.purchase_date" class="error-message">
-              {{ errors.purchase_date }}
-            </div>
-          </div>
-        </div>
-        
-        <!-- 净值信息部分 -->
-        <div class="form-section">
-          <div class="section-header">
-            <div class="section-icon">📉</div>
-            <h3 class="section-title">净值信息</h3>
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label for="currentNav" class="form-label">
-                <span class="label-icon">📊</span>
-                当前净值
-              </label>
+          <div class="input-group">
+            <div class="date-input-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <input
-                id="currentNav"
-                v-model.number="formData.current_nav"
-                type="number"
-                class="form-input"
-                placeholder="自动获取"
-                step="0.0001"
-                min="0"
-              />
-            </div>
-            
-            <div class="form-group">
-              <label for="navDate" class="form-label">
-                <span class="label-icon">📅</span>
-                净值日期
-              </label>
-              <input
-                id="navDate"
-                v-model="formData.nav_date"
+                v-model="formData.purchase_date"
                 type="date"
-                class="form-input"
+                class="form-input date-input-native-styled"
                 :max="maxDate"
+                @change="validateDate"
+                required
               />
+              <span class="date-display">{{ formattedDate }}</span>
+              <span class="date-select-arrow">▼</span>
             </div>
+            <p class="error-message" v-if="errors.purchase_date">{{ errors.purchase_date }}</p>
           </div>
         </div>
         
-        <!-- 其他信息部分 -->
+        <hr class="section-divider" />
+        
+        <!-- 备注信息部分 -->
         <div class="form-section">
-          <div class="section-header">
-            <div class="section-icon">⚙️</div>
-            <h3 class="section-title">其他信息</h3>
-          </div>
-          
-          <div class="form-group">
-            <div class="checkbox-group">
-              <label class="checkbox-label">
-                <input
-                  type="checkbox"
-                  v-model="formData.is_pinned"
-                  class="checkbox-input"
-                />
-                <span class="checkbox-custom"></span>
-                <span class="checkbox-text">置顶此持仓</span>
-              </label>
+          <div class="input-group">
+            <div class="input-icon-wrapper-textarea">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <textarea
+                v-model="formData.remarks"
+                class="form-textarea"
+                placeholder="备注 (最多255个字符)"
+                maxlength="255"
+                rows="1"
+              ></textarea>
             </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="remarks" class="form-label">
-              <span class="label-icon">📝</span>
-              备注
-            </label>
-            <textarea
-              id="remarks"
-              v-model="formData.remarks"
-              class="form-textarea"
-              placeholder="可选，最多255个字符"
-              maxlength="255"
-              rows="3"
-            ></textarea>
-            <div class="char-count">
+            <div class="char-counter">
               {{ formData.remarks?.length || 0 }}/255
             </div>
           </div>
@@ -274,22 +176,25 @@
         <div class="form-actions">
           <button
             type="button"
-            class="btn btn-secondary"
-            @click="handleCancel"
+            class="form-button cancel"
+            @click="handleReset"
             :disabled="isSubmitting"
           >
-            取消
+            重置
           </button>
           
           <button
             type="submit"
-            class="btn btn-primary"
+            class="form-button submit"
+            :class="{ 'disabled': !isFormValid || isSubmitting }"
             :disabled="!isFormValid || isSubmitting"
           >
-            <span v-if="isSubmitting">保存中...</span>
-            <span v-else>保存修改</span>
+            <span v-if="isSubmitting" class="loading-spinner"></span>
+            {{ isSubmitting ? '保存中...' : '保存修改' }}
           </button>
         </div>
+        
+        <div class="form-spacer"></div>
       </form>
     </div>
   </div>
@@ -329,8 +234,6 @@ const formData = ref({
   purchase_date: '',
   current_nav: 0,
   nav_date: '',
-  is_pinned: false,
-  pinned_timestamp: null as string | null,
   remarks: '',
   created_at: '',
   updated_at: '',
@@ -351,9 +254,49 @@ const errors = ref({
 })
 
 // ========== 辅助函数 ==========
+// 格式化购买金额
+const formatPurchaseAmount = () => {
+  if (formData.value.purchase_amount) {
+    const amount = parseFloat(formData.value.purchase_amount.toString())
+    if (!isNaN(amount)) {
+      formData.value.purchase_amount = parseFloat(amount.toFixed(2))
+    }
+  }
+}
+
+// 格式化购买份额
+const formatPurchaseShares = () => {
+  if (formData.value.purchase_shares) {
+    const shares = parseFloat(formData.value.purchase_shares.toString())
+    if (!isNaN(shares)) {
+      formData.value.purchase_shares = parseFloat(shares.toFixed(4))
+    }
+  }
+}
+
+// 格式化客户姓名
+const formatClientName = () => {
+  formData.value.client_name = formData.value.client_name.trim()
+}
+
+// 格式化日期显示
+const formattedDate = computed(() => {
+  if (!formData.value.purchase_date) return '购买日期 (必选)'
+  try {
+    const date = new Date(formData.value.purchase_date + 'T00:00:00')
+    if (isNaN(date.getTime())) return '日期格式错误'
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  } catch {
+    return formData.value.purchase_date
+  }
+})
+
 // 加载表单数据
 const loadFormData = (holding: any) => {
-  // 处理从dataStore来的数据格式
   if (holding) {
     formData.value = {
       id: holding.id || crypto.randomUUID(),
@@ -374,8 +317,6 @@ const loadFormData = (holding: any) => {
           ? holding.navDate.toISOString().split('T')[0]
           : holding.navDate.split('T')[0])
         : getTodayDate(),
-      is_pinned: holding.isPinned || holding.is_pinned || false,
-      pinned_timestamp: holding.pinnedTimestamp || holding.pinned_timestamp || null,
       remarks: holding.remarks || '',
       created_at: holding.created_at || new Date().toISOString().replace('T', ' ').substring(0, 19),
       updated_at: holding.updated_at || new Date().toISOString().replace('T', ' ').substring(0, 19),
@@ -384,6 +325,10 @@ const loadFormData = (holding: any) => {
       nav_return_6m: holding.navReturn6m || holding.nav_return_6m,
       nav_return_1y: holding.navReturn1y || holding.nav_return_1y
     }
+    
+    // 格式化数值显示
+    formatPurchaseAmount()
+    formatPurchaseShares()
   }
 }
 
@@ -407,8 +352,6 @@ const resetForm = () => {
     purchase_date: now,
     current_nav: 0,
     nav_date: now,
-    is_pinned: false,
-    pinned_timestamp: null,
     remarks: '',
     created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
     updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
@@ -561,7 +504,7 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // 准备提交数据 - 确保所有字段都有值
+    // 准备提交数据
     const updatedData = {
       ...formData.value,
       updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
@@ -575,9 +518,7 @@ const handleSubmit = async () => {
     // 记录日志
     dataStore.addLog(`编辑持仓: ${updatedData.client_name} - ${updatedData.fund_code}`, 'info')
     
-    console.log('提交持仓数据:', updatedData)
-    
-    // 触发保存事件（父组件会处理实际的数据存储）
+    // 触发保存事件
     emit('save', updatedData)
     
   } catch (error) {
@@ -588,10 +529,15 @@ const handleSubmit = async () => {
   }
 }
 
-// 取消编辑
+// 取消编辑，返回上一页
 const handleCancel = () => {
-  if (confirm('确定要取消编辑吗？未保存的修改将会丢失。')) {
-    emit('cancel')
+  emit('cancel')
+}
+
+// 重置表单
+const handleReset = () => {
+  if (confirm('确定要重置表单吗？所有修改将会丢失。')) {
+    loadFormData(props.holding)
   }
 }
 
@@ -600,8 +546,6 @@ const handleCancel = () => {
 watch(() => props.holding, (newHolding) => {
   if (newHolding) {
     loadFormData(newHolding)
-  } else {
-    resetForm()
   }
 }, { immediate: true })
 
@@ -618,282 +562,321 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-height: 90vh;
+  max-height: 85vh;
   background: var(--bg-card);
   border-radius: 16px;
   overflow: hidden;
 }
 
-.form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
-  color: white;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+/* 固定工具栏 */
+.form-toolbar {
   flex-shrink: 0;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
+  z-index: 10;
 }
 
-.header-content {
-  flex: 1;
-}
-
-.form-title {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 4px;
-}
-
-.form-subtitle {
-  font-size: 14px;
-  opacity: 0.9;
-  margin: 0;
-}
-
-.close-button {
-  width: 36px;
-  height: 36px;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 50%;
-  color: white;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
+/* 返回按钮 - 药丸形状 */
+.back-button-pill {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 20px;
+  color: var(--text-primary, #1e293b);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.close-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
+.back-button-pill:hover {
+  background: var(--accent-color, #3b82f6);
+  color: white;
+  border-color: var(--accent-color, #3b82f6);
+  transform: translateX(-2px);
 }
 
+.back-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* 表单内容区域 */
 .form-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
-  max-height: calc(90vh - 200px);
+  padding: 20px;
+  max-height: calc(85vh - 80px);
 }
 
 .holding-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
 .form-section {
   background: var(--bg-primary);
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 10px;
+  padding: 16px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-color);
+.section-divider {
+  border: 0;
+  height: 1px;
+  background: var(--border-color);
+  margin: 8px 0;
 }
 
-.section-icon {
-  font-size: 20px;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(var(--accent-color-rgb), 0.1);
-  border-radius: 8px;
-  color: var(--accent-color);
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+.input-group {
   margin-bottom: 16px;
+  position: relative;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.input-group:last-child {
+  margin-bottom: 0;
 }
 
-.form-label {
+.input-icon-wrapper {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.label-icon {
-  font-size: 14px;
-  opacity: 0.7;
-}
-
-.form-input,
-.form-textarea {
   width: 100%;
-  padding: 12px;
-  font-size: 14px;
-  color: var(--text-primary);
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-hover-light);
   transition: all 0.2s ease;
+  padding: 0 16px 0 8px;
+  min-height: 48px;
 }
 
-.form-input:focus,
-.form-textarea:focus {
-  outline: none;
+.input-icon-wrapper-textarea {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-hover-light);
+  transition: all 0.2s ease;
+  padding: 12px 16px 12px 8px;
+  min-height: 48px;
+}
+
+.input-icon-wrapper:focus-within,
+.input-icon-wrapper-textarea:focus-within {
   border-color: var(--accent-color);
   box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.1);
+}
+
+.input-icon {
+  flex-shrink: 0;
+  color: var(--accent-color);
+  margin-right: 8px;
+}
+
+.input-group.error .input-icon-wrapper,
+.input-group.error .input-icon-wrapper-textarea {
+  border-color: #ff416c;
+  background: rgba(255, 65, 108, 0.05);
+}
+
+.input-group.error .input-icon-wrapper:focus-within,
+.input-group.error .input-icon-wrapper-textarea:focus-within {
+  box-shadow: 0 0 0 3px rgba(255, 65, 108, 0.2);
+}
+
+.form-input {
+  flex-grow: 1;
+  padding: 12px 0;
+  border: none;
+  font-size: 16px;
+  color: var(--text-primary);
+  background: transparent;
+  outline: none;
+  box-sizing: border-box;
+  min-height: 24px;
+}
+
+.form-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .form-input.error {
   border-color: #ef4444;
 }
 
-.form-input.error:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+.date-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-hover-light);
+  transition: all 0.2s ease;
+  padding: 0 16px 0 8px;
+  min-height: 48px;
+}
+
+.date-input-native-styled {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+}
+
+.date-display {
+  flex: 1;
+  padding: 12px 0 12px 0;
+  font-size: 16px;
+  color: var(--text-primary);
+  z-index: 1;
+  margin-left: 8px;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.date-select-arrow {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1;
+  z-index: 1;
+  margin-left: 8px;
+}
+
+.form-textarea {
+  flex-grow: 1;
+  padding: 0;
+  border: none;
+  font-size: 16px;
+  color: var(--text-primary);
+  background: transparent;
+  outline: none;
+  resize: none;
+  min-height: 24px;
+  max-height: 120px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.form-textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .error-message {
   font-size: 12px;
-  color: #ef4444;
-  margin-top: 2px;
+  color: #ff416c;
+  margin: 4px 0 0 0;
+  font-weight: 500;
+  padding-left: 28px;
 }
 
-.form-textarea {
-  resize: vertical;
-  min-height: 80px;
+.hint-message {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-style: italic;
+  padding-left: 28px;
 }
 
-.char-count {
+.char-counter {
+  text-align: right;
   font-size: 12px;
   color: var(--text-secondary);
-  text-align: right;
   margin-top: 4px;
-}
-
-.checkbox-group {
-  margin-top: 8px;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.checkbox-input {
-  display: none;
-}
-
-.checkbox-custom {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--border-color);
-  border-radius: 6px;
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-.checkbox-input:checked + .checkbox-custom {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
-}
-
-.checkbox-input:checked + .checkbox-custom::after {
-  content: '✓';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.checkbox-text {
-  font-size: 14px;
-  color: var(--text-primary);
-  font-weight: 500;
+  padding-right: 4px;
 }
 
 .form-actions {
   display: flex;
   gap: 12px;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-color);
+  padding: 16px 0 24px;
+  margin-top: 8px;
 }
 
-.btn {
+.form-button {
   flex: 1;
-  padding: 14px;
-  font-size: 16px;
-  font-weight: 600;
+  padding: 16px;
   border: none;
   border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-primary {
-  background: var(--accent-color);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--accent-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-secondary {
-  background: var(--bg-hover);
+.form-button.cancel {
+  background: var(--bg-hover-light);
   color: var(--text-primary);
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
 }
 
-.btn-secondary:hover:not(:disabled) {
-  background: var(--border-color);
+.form-button.cancel:hover:not(:disabled) {
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* 提示信息样式 */
-.hint-message {
-  font-size: 12px;
+.form-button.cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-button.submit {
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  color: white;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+}
+
+.form-button.submit:hover:not(.disabled):not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
+}
+
+.form-button.submit.disabled,
+.form-button.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--bg-hover-light);
   color: var(--text-secondary);
-  margin-top: 4px;
-  font-style: italic;
+  box-shadow: none;
+  transform: none;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.form-spacer {
+  height: 20px;
 }
 
 /* 滚动条样式 */
@@ -914,41 +897,164 @@ onMounted(() => {
   background: var(--text-secondary);
 }
 
+/* 深色模式适配 */
+:root.dark .form-toolbar {
+  background: var(--bg-card-dark);
+  border-color: var(--border-color-dark);
+}
+
+:root.dark .back-button-pill {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+  border-color: var(--border-color, #334155);
+  color: var(--text-primary, #f1f5f9);
+}
+
+:root.dark .back-button-pill:hover {
+  background: var(--accent-color, #60a5fa);
+  border-color: var(--accent-color, #60a5fa);
+}
+
+:root.dark .input-icon-wrapper,
+:root.dark .input-icon-wrapper-textarea,
+:root.dark .date-input-wrapper {
+  background: var(--bg-hover-dark);
+  border-color: var(--border-color-dark);
+}
+
+:root.dark .form-input,
+:root.dark .form-textarea,
+:root.dark .date-display {
+  color: var(--text-primary-dark);
+}
+
+:root.dark .form-button.cancel {
+  background: var(--bg-hover-dark);
+  color: var(--text-primary-dark);
+  border-color: var(--border-color-dark);
+}
+
+:root.dark .form-button.submit.disabled,
+:root.dark .form-button.submit:disabled {
+  background: var(--bg-hover-dark);
+  color: var(--text-secondary);
+}
+
 @media (max-width: 768px) {
   .edit-holding-form {
-    max-height: 85vh;
+    max-height: 90vh;
   }
   
-  .form-header {
-    padding: 16px;
+  .form-toolbar {
+    padding: 12px;
   }
   
-  .form-title {
-    font-size: 18px;
+  .back-button-pill {
+    padding: 6px 12px;
+    font-size: 13px;
   }
   
   .form-scroll {
     padding: 16px;
-    max-height: calc(85vh - 140px);
+    max-height: calc(90vh - 60px);
   }
   
   .form-section {
-    padding: 16px;
+    padding: 14px;
   }
   
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 12px;
+  .input-group {
+    margin-bottom: 14px;
+  }
+  
+  .input-icon-wrapper,
+  .input-icon-wrapper-textarea,
+  .date-input-wrapper {
+    padding: 0 14px 0 8px;
+    min-height: 44px;
+  }
+  
+  .input-icon-wrapper-textarea {
+    padding: 10px 14px 10px 8px;
+  }
+  
+  .form-input,
+  .form-textarea,
+  .date-display {
+    padding: 10px 0;
+    font-size: 15px;
   }
   
   .form-actions {
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
+    padding: 12px 0 16px;
   }
   
-  .btn {
+  .form-button {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .edit-holding-form {
+    border-radius: 12px;
+  }
+  
+  .form-toolbar {
+    padding: 10px;
+  }
+  
+  .back-button-pill {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  
+  .form-scroll {
+    padding: 14px;
+    max-height: calc(90vh - 50px);
+  }
+  
+  .form-section {
     padding: 12px;
-    font-size: 15px;
+    border-radius: 8px;
+  }
+  
+  .input-icon-wrapper,
+  .input-icon-wrapper-textarea,
+  .date-input-wrapper {
+    padding: 0 12px 0 8px;
+    min-height: 42px;
+  }
+  
+  .input-icon-wrapper-textarea {
+    padding: 8px 12px 8px 8px;
+  }
+  
+  .form-input,
+  .form-textarea,
+  .date-display {
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  
+  .form-textarea {
+    max-height: 100px;
+  }
+  
+  .form-button {
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+  
+  .error-message {
+    font-size: 11px;
+    padding-left: 24px;
+  }
+  
+  .hint-message {
+    font-size: 10px;
+    padding-left: 24px;
   }
 }
 </style>

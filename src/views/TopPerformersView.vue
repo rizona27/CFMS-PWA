@@ -178,8 +178,16 @@ const zeroProfitIndex = computed(() => {
   }
 })
 
-const getClientDisplayName = (clientName: string, clientID: string): string => {
-  return dataStore.getClientDisplayName(clientName, clientID)
+// 只显示客户名，不显示客户号
+const getClientNameOnly = (clientName: string): string => {
+  return dataStore.getClientDisplayName(clientName, '')
+}
+
+// 截断基金名称，超过6个字符用".."代替
+const truncateFundName = (name: string): string => {
+  if (!name) return ''
+  if (name.length <= 6) return name
+  return name.substring(0, 6) + '..'
 }
 
 const refreshData = () => {
@@ -387,177 +395,181 @@ onUnmounted(() => {
 
 <template>
   <div class="top-performers-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <div class="header-section">
-      <div class="header-row">
-        <div class="action-buttons">
-          <button
-            class="action-btn"
-            :class="{ active: isFilterExpanded }"
-            @click="toggleFilter"
-            :title="isFilterExpanded ? '隐藏筛选' : '显示筛选'"
-          >
-            {{ isFilterExpanded ? '✕' : '🔍' }}
-          </button>
-        </div>
-        
-        <div class="sort-controls-wrapper" :class="{ 'with-filter': isFilterExpanded }">
-          <div class="sort-controls">
+    <!-- 固定头部区域 -->
+    <div class="fixed-header">
+      <div class="header-section" :class="{ 'with-filter': isFilterExpanded }">
+        <div class="header-row">
+          <div class="action-buttons">
             <button
-              class="sort-btn"
-              :class="{ active: selectedSortKey !== 'none' }"
-              @click="cycleSortKey"
-              :style="{ color: selectedSortKey !== 'none' ? sortKeyColor : '' }"
+              class="action-btn"
+              :class="{ active: isFilterExpanded }"
+              @click="toggleFilter"
+              :title="isFilterExpanded ? '隐藏筛选' : '显示筛选'"
             >
-              <span class="sort-icon">{{ sortButtonIcon }}</span>
-              <span v-if="selectedSortKey !== 'none'" class="sort-label">
-                {{ sortKeyDisplay }}
-              </span>
+              {{ isFilterExpanded ? '✕' : '🔍' }}
             </button>
             
-            <button
-              v-if="selectedSortKey !== 'none'"
-              class="order-btn"
-              @click="toggleSortOrder"
-              :style="{ background: sortKeyColor }"
-            >
-              {{ sortOrder === 'ascending' ? '↑' : '↓' }}
+            <div class="sort-controls">
+              <button
+                class="sort-btn"
+                :class="{ active: selectedSortKey !== 'none' }"
+                @click="cycleSortKey"
+                :style="{ color: selectedSortKey !== 'none' ? sortKeyColor : '' }"
+              >
+                <span class="sort-icon">{{ sortButtonIcon }}</span>
+                <span v-if="selectedSortKey !== 'none'" class="sort-label">
+                  {{ sortKeyDisplay }}
+                </span>
+              </button>
+              
+              <button
+                v-if="selectedSortKey !== 'none'"
+                class="order-btn"
+                @click="toggleSortOrder"
+                :style="{ background: sortKeyColor }"
+              >
+                {{ sortOrder === 'ascending' ? '↑' : '↓' }}
+              </button>
+            </div>
+          </div>
+          
+          <div v-if="isFilterExpanded" class="filter-actions">
+            <button class="filter-action-btn reset" @click="resetFilters">
+              重置
+            </button>
+            <button class="filter-action-btn apply" @click="applyFilters">
+              应用
             </button>
           </div>
         </div>
         
-        <div v-if="isFilterExpanded" class="filter-actions">
-          <button class="filter-action-btn reset" @click="resetFilters">
-            重置
-          </button>
-          <button class="filter-action-btn apply" @click="applyFilters">
-            应用
-          </button>
-        </div>
-      </div>
-      
-      <div v-if="isFilterExpanded" class="filter-section">
-        <div class="filter-row">
-          <div class="filter-field">
-            <label class="filter-label">代码/名称</label>
-            <input
-              v-model="fundCodeFilterInput"
-              type="text"
-              placeholder="输入代码或名称"
-              class="filter-input"
-            />
-          </div>
-          <div class="filter-field">
-            <label class="filter-label">金额(万)</label>
-            <div class="range-inputs">
+        <div v-if="isFilterExpanded" class="filter-section">
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="filter-label">代码/名称</label>
               <input
-                v-model="minAmountInput"
-                type="number"
-                placeholder="最低"
-                class="filter-input range"
-              />
-              <span class="range-separator">-</span>
-              <input
-                v-model="maxAmountInput"
-                type="number"
-                placeholder="最高"
-                class="filter-input range"
+                v-model="fundCodeFilterInput"
+                type="text"
+                placeholder="输入代码或名称"
+                class="filter-input"
               />
             </div>
-          </div>
-        </div>
-        
-        <div class="filter-row">
-          <div class="filter-field">
-            <label class="filter-label">持有天数</label>
-            <div class="range-inputs">
-              <input
-                v-model="minDaysInput"
-                type="number"
-                placeholder="最低"
-                class="filter-input range"
-              />
-              <span class="range-separator">-</span>
-              <input
-                v-model="maxDaysInput"
-                type="number"
-                placeholder="最高"
-                class="filter-input range"
-              />
+            <div class="filter-field">
+              <label class="filter-label">金额(万)</label>
+              <div class="range-inputs">
+                <input
+                  v-model="minAmountInput"
+                  type="number"
+                  placeholder="最低"
+                  class="filter-input range"
+                />
+                <span class="range-separator">-</span>
+                <input
+                  v-model="maxAmountInput"
+                  type="number"
+                  placeholder="最高"
+                  class="filter-input range"
+                />
+              </div>
             </div>
           </div>
-          <div class="filter-field">
-            <label class="filter-label">收益率(%)</label>
-            <div class="range-inputs">
-              <input
-                v-model="minProfitInput"
-                type="number"
-                placeholder="最低"
-                class="filter-input range"
-              />
-              <span class="range-separator">-</span>
-              <input
-                v-model="maxProfitInput"
-                type="number"
-                placeholder="最高"
-                class="filter-input range"
-              />
+          
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="filter-label">持有天数</label>
+              <div class="range-inputs">
+                <input
+                  v-model="minDaysInput"
+                  type="number"
+                  placeholder="最低"
+                  class="filter-input range"
+                />
+                <span class="range-separator">-</span>
+                <input
+                  v-model="maxDaysInput"
+                  type="number"
+                  placeholder="最高"
+                  class="filter-input range"
+                />
+              </div>
+            </div>
+            <div class="filter-field">
+              <label class="filter-label">收益率(%)</label>
+              <div class="range-inputs">
+                <input
+                  v-model="minProfitInput"
+                  type="number"
+                  placeholder="最低"
+                  class="filter-input range"
+                />
+                <span class="range-separator">-</span>
+                <input
+                  v-model="maxProfitInput"
+                  type="number"
+                  placeholder="最高"
+                  class="filter-input range"
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
     
-    <div class="content-area">
-      <div v-if="isLoading" class="loading-state">
-        <div class="spinner"></div>
-        <p>加载中...</p>
-      </div>
-      
-      <div v-else-if="precomputedHoldings.length === 0" class="empty-state">
-        <div class="empty-icon">🏆</div>
-        <h3>当前没有数据</h3>
-        <p>请导入数据开始使用</p>
-      </div>
-      
-      <div v-else class="performers-table">
-        <div class="table-header">
-          <div class="header-cell number">#</div>
-          <div class="header-cell code-name">代码/名称</div>
-          <div class="header-cell amount">金额(万)</div>
-          <div class="header-cell profit">收益(万)</div>
-          <div class="header-cell days">天数</div>
-          <div class="header-cell rate">收益率(%)</div>
-          <div class="header-cell client">客户</div>
+    <!-- 可滚动的内容区域 -->
+    <div class="content-wrapper">
+      <div class="content-area">
+        <div v-if="isLoading" class="loading-state">
+          <div class="spinner"></div>
+          <p>加载中...</p>
         </div>
         
-        <div class="table-body">
-          <div
-            v-for="(item, index) in filteredAndSortedHoldings"
-            :key="item.holding.id"
-            class="table-row"
-            :class="{ 'zero-profit-divider': zeroProfitIndex === index }"
-          >
-            <div class="row-cell number">{{ index + 1 }}.</div>
-            <div class="row-cell code-name">
-              <div class="fund-name">{{ item.holding.fundName }}</div>
-              <div class="fund-code">{{ item.holding.fundCode }}</div>
-            </div>
-            <div class="row-cell amount">{{ formatAmountInTenThousands(item.holding.purchaseAmount) }}</div>
-            <div class="row-cell profit" :style="{ color: getValueColor(item.profit.absolute) }">
-              {{ formatAmountInTenThousands(item.profit.absolute) }}
-            </div>
-            <div class="row-cell days">{{ item.daysHeld }}</div>
-            <div class="row-cell rate" :style="{ color: getValueColor(item.profit.annualized) }">
-              {{ item.profit.annualized.toFixed(2) }}
-            </div>
-            <div class="row-cell client">
-              {{ getClientDisplayName(item.holding.clientName, item.holding.clientID) }}
+        <div v-else-if="precomputedHoldings.length === 0" class="empty-state">
+          <div class="empty-icon">🏆</div>
+          <h3>当前没有数据</h3>
+          <p>请导入数据开始使用</p>
+        </div>
+        
+        <div v-else class="performers-table-container">
+          <div class="table-header">
+            <div class="header-cell number">#</div>
+            <div class="header-cell code-name">代码/名称</div>
+            <div class="header-cell amount">金额(万)</div>
+            <div class="header-cell profit">收益(万)</div>
+            <div class="header-cell days">天数</div>
+            <div class="header-cell rate">收益率(%)</div>
+            <div class="header-cell client">客户</div>
+          </div>
+          
+          <div class="table-body">
+            <div
+              v-for="(item, index) in filteredAndSortedHoldings"
+              :key="item.holding.id"
+              class="table-row"
+              :class="{ 'zero-profit-divider': zeroProfitIndex === index }"
+            >
+              <div class="row-cell number">{{ index + 1 }}.</div>
+              <div class="row-cell code-name">
+                <div class="fund-name">{{ truncateFundName(item.holding.fundName) }}</div>
+                <div class="fund-code">{{ item.holding.fundCode }}</div>
+              </div>
+              <div class="row-cell amount">{{ formatAmountInTenThousands(item.holding.purchaseAmount) }}</div>
+              <div class="row-cell profit" :style="{ color: getValueColor(item.profit.absolute) }">
+                {{ formatAmountInTenThousands(item.profit.absolute) }}
+              </div>
+              <div class="row-cell days">{{ item.daysHeld }}</div>
+              <div class="row-cell rate" :style="{ color: getValueColor(item.profit.annualized) }">
+                {{ item.profit.annualized.toFixed(2) }}
+              </div>
+              <div class="row-cell client">
+                {{ getClientNameOnly(item.holding.clientName) }}
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div v-if="filteredAndSortedHoldings.length === 0" class="no-results">
-          没有符合筛选条件的记录
+          
+          <div v-if="filteredAndSortedHoldings.length === 0" class="no-results">
+            没有符合筛选条件的记录
+          </div>
         </div>
       </div>
     </div>
@@ -570,47 +582,63 @@ onUnmounted(() => {
 
 <style scoped>
 .top-performers-view {
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: var(--bg-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   transition: background-color 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 固定头部 */
+.fixed-header {
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  z-index: 100;
+  position: relative;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: var(--bg-primary);
 }
 
 .header-section {
-  background: var(--bg-primary);
-  padding: 16px 16px 12px;
+  padding: 8px 16px 8px;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  background: var(--bg-primary);
+  position: relative;
+  z-index: 100;
+}
+
+.header-section.with-filter {
+  padding-bottom: 8px;
 }
 
 .header-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
   gap: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .action-buttons {
   display: flex;
   gap: 8px;
-}
-
-.sort-controls-wrapper {
+  align-items: center;
   flex: 1;
-  display: flex;
-}
-
-.sort-controls-wrapper.with-filter {
-  flex: 0;
-  margin-left: auto;
 }
 
 .sort-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .action-btn {
@@ -626,6 +654,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   color: var(--text-primary);
+  flex-shrink: 0;
 }
 
 .action-btn:hover {
@@ -640,17 +669,20 @@ onUnmounted(() => {
 }
 
 .sort-btn {
-  padding: 6px 12px;
+  height: 36px;
+  padding: 0 12px;
   border: 1px solid var(--border-color);
   border-radius: 18px;
   background: var(--bg-card);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sort-btn:hover {
@@ -668,38 +700,46 @@ onUnmounted(() => {
 }
 
 .sort-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .order-btn {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 50%;
+  border-radius: 18px;
   background: var(--accent-color);
   color: white;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.order-btn:hover {
+  opacity: 0.9;
 }
 
 .filter-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .filter-action-btn {
-  padding: 6px 12px;
+  padding: 8px 16px;
   border: none;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .filter-action-btn.reset {
@@ -723,10 +763,11 @@ onUnmounted(() => {
 .filter-section {
   background: var(--bg-card);
   border-radius: 10px;
-  padding: 12px;
+  padding: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin-top: 8px;
   animation: slideDown 0.2s ease;
+  border: 1px solid var(--border-color);
 }
 
 :root.dark .filter-section {
@@ -740,8 +781,8 @@ onUnmounted(() => {
 
 .filter-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .filter-row:last-child {
@@ -757,14 +798,15 @@ onUnmounted(() => {
   font-size: 11px;
   color: var(--text-secondary);
   margin-bottom: 3px;
+  font-weight: 500;
 }
 
 .filter-input {
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   outline: none;
   transition: border-color 0.2s ease;
   background: var(--bg-card);
@@ -778,26 +820,41 @@ onUnmounted(() => {
 .range-inputs {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .filter-input.range {
   flex: 1;
   text-align: center;
-  padding: 8px 6px;
+  padding: 7px 4px;
 }
 
 .range-separator {
   color: var(--text-secondary);
-  padding: 0 4px;
+  padding: 0 3px;
+}
+
+/* 可滚动内容区域 */
+.content-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 100px;
 }
 
 .content-area {
-  padding: 12px;
-  min-height: calc(100vh - 120px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 16px 16px;
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
+  overscroll-behavior: contain;
+  padding-bottom: 120px;
 }
 
 .loading-state {
@@ -857,36 +914,44 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
-.performers-table {
+.performers-table-container {
   background: var(--bg-card);
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
   border: 1px solid var(--border-color);
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
 }
 
-:root.dark .performers-table {
+:root.dark .performers-table-container {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .table-header {
   display: grid;
-  grid-template-columns: 0.5fr 1.5fr 0.8fr 0.8fr 0.6fr 0.8fr 1fr;
+  grid-template-columns: 0.5fr 1.4fr 0.8fr 1.1fr 0.6fr 1.1fr 1fr;
   background: var(--bg-hover);
   border-bottom: 1px solid var(--border-color);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   transition: all 0.3s ease;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
 .header-cell {
-  padding: 10px 6px;
+  padding: 10px 4px;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-cell.number {
@@ -910,9 +975,11 @@ onUnmounted(() => {
 
 .table-row {
   display: grid;
-  grid-template-columns: 0.5fr 1.5fr 0.8fr 0.8fr 0.6fr 0.8fr 1fr;
+  grid-template-columns: 0.5fr 1.4fr 0.8fr 1.1fr 0.6fr 1.1fr 1fr;
   border-bottom: 1px solid var(--bg-hover);
   transition: background 0.2s ease;
+  align-items: center;
+  min-height: 40px;
 }
 
 .table-row:hover {
@@ -924,12 +991,16 @@ onUnmounted(() => {
 }
 
 .row-cell {
-  padding: 10px 6px;
+  padding: 8px 4px;
   font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 38px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 .row-cell.number {
@@ -945,23 +1016,26 @@ onUnmounted(() => {
   justify-content: center;
   gap: 2px;
   padding-left: 4px;
+  overflow: hidden;
 }
 
 .fund-name {
-  font-size: 10px;
-  color: var(--text-secondary);
+  font-size: 11px;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
   line-height: 1.2;
+  font-weight: 500;
 }
 
 .fund-code {
   font-weight: 600;
   color: var(--text-primary);
   font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 12px;
+  font-size: 10px;
+  opacity: 0.8;
 }
 
 .row-cell.amount {
@@ -992,13 +1066,14 @@ onUnmounted(() => {
 .row-cell.client {
   text-align: left;
   justify-content: flex-start;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.3;
   color: var(--text-primary);
   padding-left: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 500;
 }
 
 .no-results {
@@ -1011,102 +1086,189 @@ onUnmounted(() => {
 /* 响应式调整 */
 @media (max-width: 768px) {
   .header-section {
-    padding: 14px 12px 10px;
+    padding: 8px 12px 8px;
   }
   
   .content-area {
-    padding: 10px;
-    min-height: calc(100vh - 110px);
+    padding: 6px 10px 12px;
+    padding-bottom: 120px;
   }
   
-  .table-header {
-    grid-template-columns: 0.5fr 1.2fr 0.7fr 0.7fr 0.5fr 0.7fr 0.8fr;
-    font-size: 10px;
+  .action-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
   }
   
-  .table-row {
-    grid-template-columns: 0.5fr 1.2fr 0.7fr 0.7fr 0.5fr 0.7fr 0.8fr;
-  }
-  
-  .row-cell {
-    font-size: 10px;
-    padding: 8px 4px;
-    min-height: 34px;
-  }
-  
-  .fund-name {
-    font-size: 9px;
-  }
-  
-  .fund-code {
-    font-size: 11px;
-  }
-  
-  .row-cell.client {
-    font-size: 9px;
-  }
-  
-  .filter-input {
+  .sort-btn {
+    height: 32px;
+    padding: 0 10px;
     font-size: 12px;
-    padding: 7px 9px;
+  }
+  
+  .order-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+  
+  .sort-icon {
+    font-size: 14px;
+  }
+  
+  .sort-label {
+    font-size: 12px;
+  }
+  
+  .filter-action-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  
+  .filter-section {
+    padding: 8px;
+    margin-top: 6px;
+  }
+  
+  .filter-row {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  
+  .filter-field {
+    flex: 0 0 calc(50% - 3px);
+    min-width: 0;
   }
   
   .filter-label {
     font-size: 10px;
-  }
-}
-
-@media (max-width: 480px) {
-  .content-area {
-    padding: 8px;
+    margin-bottom: 2px;
   }
   
-  .performers-table {
-    border-radius: 8px;
+  .filter-input {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+  
+  .filter-input.range {
+    padding: 6px 3px;
   }
   
   .table-header {
+    grid-template-columns: 0.5fr 1.3fr 0.7fr 1fr 0.5fr 1fr 0.8fr;
+    font-size: 10px;
+  }
+  
+  .table-row {
+    grid-template-columns: 0.5fr 1.3fr 0.7fr 1fr 0.5fr 1fr 0.8fr;
+  }
+  
+  .row-cell {
+    font-size: 10px;
+    padding: 6px 3px;
+    min-height: 34px;
+  }
+  
+  .fund-name {
+    font-size: 10px;
+  }
+  
+  .fund-code {
     font-size: 9px;
-    padding: 8px 0;
+  }
+  
+  .row-cell.client {
+    font-size: 10px;
+    padding-left: 3px;
   }
   
   .header-cell {
     padding: 8px 3px;
   }
+}
+
+@media (max-width: 480px) {
+  .header-section {
+    padding: 6px 10px 6px;
+  }
+  
+  .content-area {
+    padding: 6px 8px 10px;
+  }
+  
+  .action-buttons {
+    gap: 4px;
+  }
+  
+  .sort-controls {
+    gap: 2px;
+  }
+  
+  .filter-section {
+    padding: 6px;
+  }
+  
+  .filter-row {
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  
+  .filter-field {
+    flex: 0 0 calc(50% - 2px);
+  }
+  
+  .filter-label {
+    font-size: 9px;
+  }
+  
+  .filter-input {
+    font-size: 10px;
+    padding: 5px 6px;
+  }
+  
+  .filter-input.range {
+    padding: 5px 2px;
+  }
+  
+  .performers-table-container {
+    border-radius: 8px;
+  }
+  
+  .table-header {
+    font-size: 9px;
+    grid-template-columns: 0.5fr 1.2fr 0.6fr 0.9fr 0.4fr 0.9fr 0.7fr;
+  }
+  
+  .table-row {
+    grid-template-columns: 0.5fr 1.2fr 0.6fr 0.9fr 0.4fr 0.9fr 0.7fr;
+  }
   
   .row-cell {
     font-size: 9px;
-    padding: 6px 3px;
+    padding: 6px 2px;
     min-height: 32px;
   }
   
   .fund-name {
-    font-size: 8px;
+    font-size: 9px;
   }
   
   .fund-code {
-    font-size: 10px;
-  }
-  
-  .row-cell.client {
     font-size: 8px;
   }
   
-  .filter-section {
-    padding: 10px;
+  .row-cell.client {
+    font-size: 9px;
+    padding-left: 2px;
   }
   
-  .filter-row {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .filter-field {
-    width: 100%;
+  .header-cell {
+    padding: 8px 2px;
   }
 }
 
-.performers-table {
+.performers-table-container {
   margin-top: 4px;
 }
 
@@ -1118,5 +1280,77 @@ onUnmounted(() => {
   .table-row:active {
     background: var(--bg-hover);
   }
+}
+
+.global-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  font-size: 14px;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@media screen and (max-width: 768px) {
+  .top-performers-view {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .fixed-header {
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    background: var(--bg-primary);
+  }
+  
+  .header-section {
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    background: var(--bg-primary);
+  }
+}
+
+:root.dark .action-btn.active,
+:root.dark .sort-btn:hover {
+  background-color: var(--accent-color);
+  color: white !important;
+  border-color: var(--accent-color) !important;
+}
+
+:root.dark .sort-btn,
+:root.dark .sort-order-btn {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+:root.dark .current-sort-return,
+:root.dark .client-count {
+  background: transparent;
+}
+
+:root.dark .fund-name {
+  color: var(--text-primary);
+}
+
+:root.dark .fund-code {
+  color: var(--text-secondary);
+}
+
+:root {
+  --bg-primary-rgb: 248, 250, 252;
+}
+
+:root.dark {
+  --bg-primary-rgb: 15, 23, 42;
 }
 </style>
