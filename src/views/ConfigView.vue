@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useDataStore } from '../stores/dataStore'
-import ToastMessage from '../components/common/ToastMessage.vue' // 🚀 导入 ToastMessage 组件
+import ToastMessage from '../components/common/ToastMessage.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -31,8 +31,6 @@ const showNotification = (message: string, type: 'info' | 'success' | 'error' | 
 }
 
 watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
-  console.log(`隐私模式变化: ${oldValue} -> ${newValue}`)
-  
   if (isPrivacyInitialized && oldValue !== newValue) {
     showNotification(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')
   }
@@ -123,9 +121,7 @@ const selectedTheme = ref(dataStore.userPreferences.themeMode || 'system')
 const handleAPIChange = () => {
   const oldAPI = dataStore.userPreferences.selectedFundAPI
   dataStore.updateUserPreferences({ selectedFundAPI: selectedAPI.value })
-  
   dataStore.addLog(`数据接口已从${oldAPI}切换至: ${selectedAPI.value}`, 'info')
-  
   showNotification(`数据接口已切换至: ${fundAPIs.find(a => a.value === selectedAPI.value)?.name || selectedAPI.value}`, 'success')
 }
 
@@ -172,7 +168,6 @@ const handleFeature = (featureName: string) => {
     default:
       showNotification(`功能 ${featureName} 正在开发中...`, 'info')
   }
-  
   dataStore.addLog(`用户操作: 点击${featureName}功能`, 'info')
 }
 
@@ -186,12 +181,10 @@ const handleLogout = async () => {
   try {
     dataStore.addLog('用户执行退出登录操作', 'info')
     showNotification('您已成功退出登录', 'success')
-    
     setTimeout(() => {
       authStore.logout()
       dataStore.addLog('用户已成功退出登录', 'success')
     }, 800)
-    
   } catch (error) {
     console.error('退出登录失败:', error)
     dataStore.addLog('退出登录失败: ' + (error as Error).message, 'error')
@@ -201,14 +194,10 @@ const handleLogout = async () => {
 
 const togglePrivacyMode = (value: boolean) => {
   if (dataStore.isPrivacyMode === value) return
-  
   const newValue = value
-  console.log(`切换隐私模式: ${dataStore.isPrivacyMode} -> ${newValue}`)
-  
   dataStore.isPrivacyMode = newValue
   dataStore.updateUserPreferences({ isPrivacyMode: newValue })
   localStorage.setItem('privacy_mode', newValue.toString())
-  
   dataStore.addLog(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')
   
   const event = new CustomEvent('privacy-mode-changed-global', {
@@ -220,13 +209,11 @@ const togglePrivacyMode = (value: boolean) => {
     bubbles: true,
     composed: true
   })
-  
   window.dispatchEvent(event)
 }
 
 onMounted(() => {
   dataStore.loadData()
-  
   selectedTheme.value = dataStore.userPreferences.themeMode
   
   const disableZoom = () => {
@@ -269,7 +256,6 @@ onMounted(() => {
   
   nextTick(() => {
     const savedPrivacyMode = localStorage.getItem('privacy_mode')
-    
     if (savedPrivacyMode !== null) {
       const isPrivacyEnabled = savedPrivacyMode === 'true'
       dataStore.updateUserPreferences({ isPrivacyMode: isPrivacyEnabled })
@@ -279,20 +265,17 @@ onMounted(() => {
       dataStore.isPrivacyMode = true
       localStorage.setItem('privacy_mode', 'true')
     }
-    
     setTimeout(() => {
       isPrivacyInitialized = true
     }, 100)
   })
   
   dataStore.addLog('用户访问配置页面', 'info')
-  
   window.addEventListener('force-privacy-sync', handleForcePrivacySync)
 })
 
 const handleForcePrivacySync = () => {
   const privacyMode = dataStore.isPrivacyMode
-  console.log('强制同步隐私模式:', privacyMode)
   privacyKey.value = Date.now()
 }
 
@@ -303,106 +286,121 @@ onUnmounted(() => {
 
 <template>
   <div class="config-view">
-    <div class="config-scroll-area">
-      <div class="config-content-wrapper">
-        <div class="config-content">
-          
-          <div class="user-info-section">
-            <div class="user-card-wrapper">
-              <div
-                class="user-info-card"
-                :style="{
-                  background: getUserColors().cardBg,
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05)'
-                }"
-              >
-                <div class="user-content">
-                  <div class="user-header-row">
-                    <div class="avatar-section">
-                      <div
-                        class="avatar-icon"
-                        :style="{ color: getUserColors().iconColor }"
-                      >
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
-                          <path d="M20 21V19C20 16.7909 18.2091 15 16 15H8C5.79086 15 4 16.7909 4 19V21" stroke="currentColor" stroke-width="2"/>
-                        </svg>
-                      </div>
-                      <div class="user-details">
-                        <h3
-                          class="user-name"
-                          :style="{ color: getUserColors().textColor }"
-                        >
-                          {{ displayName }}
-                        </h3>
-                        <p class="user-email" v-if="authStore.currentUser?.email">{{ authStore.currentUser.email }}</p>
-                      </div>
-                    </div>
-                    
-                    <div class="user-header-right">
-                      <div
-                        class="user-type-ribbon"
-                        :class="authStore.userType"
-                        :style="{
-                          background: authStore.userType === 'vip' ?
-                                    'linear-gradient(135deg, #FFD700, #FFA500, #FF8C00)' :
-                                    authStore.userType === 'subscribed' ?
-                                    'linear-gradient(135deg, #E0E0E0, #B0B0B0, #909090)' :
-                                    'linear-gradient(135deg, #9E9E9E, #757575, #616161)',
-                          color: authStore.userType === 'subscribed' ? '#424242' : 'white'
-                        }"
-                      >
-                        {{ userTypeDisplay }}
-                      </div>
-                    </div>
+    <div class="fixed-top-section">
+      <div class="user-info-container">
+        <div class="user-card-wrapper">
+          <div
+            class="user-info-card"
+            :style="{
+              background: getUserColors().cardBg,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05)'
+            }"
+          >
+            <div class="user-content">
+              <div class="user-header-row">
+                <div class="avatar-section">
+                  <div
+                    class="avatar-icon"
+                    :style="{ color: getUserColors().iconColor }"
+                  >
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+                      <path d="M20 21V19C20 16.7909 18.2091 15 16 15H8C5.79086 15 4 16.7909 4 19V21" stroke="currentColor" stroke-width="2"/>
+                    </svg>
                   </div>
-                  
-                  <div class="user-info-footer">
-                    <div class="user-type-info" v-if="authStore.userType === 'subscribed' || authStore.userType === 'vip'">
-                      <span
-                        class="type-tag"
-                        :style="{
-                          backgroundColor: authStore.userType === 'vip' ? 'rgba(255, 215, 0, 0.2)' : 'rgba(255, 152, 0, 0.2)',
-                          color: authStore.userType === 'vip' ? '#B8860B' : '#f57c00'
-                        }"
-                      >
-                        {{ authStore.userType === 'vip' ? '永久有效' : '体验用户' }}
-                      </span>
-                    </div>
-                    <button
-                      class="logout-btn"
-                      @click="handleLogout"
-                      :style="{
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)'
-                      }"
+                  <div class="user-details">
+                    <h3
+                      class="user-name"
+                      :style="{ color: getUserColors().textColor }"
                     >
-                      退出
-                    </button>
+                      {{ displayName }}
+                    </h3>
+                    <p class="user-email" v-if="authStore.currentUser?.email">{{ authStore.currentUser.email }}</p>
                   </div>
-                  
-                  <div class="user-actions">
-                    <button
-                      class="upgrade-btn"
-                      @click="handleUpgrade"
-                      v-if="authStore.userType !== 'vip'"
-                      :style="{
-                        backgroundColor: getUserColors().textColor + '1A',
-                        color: getUserColors().textColor
-                      }"
-                    >
-                      升级
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </button>
+                </div>
+                
+                <div class="user-header-right">
+                  <div
+                    class="user-type-ribbon"
+                    :class="authStore.userType"
+                    :style="{
+                      background: authStore.userType === 'vip' ?
+                                'linear-gradient(135deg, #FFD700, #FFA500, #FF8C00)' :
+                                authStore.userType === 'subscribed' ?
+                                'linear-gradient(135deg, #E0E0E0, #B0B0B0, #909090)' :
+                                'linear-gradient(135deg, #9E9E9E, #757575, #616161)',
+                      color: authStore.userType === 'subscribed' ? '#424242' : 'white'
+                    }"
+                  >
+                    {{ userTypeDisplay }}
                   </div>
                 </div>
               </div>
+              
+              <div class="user-info-footer">
+                <div class="user-type-info" v-if="authStore.userType === 'subscribed' || authStore.userType === 'vip'">
+                  <span
+                    class="type-tag"
+                    :style="{
+                      backgroundColor: authStore.userType === 'vip' ? 'rgba(255, 215, 0, 0.2)' : 'rgba(255, 152, 0, 0.2)',
+                      color: authStore.userType === 'vip' ? '#B8860B' : '#f57c00'
+                    }"
+                  >
+                    {{ authStore.userType === 'vip' ? '永久有效' : '体验用户' }}
+                  </span>
+                </div>
+                <button
+                  class="logout-btn"
+                  @click="handleLogout"
+                  :style="{
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)'
+                  }"
+                >
+                  退出
+                </button>
+              </div>
+              
+              <div class="user-actions">
+                <button
+                  class="upgrade-btn"
+                  @click="handleUpgrade"
+                  v-if="authStore.userType !== 'vip'"
+                  :style="{
+                    backgroundColor: getUserColors().textColor + '1A',
+                    color: getUserColors().textColor
+                  }"
+                >
+                  升级
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-
+        </div>
+        
+        <div class="stylish-divider">
+          <div class="divider-line"></div>
+          <div class="divider-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="13" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="2" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="13" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+            </svg>
+          </div>
+          <div class="divider-line"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="scrollable-content-section">
+      <div class="config-content-wrapper">
+        <div class="config-content">
           <div class="functions-section">
             <div class="function-grid">
+              
               <div
                 class="function-card cloud-sync-card"
                 :class="{ 'disabled': authStore.userType === 'free' }"
@@ -411,18 +409,28 @@ onUnmounted(() => {
                 <div class="card-content">
                   <div class="card-header">
                     <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M6 19L12 13L18 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 13V1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M4 12L8 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M20 12L16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
+                      <transition name="icon-fade" mode="out-in">
+                        <svg v-if="authStore.userType === 'free'" key="cloud-locked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M19 10C19.5304 10 20.0391 10.2107 20.4142 10.5858C20.7893 10.9609 21 11.4696 21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H13C12.4696 21 11.9609 20.7893 11.5858 20.4142C11.2107 20.0391 11 19.5304 11 19V12C11 11.4696 11.2107 10.9609 11.5858 10.5858C11.9609 10.2107 12.4696 10 13 10H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M13 10V7C13 5.34315 14.3431 4 16 4C17.6569 4 19 5.34315 19 7V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M8 17H6C5.20435 17 4.44129 16.6839 3.87868 16.1213C3.31607 15.5587 3 14.7956 3 14C3 13.2044 3.31607 12.4413 3.87868 11.8787C4.44129 11.3161 5.20435 11 6 11C6.06 11 6.12 11.01 6.18 11.01C6.27318 9.53982 6.94165 8.16912 8.04683 7.17849C9.15201 6.18787 10.6094 5.65345 12.115 5.68652C13.6206 5.7196 15.0592 6.31761 16.127 7.355" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <svg v-else key="cloud-vip" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                           <path d="M6 19L12 13L18 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M12 13V1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M4 12L8 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M20 12L16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </transition>
                     </div>
-                    <h4 class="card-title">
-                      云端同步
-                      <span v-if="authStore.userType === 'free'" class="vip-badge">VIP</span>
-                    </h4>
+                    <div class="card-title-wrapper">
+                      <h4 class="card-title">
+                        云端同步
+                        <span v-if="authStore.userType === 'free'" class="vip-badge">VIP</span>
+                      </h4>
+                    </div>
                   </div>
+                  <p class="card-subtitle-corner">数据上传/下载</p>
                 </div>
               </div>
               
@@ -434,8 +442,11 @@ onUnmounted(() => {
                         <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     </div>
-                    <h4 class="card-title">管理持仓</h4>
+                    <div class="card-title-wrapper">
+                      <h4 class="card-title">管理持仓</h4>
+                    </div>
                   </div>
+                  <p class="card-subtitle-corner">用户数据编辑</p>
                 </div>
               </div>
               
@@ -443,12 +454,20 @@ onUnmounted(() => {
                 <div class="card-content">
                   <div class="card-header">
                     <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 15V17M6 21H18C18.5304 21 19.0391 20.7893 19.4142 20.4142C19.7893 20.0391 20 19.5304 20 19V13C20 12.4696 19.7893 11.9609 19.4142 11.5858C19.0391 11.2107 18.5304 11 18 11H6C5.46957 11 4.96086 11.2107 4.58579 11.5858C4.21071 11.9609 4 12.4696 4 13V19C4 19.5304 4.21071 20.0391 4.58579 20.4142C4.96086 20.7893 5.46957 21 6 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 11C13.6569 11 15 9.65685 15 8C15 6.34315 13.6569 5 12 5C10.3431 5 9 6.34315 9 8C9 9.65685 10.3431 11 12 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
+                      <transition name="icon-fade" mode="out-in">
+                        <svg v-if="dataStore.isPrivacyMode" key="locked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                           <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <svg v-else key="unlocked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                          <path d="M7 11V7a5 5 0 019.9-1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </transition>
                     </div>
-                    <h4 class="card-title">隐私模式</h4>
+                    <div class="card-title-wrapper">
+                      <h4 class="card-title">隐私模式</h4>
+                    </div>
                   </div>
                   <div class="privacy-toggle">
                     <div class="privacy-options">
@@ -475,15 +494,23 @@ onUnmounted(() => {
                 <div class="card-content">
                   <div class="card-header">
                     <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path v-if="selectedTheme === 'system'" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" stroke="currentColor" stroke-width="2"/>
-                        <path v-if="selectedTheme === 'system'" d="M12 16v4" stroke="currentColor" stroke-width="2"/>
-                        <circle v-if="selectedTheme === 'light'" cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
-                        <path v-if="selectedTheme === 'light'" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        <path v-if="selectedTheme === 'dark'" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
+                      <transition name="icon-fade" mode="out-in">
+                        <svg v-if="selectedTheme === 'system'" key="system" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M4 6a2 2 0 012-2h12a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" stroke="currentColor" stroke-width="2"/>
+                          <path d="M12 16v4" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <svg v-else-if="selectedTheme === 'light'" key="light" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+                          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <svg v-else key="dark" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </transition>
                     </div>
-                    <h4 class="card-title">主题设置</h4>
+                    <div class="card-title-wrapper">
+                      <h4 class="card-title">主题设置</h4>
+                    </div>
                   </div>
                   <div class="theme-toggle">
                     <div class="theme-options">
@@ -500,18 +527,26 @@ onUnmounted(() => {
                   </div>
                 </div>
               </div>
-              
+
               <div class="function-card api-card">
                 <div class="card-content">
                   <div class="card-header">
                     <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M7 12L17 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 17L12 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                      </svg>
+                       <transition name="icon-fade" mode="out-in">
+                          <svg v-if="selectedAPI === 'eastmoney'" key="eastmoney" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M23 6L13.5 15.5L8.5 10.5L1 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M17 6H23V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          <svg v-else key="ths" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 20V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18 20V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M6 20V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                       </transition>
                     </div>
-                    <h4 class="card-title">数据接口</h4>
+                    <div class="card-title-wrapper">
+                      <h4 class="card-title">数据接口</h4>
+                    </div>
                   </div>
                   <div class="api-selector">
                     <div class="api-options">
@@ -536,21 +571,8 @@ onUnmounted(() => {
                   </div>
                 </div>
               </div>
-              
-              <div class="function-card log-card" @click="handleFeature('APILog')">
-                <div class="card-content">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </div>
-                    <h4 class="card-title">日志查询</h4>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="function-card about-card" @click="handleFeature('About')">
+
+               <div class="function-card about-card" @click="handleFeature('About')">
                 <div class="card-content">
                   <div class="card-header">
                     <div class="card-icon">
@@ -560,10 +582,30 @@ onUnmounted(() => {
                         <circle cx="12" cy="8" r="1" fill="currentColor"/>
                       </svg>
                     </div>
-                    <h4 class="card-title">关于 CFMS</h4>
+                    <div class="card-title-wrapper">
+                      <h4 class="card-title">关于 CFMS</h4>
+                    </div>
                   </div>
+                  <p class="card-subtitle-corner">版本及说明</p>
                 </div>
               </div>
+              
+              <div class="function-card log-card" @click="handleFeature('APILog')">
+                <div class="card-content">
+                  <div class="card-header">
+                    <div class="card-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <div class="card-title-wrapper">
+                      <h4 class="card-title">日志查询</h4>
+                    </div>
+                  </div>
+                   <p class="card-subtitle-corner">记录系统与操作</p>
+                </div>
+              </div>
+
             </div>
           </div>
 
@@ -586,41 +628,47 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* * 移除ConfigView.vue中自定义的 .global-toast 样式，
- * 现在由 ToastMessage.vue 组件自带的样式处理。
- * * 仅保留 ConfigView.vue 页面本身的样式
- */
 .config-view {
-  /* ... (ConfigView styles) */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 :root.dark .config-view {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-.config-scroll-area {
-  height: 100vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+.fixed-top-section {
+  flex-shrink: 0;
+  z-index: 100;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
-.config-content-wrapper {
+.scrollable-content-section {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 4px;
+}
+
+.config-content-wrapper,
+.user-info-container {
   max-width: 800px;
   margin: 0 auto;
   padding: 0 16px;
 }
 
 .config-content {
-  padding: 16px 0 120px;
-}
-
-.user-info-section {
-  margin-bottom: 20px;
+  padding: 0 0 120px;
 }
 
 .user-card-wrapper {
@@ -629,14 +677,48 @@ onUnmounted(() => {
 
 .user-info-card {
   position: relative;
-  border-radius: 16px;
+  border-radius: 20px;
   overflow: hidden;
   transition: all 0.3s ease;
+  margin: 12px 0 12px;
 }
 
 :root.dark .user-info-card {
   background: rgba(30, 30, 46, 0.8);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.stylish-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 0 8px;
+  opacity: 0.6;
+}
+
+.divider-line {
+  height: 1px;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+
+.divider-line:last-child {
+  background: linear-gradient(90deg, currentColor, transparent);
+}
+
+.divider-icon {
+  color: currentColor;
+  display: flex;
+  align-items: center;
+}
+
+:root.dark .stylish-divider {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.stylish-divider {
+  color: rgba(0, 0, 0, 0.2);
 }
 
 .user-header-row {
@@ -674,7 +756,7 @@ onUnmounted(() => {
 }
 
 .user-content {
-  padding: 16px;
+  padding: 20px;
 }
 
 .avatar-section {
@@ -825,23 +907,26 @@ onUnmounted(() => {
   transform: translateY(0);
 }
 
+.functions-section {
+  margin-bottom: 20px;
+}
+
 .function-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 20px;
-  padding: 0 8px;
 }
 
 .function-card {
-  border-radius: 16px;
+  border-radius: 20px;
   border: none;
   padding: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  min-height: 90px;
+  min-height: 110px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -935,15 +1020,20 @@ onUnmounted(() => {
 
 .card-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.card-title-wrapper {
+  flex: 1;
+  min-width: 0;
 }
 
 .card-icon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -959,7 +1049,7 @@ onUnmounted(() => {
   font-size: 15px;
   font-weight: 600;
   color: #333;
-  margin: 0;
+  margin: 0 0 4px 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -967,6 +1057,23 @@ onUnmounted(() => {
 
 :root.dark .card-title {
   color: #e5e7eb;
+}
+
+.card-subtitle-corner {
+  font-size: 11px;
+  color: #666;
+  margin: 0;
+  line-height: 1.3;
+  opacity: 0.7;
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  text-align: right;
+  font-weight: 500;
+}
+
+:root.dark .card-subtitle-corner {
+  color: #9ca3af;
 }
 
 .vip-badge {
@@ -991,7 +1098,7 @@ onUnmounted(() => {
 .api-option {
   flex: 1;
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   border: 1.5px solid #F59E0B;
@@ -1002,7 +1109,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 32px;
+  min-height: 36px;
   color: #F59E0B;
 }
 
@@ -1039,7 +1146,7 @@ onUnmounted(() => {
 .privacy-option {
   flex: 1;
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   border: 1.5px solid #14B8A6;
@@ -1049,7 +1156,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
+  min-height: 36px;
   color: #14B8A6;
 }
 
@@ -1080,7 +1187,7 @@ onUnmounted(() => {
 .theme-option {
   flex: 1;
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   border: 1.5px solid #8B5CF6;
@@ -1090,7 +1197,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
+  min-height: 36px;
   color: #8B5CF6;
 }
 
@@ -1137,6 +1244,17 @@ onUnmounted(() => {
   100% { background-position: 0% 50%; }
 }
 
+.icon-fade-enter-active,
+.icon-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.icon-fade-enter-from,
+.icon-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
 @media (max-width: 768px) {
   .config-content-wrapper {
     padding: 0 12px;
@@ -1149,10 +1267,11 @@ onUnmounted(() => {
   
   .user-info-card {
     padding: 0;
+    margin: 8px 0 8px;
   }
   
   .user-content {
-    padding: 14px;
+    padding: 16px;
   }
   
   .user-header-row {
@@ -1165,13 +1284,13 @@ onUnmounted(() => {
   }
   
   .avatar-icon {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     margin-top: 2px;
   }
   
   .user-name {
-    font-size: 16px;
+    font-size: 17px;
     margin-bottom: 2px;
   }
   
@@ -1203,8 +1322,8 @@ onUnmounted(() => {
   }
   
   .user-actions {
-    padding-top: 10px;
-    margin-top: 10px;
+    padding-top: 12px;
+    margin-top: 12px;
   }
   
   .upgrade-btn {
@@ -1213,17 +1332,23 @@ onUnmounted(() => {
   }
   
   .function-card {
-    padding: 12px;
+    padding: 14px;
     min-height: 100px;
   }
   
   .card-icon {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
   }
   
   .card-title {
     font-size: 14px;
+  }
+  
+  .card-subtitle-corner {
+    font-size: 10px;
+    bottom: 10px;
+    right: 12px;
   }
   
   .api-options,
@@ -1238,11 +1363,11 @@ onUnmounted(() => {
   .theme-option {
     padding: 5px 6px;
     font-size: 11px;
-    min-height: 28px;
+    min-height: 32px;
   }
   
   .config-content {
-    padding: 12px 0 100px;
+    padding: 0 0 100px;
   }
   
   .footer-section {
@@ -1260,20 +1385,20 @@ onUnmounted(() => {
 
 @media (max-width: 480px) {
   .config-content {
-    padding: 10px 0 100px;
+    padding: 0 0 100px;
   }
   
   .user-content {
-    padding: 12px;
+    padding: 14px;
   }
   
   .avatar-icon {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
   }
   
   .user-name {
-    font-size: 15px;
+    font-size: 16px;
   }
   
   .user-email {
@@ -1281,8 +1406,8 @@ onUnmounted(() => {
   }
   
   .function-card {
-    padding: 10px;
-    min-height: 90px;
+    padding: 12px;
+    min-height: 96px;
   }
   
   .card-header {
@@ -1295,7 +1420,7 @@ onUnmounted(() => {
   .theme-option {
     padding: 4px 5px;
     font-size: 10px;
-    min-height: 26px;
+    min-height: 30px;
   }
   
   .footer-section {
@@ -1308,7 +1433,7 @@ onUnmounted(() => {
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .config-scroll-area {
+  .scrollable-content-section {
     height: calc(100vh - 60px);
   }
   
@@ -1325,13 +1450,12 @@ onUnmounted(() => {
   }
   
   .config-content {
-    padding: 10px 0 80px;
+    padding: 0 0 80px;
   }
 }
 
 @media (hover: none) and (pointer: coarse) {
-  .function-card:active,
-  .setting-card:active {
+  .function-card:active {
     transform: scale(0.98);
     transition: transform 0.1s ease;
   }
