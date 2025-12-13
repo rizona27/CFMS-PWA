@@ -6,7 +6,7 @@ export interface FundHolding {
   clientName: string
   clientID: string
   fundCode: string
-  fundName: string
+ fundName: string
   purchaseAmount: number
   purchaseShares: number
   purchaseDate: Date
@@ -193,6 +193,10 @@ export const useDataStore = defineStore('data', () => {
 
   const fundCache = ref<Map<string, CachedFundInfo>>(new Map())
 
+  // 🔴 添加防卫标志，防止递归调用
+  let isSaving = false
+  let isLogging = false
+
   const holdingsCount = computed(() => holdings.value.length)
   
   const totalAssets = computed(() => {
@@ -269,7 +273,8 @@ export const useDataStore = defineStore('data', () => {
       }
     } catch (error) {
       console.error('加载基金缓存失败:', error)
-      addLog('加载基金缓存失败', 'error')
+      // 使用安全的日志记录，不触发保存
+      safeAddLog('加载基金缓存失败', 'error', false)
     }
   }
 
@@ -282,7 +287,8 @@ export const useDataStore = defineStore('data', () => {
       localStorage.setItem('fundCache', JSON.stringify(cacheObj))
     } catch (error) {
       console.error('保存基金缓存失败:', error)
-      addLog('保存基金缓存失败', 'error')
+      // 使用安全的日志记录，不触发保存
+      safeAddLog('保存基金缓存失败', 'error', false)
     }
   }
 
@@ -355,6 +361,14 @@ export const useDataStore = defineStore('data', () => {
   }
 
   const saveData = () => {
+    // 🔴 检查防卫标志，防止递归调用
+    if (isSaving) {
+      console.warn('正在保存中，防止递归，跳过本次保存')
+      return
+    }
+    
+    isSaving = true
+    
     try {
       const holdingsData = holdings.value.map(holding => ({
         id: holding.id,
@@ -391,9 +405,47 @@ export const useDataStore = defineStore('data', () => {
       
       localStorage.setItem('exportHistory', JSON.stringify(userPreferences.value.exportHistory))
       
+      // 🔴 移除记录"数据已成功保存"的日志，因为这是触发递归的原因
+      // 不再调用：addLog('数据已成功保存', 'cache')
+      
     } catch (error) {
       console.error('数据保存失败:', error)
       showToastMessage('数据保存失败')
+      
+      // 🔴 安全的错误日志记录，不触发保存
+      safeAddLog(`保存全局错误: ${error instanceof Error ? error.message : '未知错误'}`, 'error', false)
+    } finally {
+      isSaving = false
+    }
+  }
+
+  // 🔴 添加安全的日志记录函数，可控制是否触发保存
+  const safeAddLog = (message: string, type: LogEntry['type'] = 'info', shouldSave: boolean = true) => {
+    if (isLogging) {
+      return
+    }
+    
+    isLogging = true
+    
+    try {
+      const logEntry: LogEntry = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        message,
+        type,
+        timestamp: new Date()
+      }
+      
+      logMessages.value.push(logEntry)
+      
+      if (logMessages.value.length > 500) {
+        logMessages.value = logMessages.value.slice(-500)
+      }
+      
+      if (shouldSave && !isSaving) {
+        saveData()
+      }
+    } finally {
+      isLogging = false
     }
   }
 
@@ -611,20 +663,8 @@ export const useDataStore = defineStore('data', () => {
   }
 
   const addLog = (message: string, type: LogEntry['type'] = 'info') => {
-    const logEntry: LogEntry = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      message,
-      type,
-      timestamp: new Date()
-    }
-    
-    logMessages.value.push(logEntry)
-    
-    if (logMessages.value.length > 500) {
-      logMessages.value = logMessages.value.slice(-500)
-    }
-    
-    saveData()
+    // 🔴 使用安全的日志记录函数
+    safeAddLog(message, type, true)
   }
 
   const clearLogs = () => {

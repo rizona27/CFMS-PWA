@@ -277,6 +277,7 @@ const expandedFundCodes = ref<Set<string>>(new Set())
 const isRefreshing = ref(false)
 const updatingTextState = ref(0)
 const updatingTextTimer = ref<number | null>(null)
+const autoHideTimer = ref<number | null>(null)
 
 const refreshKey = ref(0)
 const privacyKey = ref(0)
@@ -607,11 +608,7 @@ const isSameDay = (date1: Date, date2: Date) => {
          date1.getDate() === date2.getDate()
 }
 
-const onStatusTextTap = () => {
-  if (holdings.value.length === 0) return
-  
-  dataStore.updateUserPreferences({ showRefreshButton: true })
-  
+const handleAutoHide = () => {
   if (autoHideTimer.value) {
     clearTimeout(autoHideTimer.value)
     autoHideTimer.value = null
@@ -622,6 +619,13 @@ const onStatusTextTap = () => {
       dataStore.updateUserPreferences({ showRefreshButton: false })
     }
   }, 5000) as unknown as number
+}
+
+const onStatusTextTap = () => {
+  if (holdings.value.length === 0) return
+  
+  dataStore.updateUserPreferences({ showRefreshButton: true })
+  handleAutoHide()
 }
 
 const handleRefresh = async () => {
@@ -727,7 +731,6 @@ const handleThemeChange = (event: any) => {
 }
 
 const showOutdatedToast = ref(false)
-const autoHideTimer = ref<number | null>(null)
 
 watch(() => dataStore.isPrivacyMode, (newValue) => {
   privacyKey.value = Date.now()
@@ -744,12 +747,16 @@ onMounted(() => {
   
   window.addEventListener('theme-changed', handleThemeChange)
   
-  onUnmounted(() => {
-    updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
-    autoHideTimer.value !== null && clearTimeout(autoHideTimer.value)
-    
-    window.removeEventListener('theme-changed', handleThemeChange)
-  })
+  if (dataStore.showRefreshButton && !isRefreshing.value) {
+    handleAutoHide()
+  }
+})
+
+onUnmounted(() => {
+  updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
+  autoHideTimer.value !== null && clearTimeout(autoHideTimer.value)
+  
+  window.removeEventListener('theme-changed', handleThemeChange)
 })
 </script>
 

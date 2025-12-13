@@ -74,7 +74,7 @@
                   <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
@@ -242,7 +242,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import ToastMessage from '../components/common/ToastMessage.vue'
@@ -263,6 +263,12 @@ const toast = ref({
   type: 'info' as 'info' | 'success' | 'error' | 'warning'
 })
 
+// 存储键名
+const LOGIN_ATTEMPTS_KEY = 'cfms_login_attempts'
+const REGISTER_ATTEMPTS_KEY = 'cfms_register_attempts'
+const ATTEMPTS_TIMESTAMP_KEY = 'cfms_attempts_timestamp'
+const ATTEMPTS_EXPIRY_MS = 30 * 60 * 1000 // 30分钟过期
+
 const showToast = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
   toast.value = {
     show: true,
@@ -276,9 +282,14 @@ const isDevEnvironment = computed(() => {
 })
 
 const themeMode = ref('system')
+const systemTheme = ref('light') // 跟踪系统主题
 const themeClass = computed(() => {
-  if (themeMode.value === 'dark') return 'theme-dark'
-  if (themeMode.value === 'light') return 'theme-light'
+  let effectiveTheme = themeMode.value
+  if (effectiveTheme === 'system') {
+    effectiveTheme = systemTheme.value
+  }
+  if (effectiveTheme === 'dark') return 'theme-dark'
+  if (effectiveTheme === 'light') return 'theme-light'
   return 'theme-system'
 })
 
@@ -292,6 +303,87 @@ const loginForm = ref({
 const isLoading = computed(() => authStore.isLoading)
 const captchaImage = computed(() => authStore.captchaImage)
 
+// 检查尝试次数是否过期
+const isAttemptsExpired = (timestamp: number) => {
+  return Date.now() - timestamp > ATTEMPTS_EXPIRY_MS
+}
+
+// 加载持久化的尝试次数
+const loadAttempts = () => {
+  try {
+    // 检查时间戳
+    const timestampStr = localStorage.getItem(ATTEMPTS_TIMESTAMP_KEY)
+    if (timestampStr) {
+      const timestamp = parseInt(timestampStr)
+      if (isAttemptsExpired(timestamp)) {
+        // 过期则清除所有尝试次数
+        clearAttempts()
+        return
+      }
+    }
+    
+    // 加载登录尝试次数
+    const loginAttemptsStr = localStorage.getItem(LOGIN_ATTEMPTS_KEY)
+    if (loginAttemptsStr) {
+      loginAttempts.value = parseInt(loginAttemptsStr)
+      showLoginCaptcha.value = loginAttempts.value >= 3
+    }
+    
+    // 加载注册尝试次数
+    const registerAttemptsStr = localStorage.getItem(REGISTER_ATTEMPTS_KEY)
+    if (registerAttemptsStr) {
+      registerAttempts.value = parseInt(registerAttemptsStr)
+      showRegisterCaptcha.value = registerAttempts.value >= 3
+    }
+  } catch (error) {
+    console.error('加载尝试次数失败:', error)
+  }
+}
+
+// 保存尝试次数
+const saveAttempts = () => {
+  try {
+    localStorage.setItem(LOGIN_ATTEMPTS_KEY, loginAttempts.value.toString())
+    localStorage.setItem(REGISTER_ATTEMPTS_KEY, registerAttempts.value.toString())
+    localStorage.setItem(ATTEMPTS_TIMESTAMP_KEY, Date.now().toString())
+  } catch (error) {
+    console.error('保存尝试次数失败:', error)
+  }
+}
+
+// 清除尝试次数
+const clearAttempts = () => {
+  loginAttempts.value = 0
+  registerAttempts.value = 0
+  showLoginCaptcha.value = false
+  showRegisterCaptcha.value = false
+  localStorage.removeItem(LOGIN_ATTEMPTS_KEY)
+  localStorage.removeItem(REGISTER_ATTEMPTS_KEY)
+  localStorage.removeItem(ATTEMPTS_TIMESTAMP_KEY)
+}
+
+// 清除特定类型的尝试次数
+const clearSpecificAttempts = (isRegister: boolean) => {
+  if (isRegister) {
+    registerAttempts.value = 0
+    showRegisterCaptcha.value = false
+    localStorage.removeItem(REGISTER_ATTEMPTS_KEY)
+  } else {
+    loginAttempts.value = 0
+    showLoginCaptcha.value = false
+    localStorage.removeItem(LOGIN_ATTEMPTS_KEY)
+  }
+}
+
+// 监听系统主题变化
+const systemThemeMediaQuery = ref<MediaQueryList | null>(null)
+const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+  systemTheme.value = e.matches ? 'dark' : 'light'
+  if (themeMode.value === 'system') {
+    applyTheme('system')
+  }
+}
+
 onMounted(() => {
   if (window.location.pathname === '/404' || window.location.pathname === '/auth') {
     if (window.location.pathname !== '/auth') {
@@ -299,12 +391,26 @@ onMounted(() => {
     }
   }
   
+  // 加载持久化的尝试次数
+  loadAttempts()
+  
+  // 初始化主题
   initTheme()
+  
+  // 监听storage事件（来自ConfigView的主题变化）
   window.addEventListener('storage', handleThemeChange)
+  
+  // 监听系统主题变化
+  systemThemeMediaQuery.value = window.matchMedia('(prefers-color-scheme: dark)')
+  systemTheme.value = systemThemeMediaQuery.value.matches ? 'dark' : 'light'
+  systemThemeMediaQuery.value.addEventListener('change', handleSystemThemeChange)
 })
 
 onUnmounted(() => {
   window.removeEventListener('storage', handleThemeChange)
+  if (systemThemeMediaQuery.value) {
+    systemThemeMediaQuery.value.removeEventListener('change', handleSystemThemeChange)
+  }
 })
 
 const initTheme = () => {
@@ -327,23 +433,31 @@ const applyTheme = (theme: string) => {
   const root = document.documentElement
   root.classList.remove('theme-dark', 'theme-light', 'theme-system')
   
-  if (theme === 'dark') {
+  let effectiveTheme = theme
+  if (theme === 'system') {
+    effectiveTheme = systemTheme.value
+  }
+  
+  if (effectiveTheme === 'dark') {
     root.classList.add('theme-dark')
-  } else if (theme === 'light') {
+  } else if (effectiveTheme === 'light') {
     root.classList.add('theme-light')
   } else {
     root.classList.add('theme-system')
   }
 }
 
+// 不再通过切换模式重置尝试次数
 const resetAttempts = () => {
+  // 这个方法现在只重置当前模式的表单，不重置尝试次数
   if (isRegistering.value) {
-    registerAttempts.value = 0
-    showRegisterCaptcha.value = false
+    authStore.registerForm.captcha_code = ''
+    authStore.registerForm.captcha_id = ''
   } else {
-    loginAttempts.value = 0
-    showLoginCaptcha.value = false
+    loginForm.value.captcha_code = ''
+    loginForm.value.captcha_id = ''
   }
+  showPassword.value = false
 }
 
 const refreshCaptcha = async () => {
@@ -358,17 +472,19 @@ const refreshCaptcha = async () => {
 const switchToLogin = () => {
   isRegistering.value = false
   resetAttempts()
-  loginForm.value.captcha_code = ''
-  loginForm.value.captcha_id = ''
-  showPassword.value = false
+  // 根据当前尝试次数决定是否显示验证码
+  showLoginCaptcha.value = loginAttempts.value >= 3
+  if (showLoginCaptcha.value && !isDevEnvironment.value) {
+    refreshCaptcha()
+  }
 }
 
 const switchToRegister = async () => {
   isRegistering.value = true
   resetAttempts()
-  showPassword.value = false
-  
-  if (registerAttempts.value >= 3) {
+  // 根据当前尝试次数决定是否显示验证码
+  showRegisterCaptcha.value = registerAttempts.value >= 3
+  if (showRegisterCaptcha.value && !isDevEnvironment.value) {
     await authStore.getCaptcha()
     authStore.registerForm.captcha_id = authStore.captchaId
   }
@@ -379,14 +495,18 @@ const handleLogin = async () => {
     const normalizedUsername = loginForm.value.username.toLowerCase()
     const needCaptcha = loginAttempts.value >= 3
     
+    // 如果需要验证码但未填写
     if (needCaptcha && !loginForm.value.captcha_code) {
       showToast('请输入验证码', 'warning')
       return
     }
     
+    // 如果需要验证码但未获取验证码ID
     if (needCaptcha && !authStore.captchaId) {
       await authStore.getCaptcha()
       loginForm.value.captcha_id = authStore.captchaId
+      showToast('请重新输入验证码', 'info')
+      return
     }
     
     let success
@@ -402,8 +522,8 @@ const handleLogin = async () => {
     }
     
     if (success) {
-      loginAttempts.value = 0
-      showLoginCaptcha.value = false
+      // 登录成功，清除登录尝试次数
+      clearSpecificAttempts(false)
       showToast(`登录成功！欢迎 ${authStore.displayName}`, 'success')
       
       router.replace('/config').catch(() => {
@@ -411,8 +531,11 @@ const handleLogin = async () => {
       })
       
     } else {
+      // 登录失败，增加尝试次数
       loginAttempts.value++
+      saveAttempts()
       
+      // 检查是否需要显示验证码
       if (loginAttempts.value >= 3) {
         showLoginCaptcha.value = true
         if (!isDevEnvironment.value) {
@@ -421,7 +544,18 @@ const handleLogin = async () => {
         }
       }
       
-      showToast(authStore.error || '登录失败，请检查用户名和密码', 'error')
+      // 显示具体错误信息
+      const errorMessage = authStore.error || '登录失败，请检查用户名和密码'
+      showToast(errorMessage, 'error')
+      
+      // 如果验证码正确但账号密码错误，需要刷新验证码
+      if (needCaptcha && authStore.error && authStore.error.includes('验证码')) {
+        // 验证码错误，不清除验证码输入
+      } else if (needCaptcha) {
+        // 验证码正确但账号密码错误，刷新验证码
+        await refreshCaptcha()
+        loginForm.value.captcha_code = '' // 清空验证码输入框
+      }
     }
     
   } catch (error: any) {
@@ -429,11 +563,14 @@ const handleLogin = async () => {
       const normalizedUsername = loginForm.value.username.toLowerCase()
       const success = authStore.mockLogin(normalizedUsername, loginForm.value.password)
       if (success) {
+        clearSpecificAttempts(false)
         showToast(`模拟登录成功！欢迎 ${authStore.displayName}`, 'success')
         router.replace('/config').catch(() => {
           router.replace('/')
         })
       } else {
+        loginAttempts.value++
+        saveAttempts()
         showToast('登录失败，请使用测试账号：admin, user, guest', 'error')
       }
     } else {
@@ -447,8 +584,7 @@ const handleRegister = async () => {
     if (isDevEnvironment.value) {
       const success = authStore.mockLogin(authStore.registerForm.username, authStore.registerForm.password)
       if (success) {
-        registerAttempts.value = 0
-        showRegisterCaptcha.value = false
+        clearSpecificAttempts(true)
         showToast(`模拟注册成功！欢迎 ${authStore.displayName}`, 'success')
         router.replace('/config')
         return
@@ -465,17 +601,21 @@ const handleRegister = async () => {
     if (needCaptcha && !authStore.captchaId) {
       await authStore.getCaptcha()
       authStore.registerForm.captcha_id = authStore.captchaId
+      showToast('请重新输入验证码', 'info')
+      return
     }
     
     const success = await authStore.register(authStore.registerForm)
     
     if (success) {
-      registerAttempts.value = 0
-      showRegisterCaptcha.value = false
+      // 注册成功，清除注册尝试次数
+      clearSpecificAttempts(true)
       showToast(`注册成功！欢迎 ${authStore.displayName}`, 'success')
       router.replace('/config')
     } else {
+      // 注册失败，增加尝试次数
       registerAttempts.value++
+      saveAttempts()
       
       if (registerAttempts.value >= 3) {
         showRegisterCaptcha.value = true
@@ -483,7 +623,15 @@ const handleRegister = async () => {
         authStore.registerForm.captcha_id = authStore.captchaId
       }
       
-      showToast(authStore.error || '注册失败', 'error')
+      // 显示具体错误信息
+      const errorMessage = authStore.error || '注册失败'
+      showToast(errorMessage, 'error')
+      
+      // 如果验证码正确但其他信息错误，刷新验证码
+      if (needCaptcha && authStore.error && !authStore.error.includes('验证码')) {
+        await refreshCaptcha()
+        authStore.registerForm.captcha_code = ''
+      }
     }
     
   } catch (error: any) {

@@ -129,6 +129,9 @@ const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
   dataStore.updateUserPreferences({ themeMode: mode })
   selectedTheme.value = mode
   
+  // 将主题设置保存到 localStorage，以便 AuthView 读取
+  localStorage.setItem('theme_mode', mode)
+  
   const modeName = mode === 'system' ? '系统' : mode === 'light' ? '浅色' : '深色'
   showNotification(`主题已切换为: ${modeName}`, 'success')
   

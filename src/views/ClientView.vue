@@ -632,11 +632,7 @@ const isSameDay = (date1: Date, date2: Date) => {
          date1.getDate() === date2.getDate()
 }
 
-const onStatusTextTap = () => {
-  if (holdings.value.length === 0) return
-  
-  dataStore.updateUserPreferences({ showRefreshButton: true })
-  
+const handleAutoHide = () => {
   if (autoHideTimer.value) {
     clearTimeout(autoHideTimer.value)
     autoHideTimer.value = null
@@ -647,6 +643,13 @@ const onStatusTextTap = () => {
       dataStore.updateUserPreferences({ showRefreshButton: false })
     }
   }, 5000) as unknown as number
+}
+
+const onStatusTextTap = () => {
+  if (holdings.value.length === 0) return
+  
+  dataStore.updateUserPreferences({ showRefreshButton: true })
+  handleAutoHide()
 }
 
 const startUpdatingTextAnimation = () => {
@@ -811,6 +814,10 @@ onMounted(() => {
     }
   }
   mediaQuery.addEventListener('change', handleSystemThemeChange)
+  
+  if (dataStore.showRefreshButton && !isRefreshing.value) {
+    handleAutoHide()
+  }
   
   onUnmounted(() => {
     updatingTextTimer.value !== null && clearInterval(updatingTextTimer.value)
