@@ -1,17 +1,24 @@
 <template>
-  <div class="auth-view">
+  <div class="auth-view" :class="themeClass">
+    <div class="background-fx">
+      <div class="blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+      </div>
+      <div class="grid-overlay"></div>
+    </div>
+    
     <div class="auth-scroll-container">
       <div class="auth-container">
-        <div class="auth-card">
+        <div class="auth-card fade-in-down">
           <h1 class="auth-title">CFMS·一基暴富</h1>
           
-          <!-- 开发环境提示 -->
           <div v-if="isDevEnvironment" class="dev-environment-banner">
             <span class="dev-icon">🔧</span>
             <span class="dev-text">开发环境 - 使用模拟登录</span>
           </div>
           
-          <!-- 模式切换标签 -->
           <div class="mode-tabs">
             <button
               class="mode-tab"
@@ -29,7 +36,6 @@
             </button>
           </div>
           
-          <!-- 登录表单 -->
           <form v-if="!isRegistering" @submit.prevent="handleLogin" class="auth-form">
             <div class="form-group with-icon">
               <div class="icon-container">
@@ -55,7 +61,7 @@
                 placeholder="密码"
                 required
                 autocomplete="current-password"
-                class="icon-input"
+                class="icon-input password-input"
               />
               <button
                 type="button"
@@ -63,12 +69,17 @@
                 @click="showPassword = !showPassword"
                 :aria-label="showPassword ? '隐藏密码' : '显示密码'"
               >
-                <span v-if="showPassword" class="password-toggle-icon">👁️</span>
-                <span v-else class="password-toggle-icon">🔒</span>
+                <svg v-if="showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </button>
             </div>
             
-            <!-- 开发环境测试账号提示 -->
             <div v-if="isDevEnvironment" class="dev-accounts">
               <p class="dev-accounts-title">测试账号：</p>
               <p class="dev-account">admin / 任意密码 (VIP权限)</p>
@@ -106,7 +117,6 @@
             </button>
           </form>
           
-          <!-- 注册表单 -->
           <form v-else @submit.prevent="handleRegister" class="auth-form">
             <div class="form-group with-icon">
               <div class="icon-container">
@@ -132,7 +142,7 @@
                 placeholder="密码"
                 required
                 autocomplete="new-password"
-                class="icon-input"
+                class="icon-input password-input"
               />
               <button
                 type="button"
@@ -140,8 +150,14 @@
                 @click="showPassword = !showPassword"
                 :aria-label="showPassword ? '隐藏密码' : '显示密码'"
               >
-                <span v-if="showPassword" class="password-toggle-icon">👁️</span>
-                <span v-else class="password-toggle-icon">🔒</span>
+                <svg v-if="showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </button>
             </div>
             
@@ -188,7 +204,6 @@
             </button>
           </form>
           
-          <!-- 模式切换链接 -->
           <div class="mode-switch">
             <p v-if="!isRegistering">
               还没有账号？
@@ -200,26 +215,22 @@
             </p>
           </div>
           
-          <!-- 登录尝试次数提示 -->
           <div v-if="!isRegistering && loginAttempts > 0 && loginAttempts < 3" class="attempt-hint">
             <span class="hint-icon">⚠️</span>
             <span class="hint-text">登录失败 {{ loginAttempts }} 次，{{ 3 - loginAttempts }} 次后将需要验证码</span>
           </div>
           
-          <!-- 注册尝试次数提示 -->
           <div v-if="isRegistering && registerAttempts > 0 && registerAttempts < 3" class="attempt-hint">
             <span class="hint-icon">⚠️</span>
             <span class="hint-text">注册失败 {{ registerAttempts }} 次，{{ 3 - registerAttempts }} 次后将需要验证码</span>
           </div>
           
           <div class="auth-footer">
-            <!-- 移除了所有提示信息 -->
           </div>
         </div>
       </div>
     </div>
     
-    <!-- Toast消息提示 -->
     <ToastMessage
       v-if="toast.show"
       :show="toast.show"
@@ -239,22 +250,19 @@ import ToastMessage from '../components/common/ToastMessage.vue'
 const router = useRouter()
 const authStore = useAuthStore()
 
-// 状态
 const isRegistering = ref(false)
 const showLoginCaptcha = ref(false)
 const showRegisterCaptcha = ref(false)
 const loginAttempts = ref(0)
 const registerAttempts = ref(0)
-const showPassword = ref(false) // 控制密码显示/隐藏
+const showPassword = ref(false)
 
-// Toast消息
 const toast = ref({
   show: false,
   message: '',
   type: 'info' as 'info' | 'success' | 'error' | 'warning'
 })
 
-// 显示Toast消息
 const showToast = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
   toast.value = {
     show: true,
@@ -263,12 +271,10 @@ const showToast = (message: string, type: 'info' | 'success' | 'error' | 'warnin
   }
 }
 
-// 开发环境检测
 const isDevEnvironment = computed(() => {
   return import.meta.env.DEV || window.location.hostname === 'localhost'
 })
 
-// 主题相关
 const themeMode = ref('system')
 const themeClass = computed(() => {
   if (themeMode.value === 'dark') return 'theme-dark'
@@ -276,7 +282,6 @@ const themeClass = computed(() => {
   return 'theme-system'
 })
 
-// 登录表单
 const loginForm = ref({
   username: '',
   password: '',
@@ -284,28 +289,17 @@ const loginForm = ref({
   captcha_id: ''
 })
 
-// 计算属性
 const isLoading = computed(() => authStore.isLoading)
 const captchaImage = computed(() => authStore.captchaImage)
 
-// 检查当前URL和路由状态
 onMounted(() => {
-  console.log('当前路径:', window.location.pathname)
-  console.log('完整URL:', window.location.href)
-  console.log('开发环境:', isDevEnvironment.value)
-  
-  // 检查是否从404页面跳转过来
   if (window.location.pathname === '/404' || window.location.pathname === '/auth') {
-    // 确保URL正确
     if (window.location.pathname !== '/auth') {
       history.replaceState(null, '', '/auth')
     }
   }
   
-  // 初始化主题
   initTheme()
-  
-  // 监听主题变化
   window.addEventListener('storage', handleThemeChange)
 })
 
@@ -313,23 +307,22 @@ onUnmounted(() => {
   window.removeEventListener('storage', handleThemeChange)
 })
 
-// 初始化主题
 const initTheme = () => {
   const savedTheme = localStorage.getItem('theme_mode') || 'system'
   themeMode.value = savedTheme
   applyTheme(savedTheme)
 }
 
-// 处理主题变化
 const handleThemeChange = (e: StorageEvent) => {
   if (e.key === 'theme_mode') {
     const newTheme = e.newValue || 'system'
-    themeMode.value = newTheme
-    applyTheme(newTheme)
+    if (themeMode.value !== newTheme) {
+      themeMode.value = newTheme
+      applyTheme(newTheme)
+    }
   }
 }
 
-// 应用主题
 const applyTheme = (theme: string) => {
   const root = document.documentElement
   root.classList.remove('theme-dark', 'theme-light', 'theme-system')
@@ -343,7 +336,6 @@ const applyTheme = (theme: string) => {
   }
 }
 
-// 重置尝试次数
 const resetAttempts = () => {
   if (isRegistering.value) {
     registerAttempts.value = 0
@@ -354,7 +346,6 @@ const resetAttempts = () => {
   }
 }
 
-// 刷新验证码
 const refreshCaptcha = async () => {
   await authStore.getCaptcha()
   if (isRegistering.value) {
@@ -364,7 +355,6 @@ const refreshCaptcha = async () => {
   }
 }
 
-// 切换到登录模式
 const switchToLogin = () => {
   isRegistering.value = false
   resetAttempts()
@@ -373,13 +363,11 @@ const switchToLogin = () => {
   showPassword.value = false
 }
 
-// 切换到注册模式
 const switchToRegister = async () => {
   isRegistering.value = true
   resetAttempts()
   showPassword.value = false
   
-  // 获取验证码（如果需要）
   if (registerAttempts.value >= 3) {
     await authStore.getCaptcha()
     authStore.registerForm.captcha_id = authStore.captchaId
@@ -388,12 +376,7 @@ const switchToRegister = async () => {
 
 const handleLogin = async () => {
   try {
-    console.log('正在登录，用户名:', loginForm.value.username)
-    
-    // 忽略用户名大小写
     const normalizedUsername = loginForm.value.username.toLowerCase()
-    
-    // 检查是否需要验证码
     const needCaptcha = loginAttempts.value >= 3
     
     if (needCaptcha && !loginForm.value.captcha_code) {
@@ -401,17 +384,13 @@ const handleLogin = async () => {
       return
     }
     
-    // 如果需要验证码但尚未获取，先获取验证码
     if (needCaptcha && !authStore.captchaId) {
       await authStore.getCaptcha()
       loginForm.value.captcha_id = authStore.captchaId
     }
     
-    // 开发环境下使用模拟登录，避免代理问题
     let success
     if (isDevEnvironment.value) {
-      console.log('开发环境，使用模拟登录')
-      // 直接调用模拟登录函数
       success = authStore.mockLogin(normalizedUsername, loginForm.value.password)
     } else {
       success = await authStore.login(
@@ -423,33 +402,19 @@ const handleLogin = async () => {
     }
     
     if (success) {
-      // 登录成功，重置尝试次数
       loginAttempts.value = 0
       showLoginCaptcha.value = false
       showToast(`登录成功！欢迎 ${authStore.displayName}`, 'success')
       
-      console.log('登录成功，准备跳转到配置页面...')
-      
-      // 重要：使用路由的 replace 方法而不是 push
-      // 这样可以防止后退到登录页
-      router.replace('/config').then(() => {
-        console.log('跳转到 /config 成功')
-      }).catch(err => {
-        console.error('跳转到 /config 失败:', err)
-        // 备用方案：尝试跳转到首页
-        router.replace('/').catch(() => {
-          console.error('跳转到根路径也失败')
-        })
+      router.replace('/config').catch(() => {
+        router.replace('/')
       })
       
     } else {
-      // 登录失败，增加尝试次数
       loginAttempts.value++
       
-      // 如果达到3次失败，显示验证码
       if (loginAttempts.value >= 3) {
         showLoginCaptcha.value = true
-        // 开发环境下不需要验证码
         if (!isDevEnvironment.value) {
           await authStore.getCaptcha()
           loginForm.value.captcha_id = authStore.captchaId
@@ -460,17 +425,11 @@ const handleLogin = async () => {
     }
     
   } catch (error: any) {
-    console.error('登录错误:', error)
-    // 开发环境下的网络错误提示
     if (isDevEnvironment.value && error.message && error.message.includes('fetch')) {
-      // 尝试使用模拟登录作为备选
-      console.log('网络请求失败，尝试模拟登录')
       const normalizedUsername = loginForm.value.username.toLowerCase()
       const success = authStore.mockLogin(normalizedUsername, loginForm.value.password)
       if (success) {
         showToast(`模拟登录成功！欢迎 ${authStore.displayName}`, 'success')
-        console.log('模拟登录成功，准备跳转到配置页面...')
-        // 使用 replace 而不是 push
         router.replace('/config').catch(() => {
           router.replace('/')
         })
@@ -485,26 +444,17 @@ const handleLogin = async () => {
 
 const handleRegister = async () => {
   try {
-    console.log('正在注册，用户名:', authStore.registerForm.username)
-    
-    // 开发环境下跳过注册，直接模拟注册
     if (isDevEnvironment.value) {
-      console.log('开发环境，使用模拟注册')
-      // 使用模拟登录代替注册
       const success = authStore.mockLogin(authStore.registerForm.username, authStore.registerForm.password)
       if (success) {
         registerAttempts.value = 0
         showRegisterCaptcha.value = false
         showToast(`模拟注册成功！欢迎 ${authStore.displayName}`, 'success')
-        
-        console.log('注册成功，准备跳转到配置页面...')
-        // 使用 replace 而不是 push
         router.replace('/config')
         return
       }
     }
     
-    // 检查是否需要验证码
     const needCaptcha = registerAttempts.value >= 3
     
     if (needCaptcha && !authStore.registerForm.captcha_code) {
@@ -512,7 +462,6 @@ const handleRegister = async () => {
       return
     }
     
-    // 如果需要验证码但尚未获取，先获取验证码
     if (needCaptcha && !authStore.captchaId) {
       await authStore.getCaptcha()
       authStore.registerForm.captcha_id = authStore.captchaId
@@ -521,20 +470,13 @@ const handleRegister = async () => {
     const success = await authStore.register(authStore.registerForm)
     
     if (success) {
-      // 注册成功，重置尝试次数
       registerAttempts.value = 0
       showRegisterCaptcha.value = false
       showToast(`注册成功！欢迎 ${authStore.displayName}`, 'success')
-      
-      console.log('注册成功，准备跳转到配置页面...')
-      // 使用 replace 而不是 push
       router.replace('/config')
-      
     } else {
-      // 注册失败，增加尝试次数
       registerAttempts.value++
       
-      // 如果达到3次失败，显示验证码
       if (registerAttempts.value >= 3) {
         showRegisterCaptcha.value = true
         await authStore.getCaptcha()
@@ -545,24 +487,140 @@ const handleRegister = async () => {
     }
     
   } catch (error: any) {
-    console.error('注册错误:', error)
     showToast(`注册失败: ${error.message || '请检查网络连接和服务器状态'}`, 'error')
   }
 }
 </script>
 
 <style scoped>
+/* === 炫酷背景逻辑 Start === */
 .auth-view {
   width: 100%;
   height: 100vh;
   display: flex;
   justify-content: center;
-  overflow: auto;
-  transition: background-color 0.3s ease;
-  background-color: var(--bg-primary);
+  overflow: hidden;
+  position: relative;
+  /* 基础背景色 */
+  background-color: #f8fafc;
+  transition: background-color 0.5s ease;
 }
 
-/* 开发环境横幅 */
+/* 背景特效容器 */
+.background-fx {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* 1. 流体光斑层 */
+.blobs {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(80px); /* 强模糊制造流体感 */
+  opacity: 0.8;
+  z-index: 1;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  animation: float 20s infinite ease-in-out alternate;
+  opacity: 0.6;
+}
+
+/* 深色模式下的流体颜色：霓虹极光 */
+.auth-view.theme-dark .blob-1 {
+  background: #4f46e5; /* 靛蓝 */
+  width: 600px;
+  height: 600px;
+  top: -100px;
+  left: -100px;
+  animation-duration: 25s;
+}
+.auth-view.theme-dark .blob-2 {
+  background: #c026d3; /* 紫红 */
+  width: 500px;
+  height: 500px;
+  bottom: -50px;
+  right: -100px;
+  animation-duration: 18s;
+  animation-delay: -5s;
+}
+.auth-view.theme-dark .blob-3 {
+  background: #06b6d4; /* 青色 */
+  width: 300px;
+  height: 300px;
+  bottom: 30%;
+  left: 30%;
+  animation-duration: 22s;
+  animation-delay: -10s;
+}
+
+/* 浅色/系统模式下的流体颜色：清新渐变 */
+.auth-view:not(.theme-dark) .blob-1 {
+  background: #a5b4fc;
+  width: 700px;
+  height: 700px;
+  top: -200px;
+  left: -200px;
+}
+.auth-view:not(.theme-dark) .blob-2 {
+  background: #f9a8d4;
+  width: 600px;
+  height: 600px;
+  bottom: -100px;
+  right: -100px;
+}
+.auth-view:not(.theme-dark) .blob-3 {
+  background: #67e8f9;
+  width: 400px;
+  height: 400px;
+  top: 40%;
+  left: 40%;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33% { transform: translate(30px, -50px) scale(1.1) rotate(10deg); }
+  66% { transform: translate(-20px, 20px) scale(0.9) rotate(-5deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+}
+
+/* 2. 网格覆盖层 - 制造科技感质感 */
+.grid-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  background-image: 
+    linear-gradient(rgba(100, 100, 100, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 100, 100, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  pointer-events: none;
+}
+
+.auth-view.theme-dark .grid-overlay {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+/* === 炫酷背景逻辑 End === */
+
+.auth-view.theme-dark {
+  background-color: #0f172a; /* 深色底色 */
+}
+
 .dev-environment-banner {
   display: flex;
   align-items: center;
@@ -588,17 +646,10 @@ const handleRegister = async () => {
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.02);
-  }
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
 }
 
-/* 开发环境测试账号样式 */
 .dev-accounts {
   margin: 10px 0 15px;
   padding: 12px;
@@ -629,25 +680,6 @@ const handleRegister = async () => {
   color: var(--success-color);
 }
 
-/* 主题相关样式 */
-.auth-view.theme-light {
-  background: linear-gradient(135deg, var(--bg-hover) 0%, var(--bg-secondary) 100%);
-}
-
-.auth-view.theme-dark {
-  background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
-}
-
-.auth-view.theme-system {
-  background: linear-gradient(135deg, var(--bg-hover) 0%, var(--bg-secondary) 100%);
-}
-
-@media (prefers-color-scheme: dark) {
-  .auth-view.theme-system {
-    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
-  }
-}
-
 .auth-scroll-container {
   width: 100%;
   min-height: 100vh;
@@ -656,6 +688,8 @@ const handleRegister = async () => {
   align-items: center;
   padding: 20px;
   box-sizing: border-box;
+  position: relative;
+  z-index: 10;
 }
 
 .auth-container {
@@ -664,52 +698,60 @@ const handleRegister = async () => {
   padding: 20px;
 }
 
+/* 卡片样式优化：更强的玻璃质感 */
 .auth-card {
   border-radius: 20px;
   padding: 40px 35px;
-  box-shadow:
-    0 15px 35px rgba(0, 0, 0, 0.1),
-    0 5px 15px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  /* 阴影加深 */
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  /* 模糊度增加 */
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   min-height: 520px;
-  background-color: var(--bg-card);
-}
-
-.theme-light .auth-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 248, 255, 0.95) 100%);
+  background-color: rgba(255, 255, 255, 0.6); /* 浅色半透明 */
 }
 
 .theme-dark .auth-card {
-  background: linear-gradient(135deg, rgba(30, 30, 46, 0.95) 0%, rgba(25, 25, 40, 0.95) 100%);
+  background-color: rgba(30, 41, 59, 0.6); /* 深色半透明 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.fade-in-down {
+  animation: fadeInDown 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translate3d(0, -60px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 .auth-title {
   text-align: center;
   margin-bottom: 35px;
   font-size: 28px;
-  font-weight: 700;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-weight: 800;
   letter-spacing: 1px;
   transition: color 0.3s ease;
   color: var(--text-primary);
 }
 
 .theme-light .auth-title {
-  color: #1a237e;
+  color: #1e293b;
 }
 
 .theme-dark .auth-title {
-  background: linear-gradient(135deg, #64b5f6, #2196f3);
+  /* 标题渐变 */
+  background: linear-gradient(135deg, #fff, #94a3b8);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* 模式切换标签 */
 .mode-tabs {
   display: flex;
   margin-bottom: 35px;
@@ -755,7 +797,6 @@ const handleRegister = async () => {
   background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
 }
 
-/* 表单样式 */
 .auth-form {
   margin-bottom: 25px;
   flex: 1;
@@ -774,20 +815,26 @@ const handleRegister = async () => {
   padding: 0 15px;
   transition: all 0.3s;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  /* 输入框背景色稍微加深，增加对比 */
+  background-color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0,0,0,0.05);
+  position: relative;
+}
+
+.theme-dark .form-group.with-icon {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .form-group.with-icon:focus-within {
   transform: translateY(-1px);
-  box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.05),
-    0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05), 0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
   border-color: var(--accent-color);
 }
 
-.form-group.with-icon.password-group {
-  padding-right: 10px; /* 为密码显示按钮留出空间 */
+.theme-dark .form-group.with-icon:focus-within {
+  background-color: rgba(0, 0, 0, 0.4);
 }
 
 .icon-container {
@@ -811,6 +858,11 @@ const handleRegister = async () => {
   font-weight: 500;
   transition: color 0.3s ease;
   color: var(--text-primary);
+  width: 100%;
+}
+
+.password-input {
+  padding-right: 40px;
 }
 
 .icon-input::placeholder {
@@ -819,7 +871,6 @@ const handleRegister = async () => {
   color: var(--text-tertiary);
 }
 
-/* 密码显示/隐藏按钮 */
 .password-toggle {
   background: none;
   border: none;
@@ -829,9 +880,15 @@ const handleRegister = async () => {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  border-radius: 6px;
-  margin-left: 8px;
   color: var(--text-tertiary);
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  height: 36px;
+  width: 36px;
+  border-radius: 50%;
 }
 
 .password-toggle:hover {
@@ -840,15 +897,9 @@ const handleRegister = async () => {
 }
 
 .password-toggle:active {
-  transform: scale(0.95);
+  transform: translateY(-50%) scale(0.95);
 }
 
-.password-toggle-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
-/* 验证码容器 - 修复手机端高度问题 */
 .captcha-group {
   margin-top: 10px;
   width: 100%;
@@ -872,15 +923,23 @@ const handleRegister = async () => {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
   min-height: 54px;
   min-width: 0;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background-color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.theme-dark .captcha-input-group {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .captcha-input-group:focus-within {
-  box-shadow:
-    0 0 0 2px rgba(var(--accent-color-rgb), 0.2),
-    0 4px 10px rgba(0, 0, 0, 0.05);
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.2), 0 4px 10px rgba(0, 0, 0, 0.05);
   border-color: var(--accent-color);
+}
+
+.theme-dark .captcha-input-group:focus-within {
+  background-color: rgba(0, 0, 0, 0.4);
 }
 
 .captcha-image-container {
@@ -902,8 +961,13 @@ const handleRegister = async () => {
   justify-content: center;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   transition: all 0.3s;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background-color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.theme-dark .captcha-image {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .captcha-image:hover {
@@ -925,7 +989,6 @@ const handleRegister = async () => {
   color: var(--text-tertiary);
 }
 
-/* 渐变按钮 */
 .gradient-button {
   width: 100%;
   padding: 16px;
@@ -942,18 +1005,18 @@ const handleRegister = async () => {
   overflow: hidden;
   background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
   color: white;
-  box-shadow: 0 4px 15px rgba(var(--accent-color-rgb), 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 20px rgba(var(--accent-color-rgb), 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .gradient-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(var(--accent-color-rgb), 0.6);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 15px 30px rgba(var(--accent-color-rgb), 0.5);
 }
 
 .gradient-button:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(var(--accent-color-rgb), 0.4);
+  box-shadow: 0 5px 15px rgba(var(--accent-color-rgb), 0.3);
 }
 
 .gradient-button:disabled {
@@ -963,7 +1026,6 @@ const handleRegister = async () => {
   box-shadow: none !important;
 }
 
-/* 模式切换链接 */
 .mode-switch {
   margin-top: 25px;
   text-align: center;
@@ -990,7 +1052,6 @@ const handleRegister = async () => {
   background: rgba(var(--accent-color-rgb), 0.1);
 }
 
-/* 尝试次数提示 */
 .attempt-hint {
   margin-top: 15px;
   padding: 12px;
@@ -1024,225 +1085,59 @@ const handleRegister = async () => {
   border-top-color: var(--border-color);
 }
 
-/* 响应式设计 - 手机端优化 */
 @media (max-height: 700px) {
-  .auth-card {
-    padding: 30px 25px;
-    min-height: 480px;
-  }
-  
-  .auth-title {
-    font-size: 26px;
-    margin-bottom: 25px;
-  }
-  
-  .mode-tabs {
-    margin-bottom: 25px;
-  }
-  
-  .form-group {
-    margin-bottom: 18px;
-  }
-  
-  .form-group.with-icon {
-    padding: 0 12px;
-  }
-  
-  .form-group.with-icon.password-group {
-    padding-right: 10px;
-  }
-  
-  .icon-input {
-    padding: 14px 0;
-    font-size: 14px;
-  }
-  
-  .captcha-input-group,
-  .captcha-image {
-    height: 50px;
-    min-height: 50px;
-  }
-  
-  .captcha-image-container {
-    min-width: 110px;
-  }
-  
-  .gradient-button {
-    padding: 14px;
-    font-size: 15px;
-  }
+  .auth-card { padding: 30px 25px; min-height: 480px; }
+  .auth-title { font-size: 26px; margin-bottom: 25px; }
+  .mode-tabs { margin-bottom: 25px; }
+  .form-group { margin-bottom: 18px; }
+  .form-group.with-icon { padding: 0 12px; }
+  .icon-input { padding: 14px 0; font-size: 14px; }
+  .captcha-input-group, .captcha-image { height: 50px; min-height: 50px; }
+  .captcha-image-container { min-width: 110px; }
+  .gradient-button { padding: 14px; font-size: 15px; }
 }
 
 @media (max-height: 600px) {
-  .auth-card {
-    padding: 25px 20px;
-    min-height: 450px;
-  }
-  
-  .auth-title {
-    font-size: 24px;
-    margin-bottom: 20px;
-  }
-  
-  .mode-tab {
-    padding: 12px;
-    font-size: 15px;
-  }
-  
-  .captcha-input-group,
-  .captcha-image {
-    height: 46px;
-    min-height: 46px;
-  }
-  
-  .captcha-image-container {
-    min-width: 100px;
-  }
-  
-  .gradient-button {
-    padding: 14px;
-    font-size: 15px;
-  }
+  .auth-card { padding: 25px 20px; min-height: 450px; }
+  .auth-title { font-size: 24px; margin-bottom: 20px; }
+  .mode-tab { padding: 12px; font-size: 15px; }
+  .captcha-input-group, .captcha-image { height: 46px; min-height: 46px; }
+  .captcha-image-container { min-width: 100px; }
+  .gradient-button { padding: 14px; font-size: 15px; }
 }
 
-/* 适配小屏幕宽度 */
 @media (max-width: 480px) {
-  .auth-container {
-    padding: 15px;
-    max-width: 100%;
-  }
-  
-  .auth-card {
-    padding: 30px 20px;
-    min-height: 480px;
-  }
-  
-  .auth-title {
-    font-size: 24px;
-  }
-  
-  .mode-tab {
-    font-size: 15px;
-    padding: 12px 10px;
-  }
-  
-  .captcha-row {
-    flex-direction: row;
-    gap: 10px;
-  }
-  
-  .captcha-input-group {
-    flex: 2;
-    height: 50px;
-    min-height: 50px;
-  }
-  
-  .captcha-image-container {
-    flex: 1;
-    min-width: 100px;
-    max-width: 120px;
-  }
-  
-  .captcha-image {
-    height: 50px;
-    min-height: 50px;
-  }
-  
-  .gradient-button {
-    padding: 15px;
-    font-size: 16px;
-  }
-  
-  .mode-switch {
-    font-size: 13px;
-  }
-  
-  .attempt-hint {
-    font-size: 12px;
-    padding: 10px;
-  }
+  .auth-container { padding: 15px; max-width: 100%; }
+  .auth-card { padding: 30px 20px; min-height: 480px; }
+  .auth-title { font-size: 24px; }
+  .mode-tab { font-size: 15px; padding: 12px 10px; }
+  .captcha-row { flex-direction: row; gap: 10px; }
+  .captcha-input-group { flex: 2; height: 50px; min-height: 50px; }
+  .captcha-image-container { flex: 1; min-width: 100px; max-width: 120px; }
+  .captcha-image { height: 50px; min-height: 50px; }
+  .gradient-button { padding: 15px; font-size: 16px; }
+  .mode-switch { font-size: 13px; }
+  .attempt-hint { font-size: 12px; padding: 10px; }
 }
 
-/* 极窄屏幕适配 */
 @media (max-width: 360px) {
-  .auth-card {
-    padding: 25px 15px;
-    min-height: 460px;
-  }
-  
-  .auth-title {
-    font-size: 22px;
-  }
-  
-  .mode-tab {
-    padding: 10px 8px;
-    font-size: 14px;
-  }
-  
-  .captcha-input-group {
-    height: 48px;
-    min-height: 48px;
-  }
-  
-  .captcha-image-container {
-    min-width: 90px;
-    max-width: 100px;
-  }
-  
-  .captcha-image {
-    height: 48px;
-    min-height: 48px;
-  }
-  
-  .gradient-button {
-    padding: 14px;
-    font-size: 15px;
-  }
+  .auth-card { padding: 25px 15px; min-height: 460px; }
+  .auth-title { font-size: 22px; }
+  .mode-tab { padding: 10px 8px; font-size: 14px; }
+  .captcha-input-group { height: 48px; min-height: 48px; }
+  .captcha-image-container { min-width: 90px; max-width: 100px; }
+  .captcha-image { height: 48px; min-height: 48px; }
+  .gradient-button { padding: 14px; font-size: 15px; }
 }
 
-/* 横屏模式优化 */
 @media (max-height: 500px) and (orientation: landscape) {
-  .auth-scroll-container {
-    align-items: flex-start;
-    padding-top: 10px;
-  }
-  
-  .auth-card {
-    min-height: 400px;
-    padding: 20px 25px;
-  }
-  
-  .auth-title {
-    font-size: 22px;
-    margin-bottom: 20px;
-  }
-  
-  .form-group {
-    margin-bottom: 15px;
-  }
-  
-  .form-group.with-icon {
-    padding: 0 10px;
-    min-height: 44px;
-  }
-  
-  .form-group.with-icon.password-group {
-    padding-right: 8px;
-  }
-  
-  .icon-input {
-    padding: 10px 0;
-    font-size: 14px;
-  }
-  
-  .captcha-row {
-    gap: 8px;
-  }
-  
-  .captcha-input-group,
-  .captcha-image {
-    height: 44px;
-    min-height: 44px;
-  }
+  .auth-scroll-container { align-items: flex-start; padding-top: 10px; }
+  .auth-card { min-height: 400px; padding: 20px 25px; }
+  .auth-title { font-size: 22px; margin-bottom: 20px; }
+  .form-group { margin-bottom: 15px; }
+  .form-group.with-icon { padding: 0 10px; min-height: 44px; }
+  .icon-input { padding: 10px 0; font-size: 14px; }
+  .captcha-row { gap: 8px; }
+  .captcha-input-group, .captcha-image { height: 44px; min-height: 44px; }
 }
 </style>

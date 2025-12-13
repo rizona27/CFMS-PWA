@@ -559,11 +559,6 @@ const getFundDisplayName = (fundCode: string) => {
   return fundName
 }
 
-const getFullFundName = (fundCode: string) => {
-  const fund = groupedByFund.value[fundCode]?.[0]
-  return fund?.fundName || `未加载(${fundCode})`
-}
-
 const getClientCountColor = (count: number) => {
   if (count === 1) return '#eab308'
   if (count <= 3) return '#f97316'
@@ -723,82 +718,6 @@ const getSortedUniqueOutdatedFunds = () => {
   
   return Array.from(uniqueFunds.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
-}
-
-const copyClientID = (clientID: string, clientName: string) => {
-  if (!hasLatestNavDate.value) {
-    dataStore.showToastMessage('数据未更新，请先刷新数据', 'warning')
-    return
-  }
-  
-  if (!clientID || clientID.trim() === '') {
-    dataStore.showToastMessage('客户号为空', 'error')
-    return
-  }
-  
-  navigator.clipboard.writeText(clientID)
-    .then(() => {
-      dataStore.showToastMessage('客户号已复制到剪贴板', 'success')
-    })
-    .catch(err => {
-      dataStore.showToastMessage('复制失败，请重试', 'error')
-    })
-}
-
-const generateReport = (holding: any) => {
-  if (!hasLatestNavDate.value) {
-    dataStore.showToastMessage('数据未更新，请先刷新数据', 'warning')
-    return
-  }
-  
-  const profit = getHoldingReturn(holding)
-  const purchaseAmount = holding.purchaseAmount
-  const purchaseShares = holding.purchaseShares
-  const currentNav = holding.currentNav
-  const navDate = new Date(holding.navDate)
-  const purchaseDate = new Date(holding.purchaseDate)
-  
-  const formatter = new Intl.DateTimeFormat('zh-CN', {
-    year: '2-digit',
-    month: '2-digit',
-    day: '2-digit'
-  })
-  
-  const purchaseDateStr = formatter.format(purchaseDate)
-  const navDateStr = formatter.format(navDate)
-  
-  const timeDiff = Math.abs(navDate.getTime() - purchaseDate.getTime())
-  const holdingDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1
-  
-  const annualizedReturn = holdingDays > 0 ?
-    (Math.pow(1 + (profit || 0) / 100, 365 / holdingDays) - 1) * 100 : 0
-  
-  const formatCurrency = (amount: number) => {
-    if (amount >= 10000 && amount % 10000 === 0) return `${(amount / 10000).toFixed(0)}万`
-    else if (amount >= 10000) return `${(amount / 10000).toFixed(2)}万`
-    else return `${amount.toFixed(2)}元`
-  }
-  
-  const reportContent = `
-${holding.fundName || `未加载(${holding.fundCode})`} | ${holding.fundCode}
-├ 客户: ${holding.clientName} (${holding.clientID || '无客户号'})
-├ 购买日期: ${purchaseDateStr}
-├ 持有天数: ${holdingDays}天
-├ 购买金额: ${formatCurrency(purchaseAmount)}
-├ 购买份额: ${purchaseShares.toFixed(2)}份
-├ 最新净值: ${currentNav.toFixed(4)} | ${navDateStr}
-├ 收益: ${profit ? (profit > 0 ? '+' : '') + profit.toFixed(2) + '元' : '/'}
-├ 收益率: ${profit ? (profit > 0 ? '+' : '') + profit.toFixed(2) + '%' : '/'}
-└ 年化收益率: ${annualizedReturn ? (annualizedReturn > 0 ? '+' : '') + annualizedReturn.toFixed(2) + '%' : '/'}
-`
-  
-  navigator.clipboard.writeText(reportContent)
-    .then(() => {
-      dataStore.showToastMessage('报告已复制到剪贴板', 'success')
-    })
-    .catch(err => {
-      dataStore.showToastMessage('生成报告失败，请重试', 'error')
-    })
 }
 
 const handleThemeChange = (event: any) => {

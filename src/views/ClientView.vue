@@ -373,10 +373,11 @@ const isSearchExpanded = ref(false)
 const searchText = ref('')
 const expandedClients = ref<Set<string>>(new Set())
 const isRefreshing = ref(false)
-const updatingTextState = ref(0)
-const updatingTextTimer = ref<number | null>(null)
 const loadedGroupedClientCount = ref(10)
 const loadedSearchResultCount = ref(10)
+const updatingTextState = ref(0)
+const updatingTextTimer = ref<number | null>(null)
+const autoHideTimer = ref<number | null>(null)
 
 const holdings = computed(() => dataStore.holdings)
 const isPrivacyMode = computed(() => dataStore.isPrivacyMode)
@@ -428,6 +429,12 @@ const outdatedLatestDate = computed(() => {
   }, new Date(0))
   
   return latest
+})
+
+const updatingText = computed(() => {
+  const baseText = ''
+  const dots = '.'.repeat(updatingTextState.value % 4)
+  return baseText + dots
 })
 
 const statusText = computed(() => {
@@ -487,12 +494,6 @@ const searchResults = computed(() => {
     holding.clientID.toLowerCase().includes(searchLower) ||
     holding.remarks.toLowerCase().includes(searchLower)
   )
-})
-
-const updatingText = computed(() => {
-  const baseText = ''
-  const dots = '.'.repeat(updatingTextState.value % 4)
-  return baseText + dots
 })
 
 const getFundDisplayName = (fundName: string, fundCode: string): string => {
@@ -633,7 +634,14 @@ const isSameDay = (date1: Date, date2: Date) => {
 
 const onStatusTextTap = () => {
   if (holdings.value.length === 0) return
+  
   dataStore.updateUserPreferences({ showRefreshButton: true })
+  
+  if (autoHideTimer.value) {
+    clearTimeout(autoHideTimer.value)
+    autoHideTimer.value = null
+  }
+  
   autoHideTimer.value = setTimeout(() => {
     if (!isRefreshing.value) {
       dataStore.updateUserPreferences({ showRefreshButton: false })
@@ -641,8 +649,33 @@ const onStatusTextTap = () => {
   }, 5000) as unknown as number
 }
 
+const startUpdatingTextAnimation = () => {
+  updatingTextState.value = 0
+  updatingTextTimer.value = setInterval(() => {
+    updatingTextState.value = (updatingTextState.value + 1) % 4
+  }, 500) as unknown as number
+}
+
+const stopUpdatingTextAnimation = () => {
+  if (updatingTextTimer.value !== null) {
+    clearInterval(updatingTextTimer.value)
+    updatingTextTimer.value = null
+  }
+}
+
 const handleRefresh = async () => {
   if (isRefreshing.value) return
+  
+  const token = localStorage.getItem('auth_token')
+  if (!token) {
+    dataStore.showToastMessage('请先登录以刷新数据', 'warning')
+    const event = new CustomEvent('auth-required', {
+      detail: { message: '请先登录以刷新基金数据' }
+    })
+    window.dispatchEvent(event)
+    return
+  }
+  
   isRefreshing.value = true
   startUpdatingTextAnimation()
   dataStore.startRefresh()
@@ -680,23 +713,10 @@ const handleRefresh = async () => {
     dataStore.addLog('基金数据刷新完成', 'success')
     dataStore.showToastMessage('数据刷新完成！', 'success')
     refreshKey.value = Date.now()
+    
     setTimeout(() => {
       dataStore.updateUserPreferences({ showRefreshButton: false })
     }, 1000)
-  }
-}
-
-const startUpdatingTextAnimation = () => {
-  updatingTextState.value = 0
-  updatingTextTimer.value = setInterval(() => {
-    updatingTextState.value = (updatingTextState.value + 1) % 4
-  }, 500) as unknown as number
-}
-
-const stopUpdatingTextAnimation = () => {
-  if (updatingTextTimer.value !== null) {
-    clearInterval(updatingTextTimer.value)
-    updatingTextTimer.value = null
   }
 }
 
@@ -773,8 +793,6 @@ const handleThemeChange = (event: any) => {
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
-
-const autoHideTimer = ref<number | null>(null)
 
 watch(holdings, () => {
   refreshKey.value = Date.now()
@@ -1603,9 +1621,10 @@ onMounted(() => {
   
   .status-pill,
   .refresh-pill {
+    height: 30px;
+    padding: 5px 10px;
+    font-size: 12px;
     min-width: 60px;
-    padding: 6px 12px;
-    font-size: 13px;
   }
   
   .refresh-icon {

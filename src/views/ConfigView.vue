@@ -40,15 +40,13 @@ watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
       enabled: newValue,
       oldValue: oldValue,
       timestamp: Date.now(),
-      source: 'ConfigView',
-      forceUpdate: true
+      source: 'ConfigView'
     },
     bubbles: true,
     composed: true
   })
   
   window.dispatchEvent(event)
-  document.dispatchEvent(event)
   
   const legacyEvent = new CustomEvent('privacy-mode-changed', {
     detail: {
@@ -60,7 +58,6 @@ watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
   })
   
   window.dispatchEvent(legacyEvent)
-  document.dispatchEvent(legacyEvent)
   
   nextTick(() => {
     window.dispatchEvent(new CustomEvent('force-privacy-sync'))
@@ -129,7 +126,7 @@ const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
   const oldMode = dataStore.userPreferences.themeMode
   if (oldMode === mode) return
   
-  dataStore.updateThemeMode(mode)
+  dataStore.updateUserPreferences({ themeMode: mode })
   selectedTheme.value = mode
   
   const modeName = mode === 'system' ? '系统' : mode === 'light' ? '浅色' : '深色'
@@ -195,7 +192,6 @@ const handleLogout = async () => {
 const togglePrivacyMode = (value: boolean) => {
   if (dataStore.isPrivacyMode === value) return
   const newValue = value
-  dataStore.isPrivacyMode = newValue
   dataStore.updateUserPreferences({ isPrivacyMode: newValue })
   localStorage.setItem('privacy_mode', newValue.toString())
   dataStore.addLog(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')

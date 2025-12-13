@@ -32,17 +32,27 @@ const toastMessage = ref('')
 const isLoading = ref(false)
 const precomputedHoldings = ref<Array<{
   holding: any
-  profit: { absolute: number; annualized: number }
+  profit: { absolute: number; absoluteReturn: number }
   daysHeld: number
 }>>([])
 
 const isPrivacyMode = computed(() => dataStore.isPrivacyMode)
-const showRefreshButton = computed(() => dataStore.showRefreshButton)
 
 const selectedSortKey = ref<'none' | 'amount' | 'profit' | 'yield' | 'days'>('none')
 const sortOrder = ref<'ascending' | 'descending'>('descending')
 
 const sortKeyDisplay = computed(() => {
+  const map = {
+    none: '无排序',
+    amount: '金额',
+    profit: '收益',
+    yield: '收益率',
+    days: '天数'
+  }
+  return map[selectedSortKey.value]
+})
+
+const sortKeyFullDisplay = computed(() => {
   const map = {
     none: '无排序',
     amount: '金额',
@@ -69,69 +79,6 @@ const sortButtonText = computed(() => {
 })
 
 const holdings = computed(() => dataStore.holdings)
-
-// 计算最新净值日期状态
-const previousWorkday = computed(() => {
-  const today = new Date()
-  const date = new Date(today)
-  while (true) {
-    date.setDate(date.getDate() - 1)
-    const weekday = date.getDay()
-    if (weekday >= 1 && weekday <= 5) return date
-  }
-})
-
-const latestNavDate = computed(() => {
-  const validHoldings = holdings.value.filter(h => h.isValid)
-  if (validHoldings.length === 0) return null
-  
-  return validHoldings.reduce((latest, holding) => {
-    const date = new Date(holding.navDate)
-    return date > latest ? date : latest
-  }, new Date(0))
-})
-
-const hasLatestNavDate = computed(() => {
-  if (holdings.value.length === 0) return false
-  const prevWorkday = previousWorkday.value
-  
-  return holdings.value.some(holding =>
-    holding.isValid && isSameDay(new Date(holding.navDate), prevWorkday)
-  )
-})
-
-const outdatedLatestDate = computed(() => {
-  if (holdings.value.length === 0 || hasLatestNavDate.value) return null
-  
-  const outdatedHoldings = holdings.value.filter(h => h.isValid)
-  if (outdatedHoldings.length === 0) return null
-  
-  const latest = outdatedHoldings.reduce((latest, holding) => {
-    const date = new Date(holding.navDate)
-    return date > latest ? date : latest
-  }, new Date(0))
-  
-  return latest
-})
-
-const statusText = computed(() => {
-  if (holdings.value.length === 0) return '无数据'
-  
-  const formatter = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' })
-  
-  if (hasLatestNavDate.value) {
-    const prevDateString = formatter.format(previousWorkday.value)
-    return `最新净值: ${prevDateString}`
-  } else {
-    if (outdatedLatestDate.value) {
-      const outdatedDateString = formatter.format(outdatedLatestDate.value)
-      return `待更新: ${outdatedDateString}`
-    } else {
-      const prevDateString = formatter.format(previousWorkday.value)
-      return `待更新: ${prevDateString}`
-    }
-  }
-})
 
 const filteredAndSortedHoldings = computed(() => {
   let results = [...precomputedHoldings.value]
@@ -166,12 +113,12 @@ const filteredAndSortedHoldings = computed(() => {
   
   if (appliedMinProfit.value) {
     const minProfit = parseFloat(appliedMinProfit.value)
-    results = results.filter(item => item.profit.annualized >= minProfit)
+    results = results.filter(item => item.profit.absoluteReturn >= minProfit)
   }
   
   if (appliedMaxProfit.value) {
     const maxProfit = parseFloat(appliedMaxProfit.value)
-    results = results.filter(item => item.profit.annualized <= maxProfit)
+    results = results.filter(item => item.profit.absoluteReturn <= maxProfit)
   }
   
   if (selectedSortKey.value !== 'none') {
@@ -189,8 +136,8 @@ const filteredAndSortedHoldings = computed(() => {
           valueB = b.profit.absolute
           break
         case 'yield':
-          valueA = a.profit.annualized
-          valueB = b.profit.annualized
+          valueA = a.profit.absoluteReturn
+          valueB = b.profit.absoluteReturn
           break
         case 'days':
           valueA = a.daysHeld
@@ -217,7 +164,7 @@ const zeroProfitIndex = computed(() => {
   if (sortOrder.value === 'descending') {
     let lastPositiveIndex = -1
     for (let i = holdings.length - 1; i >= 0; i--) {
-      if (holdings[i].profit.annualized >= 0) {
+      if (holdings[i].profit.absoluteReturn >= 0) {
         lastPositiveIndex = i
         break
       }
@@ -226,7 +173,7 @@ const zeroProfitIndex = computed(() => {
   } else {
     let lastNegativeIndex = -1
     for (let i = holdings.length - 1; i >= 0; i--) {
-      if (holdings[i].profit.annualized < 0) {
+      if (holdings[i].profit.absoluteReturn < 0) {
         lastNegativeIndex = i
         break
       }
@@ -235,12 +182,10 @@ const zeroProfitIndex = computed(() => {
   }
 })
 
-// 只显示客户名，不显示客户号
 const getClientNameOnly = (clientName: string): string => {
   return dataStore.getClientDisplayName(clientName, '')
 }
 
-// 截断基金名称，超过6个字符用".."代替
 const truncateFundName = (name: string): string => {
   if (!name) return ''
   if (name.length <= 6) return name
@@ -254,10 +199,14 @@ const refreshData = () => {
   for (const holding of holdings.value) {
     if (holding.currentNav > 0 && holding.purchaseAmount > 0) {
       const profit = dataStore.calculateProfit(holding)
+      const absoluteReturn = (profit.absolute / holding.purchaseAmount) * 100
       const daysHeld = daysBetween(new Date(holding.purchaseDate), new Date())
       computedData.push({
         holding,
-        profit,
+        profit: {
+          absolute: profit.absolute,
+          absoluteReturn: absoluteReturn
+        },
         daysHeld
       })
     }
@@ -357,74 +306,40 @@ const getValueColor = (value: number) => {
   return '#666'
 }
 
-// 工具函数
-const isSameDay = (date1: Date, date2: Date) => {
-  return date1.getFullYear() === date2.getFullYear() &&
-         date1.getMonth() === date2.getMonth() &&
-         date1.getDate() === date2.getDate()
-}
-
-// 修复：通过正确的API更新隐私模式
 const handlePrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
-  console.log(`TopPerformersView: 隐私模式变化到 ${enabled}`)
-  
-  // ✅ 正确的更新方式
   dataStore.updateUserPreferences({ isPrivacyMode: enabled })
-  
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
-  
   dataStore.addLog(`隐私模式变化: ${enabled ? '开启' : '关闭'}`, 'info')
 }
 
 const handleGlobalPrivacyModeChange = (event: any) => {
   const { enabled } = event.detail
-  console.log(`TopPerformersView: 收到全局隐私模式变化事件: ${enabled}`)
-  
-  // ✅ 正确的更新方式
   dataStore.updateUserPreferences({ isPrivacyMode: enabled })
-  
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
 }
 
-// 主题变化处理器
 const handleThemeChange = (event: any) => {
   const { isDark } = event.detail
-  console.log(`TopPerformersView: 主题变化到 ${isDark ? 'dark' : 'light'}`)
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
 
 const handleForcePrivacySync = () => {
-  console.log('TopPerformersView: 收到强制隐私同步事件')
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
 }
 
 const handleForceThemeSync = () => {
-  console.log('TopPerformersView: 收到强制主题同步事件')
   themeKey.value = Date.now()
   refreshKey.value = Date.now()
 }
 
-const onStatusTextTap = () => {
-  if (holdings.value.length === 0) return
-  dataStore.updateUserPreferences({ showRefreshButton: true })
-  autoHideTimer.value = setTimeout(() => {
-    if (autoHideTimer.value) {
-      clearTimeout(autoHideTimer.value)
-      autoHideTimer.value = null
-    }
-    dataStore.updateUserPreferences({ showRefreshButton: false })
-  }, 5000) as unknown as number
-}
-
 watch(() => dataStore.isPrivacyMode, (newValue) => {
-  console.log(`TopPerformersView: dataStore.isPrivacyMode变化到 ${newValue}`)
   privacyKey.value = Date.now()
   refreshKey.value = Date.now()
   themeKey.value = Date.now()
@@ -433,8 +348,6 @@ watch(() => dataStore.isPrivacyMode, (newValue) => {
 watch(holdings, () => {
   refreshData()
 })
-
-const autoHideTimer = ref<number | null>(null)
 
 onMounted(() => {
   refreshData()
@@ -450,14 +363,9 @@ onMounted(() => {
     document.head.appendChild(meta)
   }
   
-  // 监听隐私模式变化事件
   window.addEventListener('privacy-mode-changed', handlePrivacyModeChange)
   window.addEventListener('privacy-mode-changed-global', handleGlobalPrivacyModeChange)
-  
-  // 监听主题变化事件（统一使用 theme-changed）
   window.addEventListener('theme-changed', handleThemeChange)
-  
-  // 监听强制同步事件
   window.addEventListener('force-privacy-sync', handleForcePrivacySync)
   window.addEventListener('force-theme-sync', handleForceThemeSync)
 })
@@ -468,17 +376,11 @@ onUnmounted(() => {
   window.removeEventListener('theme-changed', handleThemeChange)
   window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
   window.removeEventListener('force-theme-sync', handleForceThemeSync)
-  
-  if (autoHideTimer.value) {
-    clearTimeout(autoHideTimer.value)
-    autoHideTimer.value = null
-  }
 })
 </script>
 
 <template>
   <div class="top-performers-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <!-- 固定头部区域 -->
     <div class="fixed-header">
       <div class="header-section" :class="{ 'with-filter': isFilterExpanded }">
         <div class="header-row">
@@ -496,7 +398,7 @@ onUnmounted(() => {
               <button
                 class="sort-btn"
                 @click="cycleSortKey"
-                :title="selectedSortKey !== 'none' ? `按${sortKeyDisplay}排序` : '无排序'"
+                :title="selectedSortKey !== 'none' ? `按${sortKeyFullDisplay}排序` : '无排序'"
                 :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
               >
                 <span class="sort-text">{{ sortButtonText }}</span>
@@ -513,17 +415,6 @@ onUnmounted(() => {
                   {{ sortOrder === 'ascending' ? '↑' : '↓' }}
                 </span>
               </button>
-            </div>
-          </div>
-          
-          <div class="status-pill-group">
-            <div
-              v-if="!showRefreshButton"
-              class="status-pill"
-              @click="onStatusTextTap"
-              :class="{ 'status-latest': hasLatestNavDate }"
-            >
-              <span class="status-text">{{ statusText }}</span>
             </div>
           </div>
           
@@ -610,7 +501,6 @@ onUnmounted(() => {
       </div>
     </div>
     
-    <!-- 可滚动的内容区域 -->
     <div class="content-wrapper">
       <div class="content-area">
         <div v-if="isLoading" class="loading-state">
@@ -652,8 +542,8 @@ onUnmounted(() => {
                 {{ formatAmountInTenThousands(item.profit.absolute) }}
               </div>
               <div class="row-cell days">{{ item.daysHeld }}</div>
-              <div class="row-cell rate" :style="{ color: getValueColor(item.profit.annualized) }">
-                {{ item.profit.annualized.toFixed(2) }}
+              <div class="row-cell rate" :style="{ color: getValueColor(item.profit.absoluteReturn) }">
+                {{ item.profit.absoluteReturn.toFixed(2) }}
               </div>
               <div class="row-cell client">
                 {{ getClientNameOnly(item.holding.clientName) }}
@@ -689,7 +579,6 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-/* 固定头部 */
 .fixed-header {
   flex-shrink: 0;
   background: var(--bg-primary);
@@ -820,50 +709,6 @@ onUnmounted(() => {
   font-weight: bold;
 }
 
-.status-pill-group {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-left: auto;
-}
-
-.status-pill {
-  height: 32px;
-  padding: 6px 12px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  color: var(--text-primary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-weight: 500;
-  white-space: nowrap;
-  min-width: 70px;
-}
-
-.status-pill:hover {
-  background: var(--accent-color);
-  color: white;
-  border-color: var(--accent-color);
-}
-
-.status-pill.status-latest {
-  background: #d1fae5;
-  color: #065f46;
-  border-color: #065f46;
-}
-
-.status-pill.status-latest:hover {
-  background: #065f46;
-  color: white;
-  border-color: #065f46;
-}
-
 .filter-actions {
   display: flex;
   gap: 8px;
@@ -974,7 +819,6 @@ onUnmounted(() => {
   padding: 0 3px;
 }
 
-/* 可滚动内容区域 */
 .content-wrapper {
   flex: 1;
   position: relative;
@@ -1223,7 +1067,6 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
   .header-section {
     padding: 6px 12px 6px;
@@ -1255,13 +1098,6 @@ onUnmounted(() => {
   
   .sort-text {
     font-size: 12px;
-  }
-  
-  .status-pill {
-    height: 30px;
-    padding: 5px 10px;
-    font-size: 12px;
-    min-width: 55px;
   }
   
   .filter-action-btn {
@@ -1464,44 +1300,23 @@ onUnmounted(() => {
   }
 }
 
-:root.dark .action-btn.active,
-:root.dark .sort-btn:hover,
-:root.dark .sort-order-btn:hover {
-  background-color: var(--accent-color);
-  color: white !important;
-  border-color: var(--accent-color) !important;
-}
-
 :root.dark .sort-btn,
 :root.dark .sort-order-btn {
   background: var(--bg-card);
   color: var(--text-primary);
 }
 
-:root.dark .status-pill {
-  background: var(--bg-hover);
-  border-color: var(--border-color);
-  color: var(--text-primary);
+.sort-btn:hover,
+.sort-order-btn:hover {
+  background-color: var(--accent-color);
+  color: white !important;
 }
 
-:root.dark .status-pill.status-latest {
-  background: rgba(34, 197, 94, 0.2);
-  color: #86efac;
-  border-color: #4ade80;
-}
-
-:root.dark .status-pill.status-latest:hover {
-  background: #4ade80;
-  color: #1e293b;
-  border-color: #4ade80;
-}
-
-:root.dark .fund-name {
-  color: var(--text-primary);
-}
-
-:root.dark .fund-code {
-  color: var(--text-secondary);
+:root.dark .sort-btn:hover,
+:root.dark .sort-order-btn:hover {
+  background-color: var(--accent-color);
+  color: white !important;
+  border-color: var(--accent-color) !important;
 }
 
 :root {
