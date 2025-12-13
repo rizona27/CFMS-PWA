@@ -649,35 +649,74 @@ const handleRefresh = async () => {
   const total = holdings.value.length
   
   try {
-    for (let i = 0; i < total; i++) {
-      const holding = holdings.value[i]
+    // 🔴 修改：批量获取基金数据，利用后端缓存
+    const fundCodes = [...new Set(holdings.value.map(h => h.fundCode))];
+    
+    try {
+      // 首先尝试批量获取
+      const batchResults = await fundService.fetchMultipleFunds(fundCodes)
       
-      try {
-        const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
-        const eastmoneyDetails = await fundService.fetchFundDetailsFromEastmoney(holding.fundCode)
-        
-        await dataStore.updateHolding(holding.id, {
-          fundName: fundInfo.name,
-          currentNav: fundInfo.nav,
-          navDate: new Date(fundInfo.navDate),
-          isValid: true,
-          navReturn1m: eastmoneyDetails.returns?.navReturn1m,
-          navReturn3m: eastmoneyDetails.returns?.navReturn3m,
-          navReturn6m: eastmoneyDetails.returns?.navReturn6m,
-          navReturn1y: eastmoneyDetails.returns?.navReturn1y
-        })
-      } catch (error) {
-        console.error('刷新基金数据失败:', error)
+      // 批量更新所有持有记录
+      for (const holding of holdings.value) {
+        const fundInfo = batchResults.find(f => f.code === holding.fundCode)
+        if (fundInfo) {
+          await dataStore.updateHolding(holding.id, {
+            fundName: fundInfo.name,
+            currentNav: fundInfo.nav,
+            navDate: new Date(fundInfo.navDate),
+            isValid: true,
+            navReturn1m: fundInfo.returns?.navReturn1m ?? holding.navReturn1m,
+            navReturn3m: fundInfo.returns?.navReturn3m ?? holding.navReturn3m,
+            navReturn6m: fundInfo.returns?.navReturn6m ?? holding.navReturn6m,
+            navReturn1y: fundInfo.returns?.navReturn1y ?? holding.navReturn1y
+          })
+        }
       }
+    } catch (batchError) {
+      console.warn('批量获取失败，回退到逐个获取:', batchError)
       
-      dataStore.updateRefreshProgress(i + 1)
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // 回退到逐个获取
+      for (let i = 0; i < total; i++) {
+        const holding = holdings.value[i]
+        
+        try {
+          // 🔴 修改：使用 fetchFundInfo，它会自动使用数据库缓存
+          const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
+          
+          await dataStore.updateHolding(holding.id, {
+            fundName: fundInfo.name,
+            currentNav: fundInfo.nav,
+            navDate: new Date(fundInfo.navDate),
+            isValid: true,
+            navReturn1m: fundInfo.returns?.navReturn1m ?? holding.navReturn1m,
+            navReturn3m: fundInfo.returns?.navReturn3m ?? holding.navReturn3m,
+            navReturn6m: fundInfo.returns?.navReturn6m ?? holding.navReturn6m,
+            navReturn1y: fundInfo.returns?.navReturn1y ?? holding.navReturn1y
+          })
+        } catch (error) {
+          console.error('刷新基金数据失败:', error)
+          // 保留原始数据，仅标记为无效
+          await dataStore.updateHolding(holding.id, {
+            isValid: false
+          })
+        }
+        
+        dataStore.updateRefreshProgress(i + 1)
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
     }
   } finally {
     dataStore.completeRefresh()
     isRefreshing.value = false
     stopUpdatingTextAnimation()
-    dataStore.showToastMessage('数据刷新完成！', 'success')
+    
+    // 🔴 新增：检查是否有非最新日期的基金
+    const outdatedCount = outdatedFundCodes.value.length
+    if (outdatedCount > 0) {
+      dataStore.showToastMessage(`数据刷新完成！有${outdatedCount}支基金非最新日期`, 'warning')
+    } else {
+      dataStore.showToastMessage('数据刷新完成！所有基金均为最新日期', 'success')
+    }
     
     refreshKey.value = Date.now()
     

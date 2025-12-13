@@ -6,7 +6,7 @@ export interface FundHolding {
   clientName: string
   clientID: string
   fundCode: string
- fundName: string
+  fundName: string
   purchaseAmount: number
   purchaseShares: number
   purchaseDate: Date
@@ -162,6 +162,9 @@ const convertFundHoldingToHolding = (fundHolding: FundHolding): any => {
   }
 }
 
+// API基础URL，从环境变量获取或使用默认值
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://cfms.crnas.uk:8315'
+
 export const useDataStore = defineStore('data', () => {
   const holdings = ref<FundHolding[]>([])
   const logMessages = ref<LogEntry[]>([])
@@ -313,6 +316,122 @@ export const useDataStore = defineStore('data', () => {
     fundCache.value.clear()
     localStorage.removeItem('fundCache')
     addLog('基金缓存已清空', 'info')
+  }
+
+  // 🔴 添加数据库缓存相关方法
+  const getFundFromDBCache = async (code: string): Promise<CachedFundInfo | null> => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('[缓存] 未登录，跳过数据库缓存查询')
+        return null
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/fund/cache/get?code=${code}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        return null
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        // 转换格式
+        return {
+          code: result.data.code,
+          name: result.data.name,
+          nav: result.data.nav,
+          navDate: result.data.navDate,
+          returns: result.data.returns,
+          timestamp: Date.now()
+        }
+      }
+      
+      return null
+      
+    } catch (error) {
+      console.error('获取数据库缓存失败:', error)
+      return null
+    }
+  }
+
+  const saveToDBCache = async (code: string, data: CachedFundInfo): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('[缓存] 未登录，跳过保存到数据库缓存')
+        return false
+      }
+      
+      const fundData = {
+        code: data.code,
+        name: data.name,
+        nav: data.nav,
+        navDate: data.navDate,
+        isValid: true,
+        returns: data.returns
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/fund/cache/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ fundData })
+      })
+      
+      if (!response.ok) {
+        return false
+      }
+      
+      const result = await response.json()
+      return result.success || false
+      
+    } catch (error) {
+      console.error('保存到数据库缓存失败:', error)
+      return false
+    }
+  }
+
+  const clearDBCache = async (): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('[缓存] 未登录，跳过清空数据库缓存')
+        return false
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/fund/cache/clear`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (!response.ok) {
+        return false
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        addLog('数据库基金缓存已清空', 'info')
+      }
+      
+      return result.success || false
+      
+    } catch (error) {
+      console.error('清空数据库缓存失败:', error)
+      return false
+    }
   }
 
   const loadData = () => {
@@ -834,6 +953,11 @@ export const useDataStore = defineStore('data', () => {
     clearFundCache,
     
     convertHoldingToFundHolding,
-    convertFundHoldingToHolding
+    convertFundHoldingToHolding,
+    
+    // 🔴 新增数据库缓存相关方法
+    getFundFromDBCache,
+    saveToDBCache,
+    clearDBCache
   }
 })

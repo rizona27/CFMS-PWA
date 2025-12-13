@@ -683,15 +683,22 @@ const handleRefresh = async () => {
   startUpdatingTextAnimation()
   dataStore.startRefresh()
   dataStore.showToastMessage('开始刷新数据，请稍候...', 'info')
-  dataStore.addLog('开始刷新基金数据', 'info')
+  dataStore.addLog('开始刷新基金数据（使用数据库缓存）', 'info')
   
   const total = holdings.value.length
+  
   try {
-    for (let i = 0; i < total; i++) {
-      const holding = holdings.value[i]
-      try {
-        const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
-        if (fundInfo.name && fundInfo.nav > 0) {
+    // 🔴 修改：使用批量获取方式，充分利用数据库缓存
+    const fundCodes = [...new Set(holdings.value.map(h => h.fundCode))]
+    
+    try {
+      // 尝试批量获取基金数据
+      const batchResults = await fundService.fetchMultipleFunds(fundCodes)
+      
+      // 批量更新所有持有记录
+      for (const holding of holdings.value) {
+        const fundInfo = batchResults.find(f => f.code === holding.fundCode)
+        if (fundInfo) {
           await dataStore.updateHolding(holding.id, {
             fundName: fundInfo.name,
             currentNav: fundInfo.nav,
@@ -703,18 +710,74 @@ const handleRefresh = async () => {
             navReturn1y: fundInfo.returns?.navReturn1y ?? holding.navReturn1y
           })
         }
-      } catch (error) {
-        console.error('刷新基金数据失败:', error)
       }
-      dataStore.updateRefreshProgress(i + 1)
-      await new Promise(resolve => setTimeout(resolve, 100))
+    } catch (batchError) {
+      console.warn('批量获取失败，回退到逐个获取:', batchError)
+      dataStore.addLog('批量获取失败，回退到逐个获取', 'warning')
+      
+      // 回退到逐个获取
+      for (let i = 0; i < total; i++) {
+        const holding = holdings.value[i]
+        
+        try {
+          // 🔴 修改：使用 fetchFundInfo，它会自动使用数据库缓存
+          const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
+          
+          if (fundInfo.name && fundInfo.nav > 0) {
+            await dataStore.updateHolding(holding.id, {
+              fundName: fundInfo.name,
+              currentNav: fundInfo.nav,
+              navDate: new Date(fundInfo.navDate),
+              isValid: true,
+              navReturn1m: fundInfo.returns?.navReturn1m ?? holding.navReturn1m,
+              navReturn3m: fundInfo.returns?.navReturn3m ?? holding.navReturn3m,
+              navReturn6m: fundInfo.returns?.navReturn6m ?? holding.navReturn6m,
+              navReturn1y: fundInfo.returns?.navReturn1y ?? holding.navReturn1y
+            })
+          } else {
+            // 数据无效，仅标记为无效
+            await dataStore.updateHolding(holding.id, {
+              isValid: false
+            })
+          }
+        } catch (error) {
+          console.error('刷新基金数据失败:', error)
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          dataStore.addLog(`刷新基金 ${holding.fundCode} 失败: ${errorMessage}`, 'error')
+          // 保留原始数据，仅标记为无效
+          await dataStore.updateHolding(holding.id, {
+            isValid: false
+          })
+        }
+        
+        dataStore.updateRefreshProgress(i + 1)
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
     }
   } finally {
     dataStore.completeRefresh()
     isRefreshing.value = false
     stopUpdatingTextAnimation()
-    dataStore.addLog('基金数据刷新完成', 'success')
-    dataStore.showToastMessage('数据刷新完成！', 'success')
+    
+    // 🔴 新增：检查数据状态
+    const validHoldings = holdings.value.filter(h => h.isValid)
+    const outdatedHoldings = holdings.value.filter(h => {
+      if (!h.isValid) return false
+      const navDate = new Date(h.navDate)
+      const today = new Date()
+      return !isSameDay(navDate, today) && navDate < today
+    })
+    
+    if (validHoldings.length === 0) {
+      dataStore.showToastMessage('刷新完成，但所有基金数据无效', 'error')
+    } else if (outdatedHoldings.length > 0) {
+      dataStore.showToastMessage(`刷新完成！有${outdatedHoldings.length}支基金非最新日期`, 'warning')
+    } else {
+      dataStore.showToastMessage('数据刷新完成！所有基金均为最新日期', 'success')
+    }
+    
+    dataStore.addLog(`基金数据刷新完成，有效:${validHoldings.length}，过时:${outdatedHoldings.length}`, 'success')
+    
     refreshKey.value = Date.now()
     
     setTimeout(() => {

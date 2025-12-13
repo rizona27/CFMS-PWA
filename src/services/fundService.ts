@@ -100,6 +100,172 @@ class FundService {
     }
   }
 
+  // 🔴 新增方法：从数据库缓存获取基金数据
+  async getFundFromDBCache(code: string): Promise<FundInfo | null> {
+    const formattedCode = this.formatFundCode(code)
+    
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('[缓存] 未登录，跳过数据库缓存')
+        return null
+      }
+      
+      const url = `${API_BASE_URL}/api/fund/cache/get?code=${formattedCode}`
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Origin': window.location.origin
+      }
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers,
+        credentials: 'include'
+      })
+      
+      if (!response.ok) {
+        if (response.status !== 404) {
+          console.warn(`[缓存] 获取数据库缓存失败: ${response.status}`)
+        }
+        return null
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.data) {
+        console.log(`[缓存] ✅ 从数据库缓存获取基金数据: ${formattedCode}`)
+        this.dataStore.addLog(`基金代码 ${formattedCode}: 从数据库缓存获取数据`, 'cache')
+        return result.data
+      }
+      
+      return null
+      
+    } catch (error) {
+      console.error(`[缓存] 获取数据库缓存异常:`, error)
+      return null
+    }
+  }
+
+  // 🔴 新增方法：保存基金数据到数据库缓存
+  async saveToDBCache(fundInfo: FundInfo): Promise<boolean> {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('[缓存] 未登录，跳过保存到数据库缓存')
+        return false
+      }
+      
+      const url = `${API_BASE_URL}/api/fund/cache/update`
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Origin': window.location.origin
+      }
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          fundData: fundInfo
+        })
+      })
+      
+      if (!response.ok) {
+        console.warn(`[缓存] 保存到数据库缓存失败: ${response.status}`)
+        return false
+      }
+      
+      const result = await response.json()
+      return result.success || false
+      
+    } catch (error) {
+      console.error(`[缓存] 保存到数据库缓存异常:`, error)
+      return false
+    }
+  }
+
+  // 🔴 新增方法：批量保存基金数据到数据库缓存
+  async batchSaveToDBCache(fundInfos: FundInfo[]): Promise<boolean> {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('[缓存] 未登录，跳过批量保存到数据库缓存')
+        return false
+      }
+      
+      const url = `${API_BASE_URL}/api/fund/cache/batch-update`
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Origin': window.location.origin
+      }
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          fundsData: fundInfos
+        })
+      })
+      
+      if (!response.ok) {
+        console.warn(`[缓存] 批量保存到数据库缓存失败: ${response.status}`)
+        return false
+      }
+      
+      const result = await response.json()
+      return result.success || false
+      
+    } catch (error) {
+      console.error(`[缓存] 批量保存到数据库缓存异常:`, error)
+      return false
+    }
+  }
+
+  // 🔴 新增方法：清空数据库缓存
+  async clearDBCache(): Promise<boolean> {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('[缓存] 未登录，跳过清空数据库缓存')
+        return false
+      }
+      
+      const url = `${API_BASE_URL}/api/fund/cache/clear`
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Origin': window.location.origin
+      }
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        credentials: 'include'
+      })
+      
+      if (!response.ok) {
+        console.warn(`[缓存] 清空数据库缓存失败: ${response.status}`)
+        return false
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        this.dataStore.addLog('数据库基金缓存已清空', 'info')
+      }
+      
+      return result.success || false
+      
+    } catch (error) {
+      console.error(`[缓存] 清空数据库缓存异常:`, error)
+      return false
+    }
+  }
+
   async fetchFundInfo(fundCode: string, useOnlyEastmoney: boolean = false): Promise<FundInfo> {
     const formattedCode = this.formatFundCode(fundCode)
     console.group(`🧭 [fetchFundInfo] 开始处理基金: ${fundCode} (${formattedCode})`)
@@ -113,21 +279,48 @@ class FundService {
 
     this.dataStore.addLog(`开始查询基金代码: ${formattedCode}，使用API: ${this.getSelectedAPI()}` + (useOnlyEastmoney ? " (仅使用天天基金)" : ""), 'network')
 
+    // 1. 首先检查内存缓存
     const cachedData = this.fundCache.get(formattedCode)
     if (cachedData) {
       const isSameNavDay = this.isSameDay(DateFormatters.parseYYYY_MM_DD(cachedData.holding.navDate) || new Date(), new Date())
       const isCacheFresh = !this.isCacheExpired(cachedData)
       
       if (isSameNavDay && isCacheFresh) {
-        console.log(`[缓存] ✅ 命中有效缓存`)
-        this.dataStore.addLog(`基金代码 ${formattedCode}: 从缓存中获取数据`, 'cache')
+        console.log(`[内存缓存] ✅ 命中有效缓存`)
+        this.dataStore.addLog(`基金代码 ${formattedCode}: 从内存缓存中获取数据`, 'cache')
         console.groupEnd()
         return cachedData.holding
       } else {
-        console.log(`[缓存] ⏰ 缓存已过期或非今日`)
+        console.log(`[内存缓存] ⏰ 内存缓存已过期或非今日`)
       }
     }
 
+    // 2. 检查数据库缓存
+    try {
+      const dbCachedData = await this.getFundFromDBCache(formattedCode)
+      if (dbCachedData) {
+        const isSameNavDay = this.isSameDay(DateFormatters.parseYYYY_MM_DD(dbCachedData.navDate) || new Date(), new Date())
+        
+        if (isSameNavDay) {
+          console.log(`[数据库缓存] ✅ 命中有效缓存`)
+          
+          // 更新内存缓存
+          this.fundCache.set(formattedCode, {
+            holding: dbCachedData,
+            timestamp: Date.now()
+          })
+          
+          console.groupEnd()
+          return dbCachedData
+        } else {
+          console.log(`[数据库缓存] ⏰ 数据库缓存数据非今日`)
+        }
+      }
+    } catch (error) {
+      console.warn(`[数据库缓存] 获取失败:`, error)
+    }
+
+    // 3. 缓存未命中，从代理接口获取
     const requestTask = this.fetchFromProxy(formattedCode, useOnlyEastmoney)
     this.activeRequests.set(formattedCode, requestTask)
 
@@ -208,8 +401,16 @@ class FundService {
       
       console.log(`[成功] 基金数据:`, result.data.name, result.data.nav)
       
-      // 保存到缓存
+      // 保存到内存缓存
       this.saveToCache(result.data)
+      
+      // 🔴 新增：尝试保存到数据库缓存
+      try {
+        await this.saveToDBCache(result.data)
+        console.log(`[缓存] 基金数据已保存到数据库缓存: ${fundCode}`)
+      } catch (cacheError) {
+        console.warn(`[缓存] 保存到数据库缓存失败:`, cacheError)
+      }
       
       return result.data
       
@@ -242,7 +443,31 @@ class FundService {
     
     this.dataStore.addLog(`开始批量获取 ${fundCodes.length} 支基金信息`, 'network')
     
-    // 使用批量代理接口
+    // 1. 首先尝试从数据库缓存批量获取
+    const cachePromises = fundCodes.map(code => this.getFundFromDBCache(code))
+    const cacheResults = await Promise.all(cachePromises)
+    
+    const cachedFunds: FundInfo[] = []
+    const codesToFetch: string[] = []
+    
+    for (let i = 0; i < fundCodes.length; i++) {
+      const cachedData = cacheResults[i]
+      if (cachedData && this.isSameDay(DateFormatters.parseYYYY_MM_DD(cachedData.navDate) || new Date(), new Date())) {
+        cachedFunds.push(cachedData)
+        results.push(cachedData)
+      } else {
+        codesToFetch.push(fundCodes[i])
+      }
+    }
+    
+    console.log(`[批量缓存] 从数据库缓存获取 ${cachedFunds.length} 支，需要获取 ${codesToFetch.length} 支`)
+    
+    if (codesToFetch.length === 0) {
+      this.dataStore.addLog(`批量获取基金信息完成（全部来自缓存）`, 'success')
+      return results
+    }
+    
+    // 2. 剩余的基金从代理接口获取
     const url = `${API_BASE_URL}/api/proxy/fund/batch`
     
     // 检查令牌
@@ -264,7 +489,7 @@ class FundService {
         headers: headers,
         credentials: 'include',
         body: JSON.stringify({
-          codes: fundCodes,
+          codes: codesToFetch,
           api: this.getSelectedAPI()
         })
       })
@@ -292,7 +517,7 @@ class FundService {
         throw new Error(result.error || '批量请求返回错误')
       }
       
-      // 更新缓存
+      // 更新内存缓存
       result.data.forEach((fund: FundInfo) => {
         this.fundCache.set(fund.code, {
           holding: fund,
@@ -300,15 +525,26 @@ class FundService {
         })
       })
       
+      // 🔴 新增：批量保存到数据库缓存
+      try {
+        await this.batchSaveToDBCache(result.data)
+        console.log(`[缓存] 批量基金数据已保存到数据库缓存`)
+      } catch (cacheError) {
+        console.warn(`[缓存] 批量保存到数据库缓存失败:`, cacheError)
+      }
+      
+      // 合并结果
+      results.push(...result.data)
+      
       this.dataStore.addLog(`批量获取基金信息完成`, 'success')
-      return result.data
+      return results
       
     } catch (error) {
       console.error(`批量请求异常:`, error)
       this.dataStore.addLog(`批量获取基金信息失败，回退到逐个请求`, 'warning')
       
       // 回退到逐个请求
-      for (const code of fundCodes) {
+      for (const code of codesToFetch) {
         try {
           const info = await this.fetchFundInfo(code)
           results.push(info)
@@ -332,7 +568,7 @@ class FundService {
     }
   }
 
-  async fetchFundDetailsFromEastmoney(code: string): Promise<{ fundName: string; returns: FundReturns }> {
+  async fetchFundDetailsFromEastmoney(code: string): Promise<{ fundName: string; returns: FundReturns; nav: number; navDate: string }> {
     const formattedCode = this.formatFundCode(code)
     this.dataStore.addLog(`基金代码 ${formattedCode}: 尝试从天天基金获取详情数据`, 'network')
     
@@ -382,20 +618,37 @@ class FundService {
       
       return {
         fundName: result.data.name || 'N/A',
+        nav: result.data.nav,
+        navDate: result.data.navDate,
         returns: result.data.returns || {}
       }
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误'
       this.dataStore.addLog(`基金代码 ${formattedCode}: 详情数据获取失败: ${errorMessage}`, 'error')
-      return { fundName: 'N/A', returns: {} }
+      return { 
+        fundName: 'N/A',
+        nav: 0,
+        navDate: 'N/A',
+        returns: {}
+      }
     }
   }
 
-  // 清理缓存
+  // 🔴 修改现有的 clearCache 方法，添加数据库缓存清空
   clearCache(): void {
+    // 清空内存缓存
     this.fundCache.clear()
-    console.log(`[缓存] 已清理所有基金缓存`)
+    console.log(`[内存缓存] 已清理所有基金缓存`)
+    
+    // 尝试清空数据库缓存
+    this.clearDBCache().then(success => {
+      if (success) {
+        console.log(`[数据库缓存] 已清空`)
+      }
+    }).catch(error => {
+      console.warn(`[数据库缓存] 清空失败:`, error)
+    })
   }
 }
 
