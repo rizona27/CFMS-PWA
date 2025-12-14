@@ -15,8 +15,16 @@
       </div>
 
       <div class="decorative-elements">
-        <div class="decor-circle decor-1"></div>
-        <div class="decor-circle decor-2"></div>
+        <div class="decor-line decor-1"></div>
+        <div class="decor-line decor-2"></div>
+        <div class="decor-line decor-3"></div>
+        <div class="decor-line decor-4"></div>
+        <div class="decor-circle decor-circle-1"></div>
+        <div class="decor-circle decor-circle-2"></div>
+        <div class="decor-circle decor-circle-3"></div>
+        <div class="decor-dot decor-dot-1"></div>
+        <div class="decor-dot decor-dot-2"></div>
+        <div class="decor-dot decor-dot-3"></div>
       </div>
     </div>
   </div>
@@ -40,9 +48,7 @@ const props = defineProps<{
   justify-content: center;
   position: relative;
   overflow: hidden;
-  
-  /* 移除边框和阴影，将渐变应用到整个区域 */
-  background: linear-gradient(135deg, rgba(245, 247, 250, 0.95), rgba(230, 235, 240, 0.95));
+  background: transparent;
   border-radius: 0;
   box-shadow: none;
 }
@@ -52,23 +58,40 @@ const props = defineProps<{
   padding: 40px 32px;
   max-width: 400px;
   z-index: 10;
+  position: relative;
 }
 
 .icon-container {
-  width: 80px;
-  height: 80px;
+  width: 100px;
+  height: 100px;
   margin: 0 auto 24px;
-  background-color: var(--accent-color);
+  background-color: #eff6ff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid #bfdbfe;
+  position: relative;
+  z-index: 2;
+}
+
+.icon-container::before {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(191, 219, 254, 0.3), rgba(219, 234, 254, 0.2));
+  z-index: 1;
 }
 
 .empty-icon {
-  width: 50%;
-  height: 50%;
+  width: 50px;
+  height: 50px;
+  filter: brightness(0.9);
+  z-index: 2;
+  position: relative;
 }
 
 .main-title {
@@ -76,11 +99,15 @@ const props = defineProps<{
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .subtitle {
   font-size: 14px;
   color: var(--text-secondary);
+  position: relative;
+  z-index: 2;
 }
 
 .decorative-elements {
@@ -90,43 +117,155 @@ const props = defineProps<{
   width: 100%;
   height: 100%;
   overflow: hidden;
-  z-index: 5;
+  z-index: 1;
 }
 
-.decor-circle {
+/* 装饰线条 - 使用蓝色主题 */
+.decor-line {
   position: absolute;
-  border-radius: 50%;
-  opacity: 0.3;
-  animation: float 20s infinite ease-in-out;
+  width: 180px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+  opacity: 0.15;
+  animation: moveLine 20s infinite linear;
+  filter: blur(0.5px);
 }
 
 .decor-1 {
-  width: 180px;
-  height: 180px;
-  background-color: var(--accent-color);
-  top: 10%;
-  left: -5%;
+  top: 20%;
+  left: -10%;
+  transform: rotate(30deg);
   animation-delay: 0s;
+  animation-duration: 25s;
 }
 
 .decor-2 {
-  width: 120px;
-  height: 120px;
-  background-color: var(--secondary-color);
-  bottom: 5%;
-  right: -5%;
-  animation-delay: 10s;
+  bottom: 25%;
+  right: -15%;
+  transform: rotate(-45deg);
+  animation-delay: 5s;
+  animation-duration: 22s;
 }
 
-@keyframes float {
+.decor-3 {
+  top: 40%;
+  left: -5%;
+  transform: rotate(15deg);
+  animation-delay: 10s;
+  animation-duration: 28s;
+  opacity: 0.1;
+}
+
+.decor-4 {
+  bottom: 40%;
+  right: -10%;
+  transform: rotate(-25deg);
+  animation-delay: 15s;
+  animation-duration: 24s;
+  opacity: 0.1;
+}
+
+/* 装饰圆圈 - 使用蓝色主题 */
+.decor-circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid #3b82f6;
+  opacity: 0.08;
+  animation: floatCircle 30s infinite ease-in-out;
+}
+
+.decor-circle-1 {
+  width: 180px;
+  height: 180px;
+  top: 10%;
+  left: 5%;
+  animation-delay: 0s;
+  animation-duration: 40s;
+}
+
+.decor-circle-2 {
+  width: 120px;
+  height: 120px;
+  bottom: 15%;
+  right: 10%;
+  animation-delay: 10s;
+  animation-duration: 35s;
+}
+
+.decor-circle-3 {
+  width: 80px;
+  height: 80px;
+  top: 60%;
+  left: 15%;
+  animation-delay: 20s;
+  animation-duration: 30s;
+  opacity: 0.05;
+}
+
+/* 装饰点 - 使用蓝色主题 */
+.decor-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  opacity: 0.2;
+  animation: pulseDot 8s infinite ease-in-out;
+  filter: blur(0.5px);
+}
+
+.decor-dot-1 {
+  top: 30%;
+  left: 80%;
+  animation-delay: 0s;
+}
+
+.decor-dot-2 {
+  top: 70%;
+  left: 10%;
+  animation-delay: 2s;
+}
+
+.decor-dot-3 {
+  top: 50%;
+  left: 90%;
+  animation-delay: 4s;
+  width: 6px;
+  height: 6px;
+}
+
+@keyframes moveLine {
   0% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-20px) rotate(180deg);
+    transform: translateX(-100px) rotate(var(--rotation, 30deg));
   }
   100% {
-    transform: translateY(0) rotate(360deg);
+    transform: translateX(calc(100vw + 100px)) rotate(var(--rotation, 30deg));
+  }
+}
+
+@keyframes floatCircle {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate(20px, -15px) rotate(120deg);
+  }
+  66% {
+    transform: translate(-10px, 10px) rotate(240deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(360deg);
+  }
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    opacity: 0.1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.2);
   }
 }
 
@@ -140,9 +279,19 @@ const props = defineProps<{
   }
   
   .icon-container {
-    width: 64px;
-    height: 64px;
+    width: 85px;
+    height: 85px;
     margin-bottom: 20px;
+  }
+  
+  .icon-container::before {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .empty-icon {
+    width: 45px;
+    height: 45px;
   }
   
   .main-title {
@@ -154,18 +303,35 @@ const props = defineProps<{
     font-size: 13px;
   }
   
-  .decor-1 {
+  .decor-1,
+  .decor-2,
+  .decor-3,
+  .decor-4 {
+    width: 120px;
+  }
+  
+  .decor-circle-1 {
     width: 120px;
     height: 120px;
   }
   
-  .decor-2 {
+  .decor-circle-2 {
     width: 80px;
     height: 80px;
   }
+  
+  .decor-circle-3 {
+    width: 60px;
+    height: 60px;
+  }
 }
 
-:root.dark .empty-state-wrapper {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+:root.dark .icon-container {
+  background-color: rgba(30, 58, 138, 0.2);
+  border-color: rgba(30, 58, 138, 0.4);
+}
+
+:root.dark .icon-container::before {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.2), rgba(23, 37, 84, 0.1));
 }
 </style>
