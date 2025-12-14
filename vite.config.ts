@@ -11,9 +11,9 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'CFMS · 一基暴富',
-        short_name: '一基暴富',  // 改为中文短名
+        short_name: '一基暴富',
         description: '基金客户管理系统',
-        theme_color: '#4facfe',  // 与 index.html 保持一致
+        theme_color: '#4facfe',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
@@ -21,13 +21,13 @@ export default defineConfig(({ mode }) => ({
         scope: '/',
         icons: [
           {
-            src: '/icons/icon-192x192.png',  // 修改路径
+            src: '/icons/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: '/icons/icon-512x512.png',  // 修改路径
+            src: '/icons/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
@@ -54,9 +54,10 @@ export default defineConfig(({ mode }) => ({
           }
         ]
       },
-      // 添加 devOptions 配置
+      // 修改 devOptions 配置：将 enabled 设置为 true
       devOptions: {
-        enabled: false,
+        // 🚀 修复 manifest 404 错误：启用开发模式下的 PWA 插件，以在 dev server 中提供 manifest.webmanifest 文件。
+        enabled: true,
         type: 'module'
       }
     })

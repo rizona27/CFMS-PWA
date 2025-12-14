@@ -134,15 +134,15 @@ const updateLogs: UpdateLog[] = [
 // 复制两份内容以实现无缝滚动
 const scrollLogs = computed(() => [...updateLogs, ...updateLogs])
 
-const scrollContentRef = ref<HTMLElement | null>(null) // 新增 DOM 引用
+const scrollContentRef = ref<HTMLElement | null>(null) // DOM 引用
 const scrollOffset = ref(0)
 const scrollSpeed = 20 // 像素/秒
-let singleSetHeight = 0 // 修正：改为变量，精确计算后赋值
+let singleSetHeight = 0 // 精确计算后赋值
 let animationId: number | null = null
 let lastTimestamp: number | null = null
 let isPaused = false
 
-// 关键修复 1: 精确计算单组数据的高度
+// 精确计算单组数据的高度
 const calculateSingleSetHeight = () => {
   if (!scrollContentRef.value) return 0
   
@@ -163,10 +163,9 @@ const calculateSingleSetHeight = () => {
   return totalHeight > 0 ? totalHeight : 0
 }
 
-// 修复 2: 优化滚动动画逻辑，使用精确高度进行模运算
+// 滚动动画逻辑，使用精确高度进行模运算
 const startScrollAnimation = (timestamp: number) => {
   if (singleSetHeight === 0) {
-    // 如果高度未计算，则跳过本次动画
     animationId = requestAnimationFrame(startScrollAnimation)
     return
   }
@@ -175,10 +174,8 @@ const startScrollAnimation = (timestamp: number) => {
   const elapsed = timestamp - lastTimestamp
   
   if (!isPaused) {
-    // 计算新的滚动增量
     const scrollDelta = (scrollSpeed * elapsed) / 1000
-    
-    // 使用模运算来保证无缝循环，将浮点数精度问题留给 Math.round() 解决
+    // 使用模运算实现无缝循环
     scrollOffset.value = (scrollOffset.value + scrollDelta) % singleSetHeight
   }
   
@@ -207,7 +204,7 @@ const goBack = () => {
 }
 
 onMounted(async () => {
-  // 1. 等待DOM渲染完成，确保日志项被渲染
+  // 1. 等待DOM渲染完成
   await nextTick()
   
   // 2. 精确计算高度并赋值
@@ -218,7 +215,10 @@ onMounted(async () => {
   
   // 4. 延迟一小段时间开始滚动
   setTimeout(() => {
-    animationId = requestAnimationFrame(startScrollAnimation)
+    // 只有在计算出高度后才开始动画，否则会再次请求下一帧进行计算
+    if (singleSetHeight > 0) {
+      animationId = requestAnimationFrame(startScrollAnimation)
+    }
   }, 100)
 })
 
@@ -229,7 +229,7 @@ onUnmounted(() => {
 })
 </script>
 
-<style>
+<style scoped>
 /* 确保样式被正确加载 */
 .about-view {
   position: fixed;
@@ -876,5 +876,139 @@ onUnmounted(() => {
   .auto-scroll-container {
     pointer-events: none;
   }
+}
+
+/* 添加滚动条样式修复 */
+@media (max-width: 768px) {
+  .about-view {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .content-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* 修复可能溢出导致滚动条的问题 */
+  .auto-scroll-container {
+    max-height: 200px;
+    overflow: hidden;
+  }
+}
+
+/* 确保所有视图的容器正确处理滚动 */
+.summary-view,
+.top-performers-view,
+.client-view,
+.about-view {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  height: 100vh;
+}
+
+/* 修复移动端可能的溢出问题 */
+@media (max-width: 768px) {
+  .summary-view .content-area,
+  .top-performers-view .content-area,
+  .client-view .content-area {
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+}
+
+/* 补充的CSS修复 */
+.about-view {
+  overflow: hidden;
+}
+
+.content-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 二维码图片优化 */
+.qr-link {
+  display: inline-block;
+  line-height: 0;
+}
+
+.wxpay-qr {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 修复滚动容器高度计算 */
+.auto-scroll-container {
+  position: relative;
+  min-height: 120px;
+}
+
+/* 确保滚动内容可见性 */
+.scroll-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* 优化暗色模式对比度 */
+:root.dark .log-description,
+:root.dark .features-intro {
+  color: #b0b7c3;
+}
+
+/* 触摸设备优化 */
+@media (pointer: coarse) {
+  .back-button-pill {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .feature-item {
+    min-height: 44px;
+  }
+}
+
+/* 打印样式优化 */
+@media print {
+  .about-view {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .back-button-pill,
+  .wxpay-qr {
+    display: none !important;
+  }
+  
+  .auto-scroll-container {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  .scroll-content {
+    transform: none !important;
+  }
+}
+
+/* 高性能优化 */
+.about-view * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  backface-visibility: hidden;
+}
+
+/* 修复可能的布局问题 */
+.fixed-top-section {
+  position: relative;
+}
+
+.scrollable-content-section {
+  position: relative;
+  flex: 1;
+}
+
+/* 确保内容区域正确显示 */
+.content-wrapper {
+  min-height: 100%;
+  padding-bottom: 80px;
 }
 </style>
