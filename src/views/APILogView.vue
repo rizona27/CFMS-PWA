@@ -1,23 +1,29 @@
 <template>
   <div class="api-log-view">
-    <div class="custom-navbar">
-      <button class="back-button" @click="goBack">
-        <span class="back-icon">←</span>
-        返回
-      </button>
-      <h1 class="page-title">API 日志</h1>
-      <div class="nav-spacer"></div>
+    <!-- 固定顶部工具栏 -->
+    <div class="fixed-toolbar">
+      <div class="top-actions">
+        <button class="back-button-pill" @click="goBack">
+          <span class="back-icon">←</span>
+          返回
+        </button>
+        
+        <!-- 筛选按钮 -->
+        <button class="filter-toggle-btn" @click="toggleFilterPanel">
+          <span class="filter-icon">⚙️</span>
+          <span class="filter-text">筛选</span>
+        </button>
+      </div>
     </div>
     
     <div class="content">
-      <!-- 日志类型筛选器 -->
-      <div class="log-filter-section">
-        <div class="filter-title">筛选日志类型</div>
+      <!-- 折叠的日志类型筛选器 -->
+      <div class="log-filter-section" v-if="showFilterPanel">
         <div class="filter-buttons">
           <button
             v-for="type in allLogTypes"
             :key="type"
-            class="filter-button"
+            class="filter-button-pill"
             :class="{
               'selected': selectedLogTypes.includes(type),
               [type]: true
@@ -35,17 +41,14 @@
         </div>
         
         <div class="filter-actions">
-          <button class="action-button" @click="toggleSelectAll">
+          <button class="action-button-pill" @click="toggleSelectAll">
             {{ isAllSelected ? '取消全选' : '全选' }}
           </button>
-          <button class="action-button danger" @click="clearLogs" :disabled="logEntries.length === 0">
+          <button class="action-button-pill danger" @click="clearLogs" :disabled="logEntries.length === 0">
             清空日志
           </button>
         </div>
       </div>
-      
-      <!-- 分割线 -->
-      <div class="divider"></div>
       
       <!-- 日志列表 -->
       <div class="log-list-container" ref="logListContainer" @scroll="handleUserScroll">
@@ -66,7 +69,7 @@
           <div
             v-for="type in filteredLogTypes"
             :key="type"
-            class="log-type-group"
+            class="log-type-pill"
           >
             <div class="log-type-header" @click="toggleExpandType(type)">
               <div class="type-info">
@@ -79,11 +82,11 @@
               </span>
             </div>
             
-            <div class="log-items" v-if="isTypeExpanded(type)">
+            <div class="log-items-pill" v-if="isTypeExpanded(type)">
               <div
                 v-for="log in getLogsByType(type)"
                 :key="log.id"
-                class="log-item"
+                class="log-item-pill"
                 :class="log.type"
               >
                 <div class="log-header">
@@ -121,12 +124,13 @@ const allLogTypes = ['info', 'success', 'error', 'warning', 'network', 'cache'] 
 
 // 响应式状态
 const selectedLogTypes = ref<string[]>(['info', 'success', 'error', 'warning', 'network', 'cache'])
-const expandedLogTypes = ref<string[]>(['info', 'success', 'error', 'warning', 'network', 'cache'])
+const expandedLogTypes = ref<string[]>([]) // 默认空数组，所有类型都折叠
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref('info')
 const logListContainer = ref<HTMLElement>()
 const isAutoScrolling = ref(true)
+const showFilterPanel = ref(false) // 控制筛选面板显示
 
 // 从 localStorage 加载筛选状态
 const loadFilterState = () => {
@@ -297,6 +301,12 @@ const showToastMessage = (message: string, type: 'info' | 'success' | 'error' | 
   }, 3000)
 }
 
+// 切换筛选面板显示
+const toggleFilterPanel = () => {
+  showFilterPanel.value = !showFilterPanel.value
+  dataStore.addLog(`${showFilterPanel.value ? '展开' : '折叠'}筛选面板`, 'info')
+}
+
 // 监听日志变化，自动滚动到底部
 const scrollToBottom = () => {
   if (logListContainer.value && isAutoScrolling.value) {
@@ -349,57 +359,98 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.custom-navbar {
+/* 固定顶部工具栏样式 */
+.fixed-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.top-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  padding: 16px 16px 12px;
   flex-shrink: 0;
 }
 
-.back-button {
+/* 返回按钮样式 - 药丸形 */
+.back-button-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-primary);
+  padding: 8px 16px;
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 20px;
+  color: var(--text-primary, #1e293b);
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  transition: all 0.3s ease;
 }
 
-.back-button:hover {
-  background: var(--accent-color);
+.back-button-pill:hover {
+  background: var(--accent-color, #3b82f6);
   color: white;
-  border-color: var(--accent-color);
+  border-color: var(--accent-color, #3b82f6);
+  transform: translateX(-2px);
 }
 
 .back-icon {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
 }
 
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  text-align: center;
-  flex: 1;
+/* 筛选按钮样式 - 改为药丸形，与返回按钮配套 */
+.filter-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 20px;
+  color: var(--text-primary, #1e293b);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.nav-spacer {
-  width: 80px;
-  visibility: hidden;
+.filter-toggle-btn:hover {
+  background: var(--accent-color, #3b82f6);
+  color: white;
+  border-color: var(--accent-color, #3b82f6);
+  transform: translateY(-1px);
+}
+
+.filter-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.filter-text {
+  margin-left: 2px;
+}
+
+/* 深色模式适配 */
+:root.dark .back-button-pill,
+:root.dark .filter-toggle-btn {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+  border-color: var(--border-color, #334155);
+  color: var(--text-primary, #f1f5f9);
+}
+
+:root.dark .back-button-pill:hover,
+:root.dark .filter-toggle-btn:hover {
+  background: var(--accent-color, #60a5fa);
+  border-color: var(--accent-color, #60a5fa);
 }
 
 .content {
@@ -407,6 +458,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin-top: 60px; /* 给固定工具栏留出空间 */
 }
 
 .log-filter-section {
@@ -414,16 +466,21 @@ onMounted(() => {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+  animation: slideDown 0.3s ease;
 }
 
-.filter-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
-  text-align: center;
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
+/* 筛选按钮样式 - 改为药丸形 */
 .filter-buttons {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -431,61 +488,57 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
-.filter-button {
+.filter-button-pill {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   padding: 8px 12px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 20px;
   background: var(--bg-hover);
   color: var(--text-secondary);
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
 }
 
-.filter-button:hover {
-  background: var(--bg-hover);
+.filter-button-pill:hover {
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.filter-button.selected {
-  border-color: currentColor;
+.filter-button-pill.selected {
+  border-color: transparent;
   color: white;
   font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.filter-button.info.selected {
+.filter-button-pill.info.selected {
   background: linear-gradient(135deg, #ff9a00, #ff5e00);
-  border-color: #ff5e00;
 }
 
-.filter-button.success.selected {
+.filter-button-pill.success.selected {
   background: linear-gradient(135deg, #00b09b, #96c93d);
-  border-color: #00b09b;
 }
 
-.filter-button.error.selected {
+.filter-button-pill.error.selected {
   background: linear-gradient(135deg, #ff416c, #ff4b2b);
-  border-color: #ff416c;
 }
 
-.filter-button.warning.selected {
+.filter-button-pill.warning.selected {
   background: linear-gradient(135deg, #ffd700, #ffa500);
-  border-color: #ffa500;
 }
 
-.filter-button.network.selected {
+.filter-button-pill.network.selected {
   background: linear-gradient(135deg, #2196f3, #21cbf3);
-  border-color: #2196f3;
 }
 
-.filter-button.cache.selected {
+.filter-button-pill.cache.selected {
   background: linear-gradient(135deg, #9c27b0, #673ab7);
-  border-color: #9c27b0;
 }
 
 .filter-button-icon {
@@ -516,60 +569,43 @@ onMounted(() => {
   text-align: center;
 }
 
+/* 操作按钮样式 - 改为药丸形 */
 .filter-actions {
   display: flex;
   gap: 8px;
 }
 
-.action-button {
+.action-button-pill {
   flex: 1;
   padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent-color), #2196f3);
-  color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--bg-hover);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.action-button:hover:not(:disabled) {
-  opacity: 0.9;
+.action-button-pill:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--accent-color), #2196f3);
+  color: white;
+  border-color: transparent;
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-.action-button:disabled {
+.action-button-pill:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.action-button.danger {
+.action-button-pill.danger:hover:not(:disabled) {
   background: linear-gradient(135deg, #ff416c, #ff4b2b);
-}
-
-.divider {
-  height: 1px;
-  background: var(--border-color);
-  margin: 0 16px;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.divider::before {
-  content: '';
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent,
-    transparent 5px,
-    var(--border-color) 5px,
-    var(--border-color) 10px
-  );
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
 .log-list-container {
@@ -610,26 +646,36 @@ onMounted(() => {
 .log-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.log-type-group {
+/* 日志类型分组 - 改为药丸条形 */
+.log-type-pill {
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
 }
 
-:root.dark .log-type-group {
+.log-type-pill:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+:root.dark .log-type-pill {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark .log-type-pill:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .log-type-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 16px 20px;
   background: var(--bg-hover);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -638,19 +684,18 @@ onMounted(() => {
 
 .log-type-header:hover {
   background: var(--bg-hover);
-  opacity: 0.9;
 }
 
 .type-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
 }
 
 .type-dot {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -680,13 +725,13 @@ onMounted(() => {
 }
 
 .type-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .type-count {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
   margin-left: 4px;
 }
@@ -701,55 +746,58 @@ onMounted(() => {
   color: var(--accent-color);
 }
 
-.log-items {
+/* 日志项容器 - 药丸形 */
+.log-items-pill {
+  padding: 12px 20px;
   max-height: 400px;
   overflow-y: auto;
-  padding: 8px;
+  background: var(--bg-hover);
 }
 
-.log-item {
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  background: var(--bg-hover);
-  border-left: 4px solid;
+/* 单个日志项 - 药丸形 */
+.log-item-pill {
+  padding: 14px 16px;
+  border-radius: 16px;
+  margin-bottom: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   transition: all 0.2s ease;
 }
 
-.log-item:hover {
+.log-item-pill:hover {
   transform: translateX(4px);
-  background: var(--bg-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.log-item.info {
-  border-left-color: #ff9a00;
+.log-item-pill.info {
+  border-left: 4px solid #ff9a00;
 }
 
-.log-item.success {
-  border-left-color: #00b09b;
+.log-item-pill.success {
+  border-left: 4px solid #00b09b;
 }
 
-.log-item.error {
-  border-left-color: #ff416c;
+.log-item-pill.error {
+  border-left: 4px solid #ff416c;
 }
 
-.log-item.warning {
-  border-left-color: #ffd700;
+.log-item-pill.warning {
+  border-left: 4px solid #ffd700;
 }
 
-.log-item.network {
-  border-left-color: #2196f3;
+.log-item-pill.network {
+  border-left: 4px solid #2196f3;
 }
 
-.log-item.cache {
-  border-left-color: #9c27b0;
+.log-item-pill.cache {
+  border-left: 4px solid #9c27b0;
 }
 
 .log-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   font-size: 12px;
 }
 
@@ -761,8 +809,8 @@ onMounted(() => {
 .log-id {
   color: var(--text-secondary);
   background: var(--bg-hover);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
   font-family: monospace;
   font-size: 10px;
 }
@@ -845,11 +893,35 @@ onMounted(() => {
 
 /* 移动端优化 */
 @media (max-width: 768px) {
+  .fixed-toolbar {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+  
+  .top-actions {
+    padding: 12px 12px 10px;
+  }
+  
+  .back-button-pill,
+  .filter-toggle-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
   .filter-buttons {
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .log-items {
+  .filter-button-pill {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  
+  .action-button-pill {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .log-items-pill {
     max-height: 300px;
   }
   
@@ -866,24 +938,24 @@ onMounted(() => {
 
 /* 滚动条样式 */
 .log-list-container::-webkit-scrollbar,
-.log-items::-webkit-scrollbar {
+.log-items-pill::-webkit-scrollbar {
   width: 6px;
 }
 
 .log-list-container::-webkit-scrollbar-track,
-.log-items::-webkit-scrollbar-track {
+.log-items-pill::-webkit-scrollbar-track {
   background: var(--bg-hover);
   border-radius: 3px;
 }
 
 .log-list-container::-webkit-scrollbar-thumb,
-.log-items::-webkit-scrollbar-thumb {
+.log-items-pill::-webkit-scrollbar-thumb {
   background: var(--text-secondary);
   border-radius: 3px;
 }
 
 .log-list-container::-webkit-scrollbar-thumb:hover,
-.log-items::-webkit-scrollbar-thumb:hover {
+.log-items-pill::-webkit-scrollbar-thumb:hover {
   background: var(--accent-color);
 }
 </style>

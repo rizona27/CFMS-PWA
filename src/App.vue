@@ -108,15 +108,6 @@ const applyTheme = () => {
     shouldBeDark,
     currentClasses: document.documentElement.className
   })
-  
-  // 触发全局主题变化事件（使用一致的事件名称）
-  window.dispatchEvent(new CustomEvent('theme-changed', {
-    detail: {
-      mode: mode,
-      isDark: shouldBeDark,
-      timestamp: Date.now()
-    }
-  }))
 }
 
 // 系统主题变化监听器
@@ -210,9 +201,10 @@ onMounted(() => {
   })
 })
 
-watch(() => dataStore.userPreferences.themeMode, () => {
-  applyTheme()
-})
+// 🔴 移除可能导致循环的watch
+// watch(() => dataStore.userPreferences.themeMode, () => {
+//   applyTheme()
+// })
 
 onUnmounted(() => {
   const errorHandler = (event: ErrorEvent) => {

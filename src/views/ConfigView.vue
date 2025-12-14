@@ -27,7 +27,8 @@ const showNotification = (message: string, type: 'info' | 'success' | 'error' | 
     showToast.value = false
   }, 3000)
   
-  dataStore.addLog(`系统提示: ${message}`, type)
+  // 使用安全的日志记录，避免递归
+  dataStore.safeAddLog(`系统提示: ${message}`, type, false)
 }
 
 watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
@@ -101,12 +102,6 @@ const getUserColors = () => {
   }
 }
 
-const fundAPIs = [
-  { name: '天天基金', value: 'eastmoney', color: '#007bff' },
-  { name: '同花顺', value: 'ths', color: '#dc3545' },
-]
-const selectedAPI = ref(dataStore.userPreferences.selectedFundAPI || 'eastmoney')
-
 const themeModes = [
   { name: '系统', value: 'system', icon: 'system', color: '#6b7280' },
   { name: '浅色', value: 'light', icon: 'light', color: '#f59e0b' },
@@ -115,36 +110,41 @@ const themeModes = [
 
 const selectedTheme = ref(dataStore.userPreferences.themeMode || 'system')
 
-const handleAPIChange = () => {
-  const oldAPI = dataStore.userPreferences.selectedFundAPI
-  dataStore.updateUserPreferences({ selectedFundAPI: selectedAPI.value })
-  dataStore.addLog(`数据接口已从${oldAPI}切换至: ${selectedAPI.value}`, 'info')
-  showNotification(`数据接口已切换至: ${fundAPIs.find(a => a.value === selectedAPI.value)?.name || selectedAPI.value}`, 'success')
-}
+// 🔴 修复：添加标志防止递归调用
+let isThemeChanging = false
 
 const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
+  if (isThemeChanging) {
+    console.warn('主题切换正在进行中，跳过本次调用')
+    return
+  }
+  
   const oldMode = dataStore.userPreferences.themeMode
   if (oldMode === mode) return
   
-  dataStore.updateUserPreferences({ themeMode: mode })
-  selectedTheme.value = mode
+  isThemeChanging = true
   
-  // 将主题设置保存到 localStorage，以便 AuthView 读取
-  localStorage.setItem('theme_mode', mode)
-  
-  const modeName = mode === 'system' ? '系统' : mode === 'light' ? '浅色' : '深色'
-  showNotification(`主题已切换为: ${modeName}`, 'success')
-  
-  const event = new CustomEvent('theme-changed', {
-    detail: {
-      mode,
-      oldMode,
-      timestamp: Date.now()
-    },
-    bubbles: true,
-    composed: true
-  })
-  window.dispatchEvent(event)
+  try {
+    console.log(`主题切换: ${oldMode} -> ${mode}`)
+    
+    // 先更新本地状态
+    selectedTheme.value = mode
+    
+    // 🔴 修复：直接调用 updateThemeMode，避免中间层
+    dataStore.updateThemeMode(mode)
+    
+    const modeName = mode === 'system' ? '系统' : mode === 'light' ? '浅色' : '深色'
+    showNotification(`主题已切换为: ${modeName}`, 'success')
+    
+    // 🔴 移除手动触发的事件，已在 updateThemeMode 中处理
+    // 移除手动日志记录，已在 updateThemeMode 中处理
+    
+  } finally {
+    // 延迟重置标志，避免快速连续点击
+    setTimeout(() => {
+      isThemeChanging = false
+    }, 300)
+  }
 }
 
 const handleFeature = (featureName: string) => {
@@ -168,26 +168,26 @@ const handleFeature = (featureName: string) => {
     default:
       showNotification(`功能 ${featureName} 正在开发中...`, 'info')
   }
-  dataStore.addLog(`用户操作: 点击${featureName}功能`, 'info')
+  dataStore.safeAddLog(`用户操作: 点击${featureName}功能`, 'info', false)
 }
 
 const handleUpgrade = (e: Event) => {
   e.preventDefault()
   showNotification('正在跳转到升级页面...', 'info')
-  dataStore.addLog('用户点击升级按钮', 'info')
+  dataStore.safeAddLog('用户点击升级按钮', 'info', false)
 }
 
 const handleLogout = async () => {
   try {
-    dataStore.addLog('用户执行退出登录操作', 'info')
+    dataStore.safeAddLog('用户执行退出登录操作', 'info', false)
     showNotification('您已成功退出登录', 'success')
     setTimeout(() => {
       authStore.logout()
-      dataStore.addLog('用户已成功退出登录', 'success')
+      dataStore.safeAddLog('用户已成功退出登录', 'success', false)
     }, 800)
   } catch (error) {
     console.error('退出登录失败:', error)
-    dataStore.addLog('退出登录失败: ' + (error as Error).message, 'error')
+    dataStore.safeAddLog('退出登录失败: ' + (error as Error).message, 'error', false)
     showNotification('退出登录失败，请重试', 'error')
   }
 }
@@ -197,7 +197,7 @@ const togglePrivacyMode = (value: boolean) => {
   const newValue = value
   dataStore.updateUserPreferences({ isPrivacyMode: newValue })
   localStorage.setItem('privacy_mode', newValue.toString())
-  dataStore.addLog(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')
+  dataStore.safeAddLog(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info', false)
   
   const event = new CustomEvent('privacy-mode-changed-global', {
     detail: {
@@ -269,7 +269,7 @@ onMounted(() => {
     }, 100)
   })
   
-  dataStore.addLog('用户访问配置页面', 'info')
+  dataStore.safeAddLog('用户访问配置页面', 'info', false)
   window.addEventListener('force-privacy-sync', handleForcePrivacySync)
 })
 
@@ -527,47 +527,20 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <div class="function-card api-card">
+              <!-- 日志查询卡片替换原来的数据接口卡片位置 -->
+              <div class="function-card log-card" @click="handleFeature('APILog')">
                 <div class="card-content">
                   <div class="card-header">
                     <div class="card-icon">
-                       <transition name="icon-fade" mode="out-in">
-                          <svg v-if="selectedAPI === 'eastmoney'" key="eastmoney" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M23 6L13.5 15.5L8.5 10.5L1 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M17 6H23V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                          <svg v-else key="ths" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 20V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M18 20V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M6 20V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                       </transition>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
                     </div>
                     <div class="card-title-wrapper">
-                      <h4 class="card-title">数据接口</h4>
+                      <h4 class="card-title">日志查询</h4>
                     </div>
                   </div>
-                  <div class="api-selector">
-                    <div class="api-options">
-                      <button
-                        v-for="api in fundAPIs"
-                        :key="api.value"
-                        :class="[
-                          'api-option',
-                          { 'active': selectedAPI === api.value },
-                          { 'disabled': api.value !== 'eastmoney' && authStore.userType === 'free' }
-                        ]"
-                        @click.stop="selectedAPI = api.value; if (!(api.value !== 'eastmoney' && authStore.userType === 'free')) handleAPIChange()"
-                        :disabled="api.value !== 'eastmoney' && authStore.userType === 'free'"
-                        :title="api.name + (api.value !== 'eastmoney' && authStore.userType === 'free' ? ' (VIP)' : '')"
-                      >
-                        {{ api.name }}
-                        <svg v-if="api.value !== 'eastmoney' && authStore.userType === 'free'" width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M12 15V12M12 9H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+                   <p class="card-subtitle-corner">记录系统与操作</p>
                 </div>
               </div>
 
@@ -586,22 +559,6 @@ onUnmounted(() => {
                     </div>
                   </div>
                   <p class="card-subtitle-corner">版本及说明</p>
-                </div>
-              </div>
-              
-              <div class="function-card log-card" @click="handleFeature('APILog')">
-                <div class="card-content">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </div>
-                    <div class="card-title-wrapper">
-                      <h4 class="card-title">日志查询</h4>
-                    </div>
-                  </div>
-                   <p class="card-subtitle-corner">记录系统与操作</p>
                 </div>
               </div>
 
@@ -954,60 +911,77 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
+/* 重新设计卡片颜色 - 从左到右，从上到下的渐变 */
 .cloud-sync-card {
-  background: rgba(147, 51, 234, 0.1);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
 }
 
 .cloud-sync-card .card-icon svg {
-  color: #9333EA;
+  color: #667eea;
 }
 
 .manage-holdings-card {
-  background: rgba(59, 130, 246, 0.1);
+  background: linear-gradient(135deg, rgba(118, 75, 162, 0.15) 0%, rgba(245, 87, 108, 0.15) 100%);
 }
 
 .manage-holdings-card .card-icon svg {
-  color: #3B82F6;
+  color: #764ba2;
 }
 
 .privacy-card {
-  background: rgba(20, 184, 166, 0.1);
+  background: linear-gradient(135deg, rgba(245, 87, 108, 0.15) 0%, rgba(79, 172, 254, 0.15) 100%);
 }
 
 .privacy-card .card-icon svg {
-  color: #14B8A6;
+  color: #f5576c;
 }
 
 .theme-card {
-  background: rgba(139, 92, 246, 0.1);
+  background: linear-gradient(135deg, rgba(79, 172, 254, 0.15) 0%, rgba(67, 233, 123, 0.15) 100%);
 }
 
 .theme-card .card-icon svg {
-  color: #8B5CF6;
-}
-
-.api-card {
-  background: rgba(245, 158, 11, 0.1);
-}
-
-.api-card .card-icon svg {
-  color: #F59E0B;
+  color: #4facfe;
 }
 
 .log-card {
-  background: rgba(6, 182, 212, 0.1);
+  background: linear-gradient(135deg, rgba(67, 233, 123, 0.15) 0%, rgba(250, 112, 154, 0.15) 100%);
 }
 
 .log-card .card-icon svg {
-  color: #06B6D4;
+  color: #43e97b;
 }
 
 .about-card {
-  background: rgba(59, 130, 246, 0.1);
+  background: linear-gradient(135deg, rgba(250, 112, 154, 0.15) 0%, rgba(254, 209, 64, 0.15) 100%);
 }
 
 .about-card .card-icon svg {
-  color: #3B82F6;
+  color: #fa709a;
+}
+
+:root.dark .cloud-sync-card {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+}
+
+:root.dark .manage-holdings-card {
+  background: linear-gradient(135deg, rgba(118, 75, 162, 0.25) 0%, rgba(245, 87, 108, 0.25) 100%);
+}
+
+:root.dark .privacy-card {
+  background: linear-gradient(135deg, rgba(245, 87, 108, 0.25) 0%, rgba(79, 172, 254, 0.25) 100%);
+}
+
+:root.dark .theme-card {
+  background: linear-gradient(135deg, rgba(79, 172, 254, 0.25) 0%, rgba(67, 233, 123, 0.25) 100%);
+}
+
+:root.dark .log-card {
+  background: linear-gradient(135deg, rgba(67, 233, 123, 0.25) 0%, rgba(250, 112, 154, 0.25) 100%);
+}
+
+:root.dark .about-card {
+  background: linear-gradient(135deg, rgba(250, 112, 154, 0.25) 0%, rgba(254, 209, 64, 0.25) 100%);
 }
 
 .card-content {
@@ -1083,54 +1057,6 @@ onUnmounted(() => {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-}
-
-.api-selector {
-  margin-top: auto;
-}
-
-.api-options {
-  display: flex;
-  gap: 8px;
-}
-
-.api-option {
-  flex: 1;
-  padding: 6px 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1.5px solid #F59E0B;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-height: 36px;
-  color: #F59E0B;
-}
-
-.api-option.active {
-  background: #F59E0B;
-  color: white;
-  cursor: default;
-}
-
-.api-option:hover:not(.disabled):not(.active) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-:root.dark .api-option:hover:not(.disabled):not(.active) {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.api-option.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  position: relative;
 }
 
 .privacy-toggle {
@@ -1350,14 +1276,12 @@ onUnmounted(() => {
     right: 12px;
   }
   
-  .api-options,
   .privacy-options,
   .theme-options {
     flex-direction: row;
     gap: 6px;
   }
   
-  .api-option,
   .privacy-option,
   .theme-option {
     padding: 5px 6px;
@@ -1414,7 +1338,6 @@ onUnmounted(() => {
     margin-bottom: 8px;
   }
   
-  .api-option,
   .privacy-option,
   .theme-option {
     padding: 4px 5px;
@@ -1459,7 +1382,6 @@ onUnmounted(() => {
     transition: transform 0.1s ease;
   }
   
-  .api-option:active:not(.disabled):not(.active),
   .privacy-option:active:not(.active),
   .theme-option:active:not(.active) {
     transform: scale(0.95);
