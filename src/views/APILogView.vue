@@ -1,6 +1,6 @@
 <template>
   <div class="api-log-view">
-    <!-- 固定顶部工具栏 -->
+    <!-- 修改后的固定顶部工具栏 -->
     <div class="fixed-toolbar">
       <div class="top-actions">
         <button class="back-button-pill" @click="goBack">
@@ -359,16 +359,17 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 固定顶部工具栏样式 */
+/* 修改后的固定顶部工具栏样式 - 去掉底部边框和背景 */
 .fixed-toolbar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
+  background: transparent; /* 背景设为透明 */
+  /* 移除 border-bottom: 1px solid var(--border-color); */
   padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: 8px; /* 添加一点底部内边距 */
 }
 
 .top-actions {
@@ -377,6 +378,7 @@ onMounted(() => {
   justify-content: space-between;
   padding: 16px 16px 12px;
   flex-shrink: 0;
+  background: transparent; /* 确保按钮容器背景也是透明的 */
 }
 
 /* 返回按钮样式 - 药丸形 */
@@ -393,6 +395,7 @@ onMounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* 添加轻微阴影，使按钮更突出 */
 }
 
 .back-button-pill:hover {
@@ -400,6 +403,7 @@ onMounted(() => {
   color: white;
   border-color: var(--accent-color, #3b82f6);
   transform: translateX(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .back-icon {
@@ -421,6 +425,7 @@ onMounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .filter-toggle-btn:hover {
@@ -428,6 +433,7 @@ onMounted(() => {
   color: white;
   border-color: var(--accent-color, #3b82f6);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .filter-icon {
@@ -445,12 +451,14 @@ onMounted(() => {
   background: var(--bg-hover, rgba(255, 255, 255, 0.05));
   border-color: var(--border-color, #334155);
   color: var(--text-primary, #f1f5f9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 :root.dark .back-button-pill:hover,
 :root.dark .filter-toggle-btn:hover {
   background: var(--accent-color, #60a5fa);
   border-color: var(--accent-color, #60a5fa);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
 }
 
 .content {
@@ -895,6 +903,7 @@ onMounted(() => {
 @media (max-width: 768px) {
   .fixed-toolbar {
     padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: 6px;
   }
   
   .top-actions {
