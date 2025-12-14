@@ -52,18 +52,33 @@
               
               <div
                 class="function-card import-holding-card"
+                :class="{ 'disabled': userType === 'free' }"
                 @click="goToImportHolding"
               >
                 <div class="card-content">
                   <div class="card-header">
                     <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
+                      <transition name="icon-fade" mode="out-in">
+                        <svg v-if="userType === 'free'" key="import-locked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M19 10C19.5304 10 20.0391 10.2107 20.4142 10.5858C20.7893 10.9609 21 11.4696 21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H13C12.4696 21 11.9609 20.7893 11.5858 20.4142C11.2107 20.0391 11 19.5304 11 19V12C11 11.4696 11.2107 10.9609 11.5858 10.5858C11.9609 10.2107 12.4696 10 13 10H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M13 10V7C13 5.34315 14.3431 4 16 4C17.6569 4 19 5.34315 19 7V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <svg v-else key="import-unlocked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </transition>
                     </div>
-                    <h4 class="card-title">导入持仓</h4>
+                    <div class="card-title-wrapper">
+                      <h4 class="card-title">
+                        导入持仓
+                        <span v-if="userType === 'free'" class="vip-badge">VIP</span>
+                      </h4>
+                    </div>
                   </div>
                   <p class="card-description">从文件导入持仓数据</p>
                 </div>
@@ -71,18 +86,33 @@
               
               <div
                 class="function-card export-holding-card"
+                :class="{ 'disabled': userType === 'free' }"
                 @click="goToExportHolding"
               >
                 <div class="card-content">
                   <div class="card-header">
                     <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M17 10L12 5L7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
+                      <transition name="icon-fade" mode="out-in">
+                        <svg v-if="userType === 'free'" key="export-locked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M19 10C19.5304 10 20.0391 10.2107 20.4142 10.5858C20.7893 10.9609 21 11.4696 21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H13C12.4696 21 11.9609 20.7893 11.5858 20.4142C11.2107 20.0391 11 19.5304 11 19V12C11 11.4696 11.2107 10.9609 11.5858 10.5858C11.9609 10.2107 12.4696 10 13 10H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M13 10V7C13 5.34315 14.3431 4 16 4C17.6569 4 19 5.34315 19 7V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M17 10L12 5L7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <svg v-else key="export-unlocked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M17 10L12 5L7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </transition>
                     </div>
-                    <h4 class="card-title">导出持仓</h4>
+                    <div class="card-title-wrapper">
+                      <h4 class="card-title">
+                        导出持仓
+                        <span v-if="userType === 'free'" class="vip-badge">VIP</span>
+                      </h4>
+                    </div>
                   </div>
                   <p class="card-description">导出持仓数据到文件</p>
                 </div>
@@ -121,21 +151,34 @@
       </div>
     </div>
 
-    <div v-if="showToast" class="global-toast" :class="toastType">
-      {{ toastMessage }}
-    </div>
+    <!-- 使用 ToastMessage 组件替换原有的全局 toast -->
+    <ToastMessage
+      :show="showToast"
+      :message="toastMessage"
+      :type="toastType"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-// 移除了对 NavBar 的导入
+import { useAuthStore } from '../../stores/authStore'
+import { useDataStore } from '../../stores/dataStore'
+import ToastMessage from '../../components/common/ToastMessage.vue'
 
 const router = useRouter()
+const authStore = useAuthStore()
+const dataStore = useDataStore()
+
 const showToast = ref(false)
 const toastMessage = ref('')
 const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
+
+// 获取用户类型
+const userType = computed(() => {
+  return authStore.userType || 'free'
+})
 
 // 返回逻辑常量
 const backRoute = '/config'
@@ -168,10 +211,22 @@ const goToEditHolding = () => {
 }
 
 const goToImportHolding = () => {
+  // 检查用户类型，如果是基础用户则阻止并显示提示
+  if (userType.value === 'free') {
+    showNotification('导入持仓功能需要升级到VIP用户', 'warning')
+    dataStore.safeAddLog('基础用户尝试使用导入持仓功能被阻止', 'info', false)
+    return
+  }
   router.push('/holdings/import')
 }
 
 const goToExportHolding = () => {
+  // 检查用户类型，如果是基础用户则阻止并显示提示
+  if (userType.value === 'free') {
+    showNotification('导出持仓功能需要升级到VIP用户', 'warning')
+    dataStore.safeAddLog('基础用户尝试使用导出持仓功能被阻止', 'info', false)
+    return
+  }
   router.push('/holdings/export')
 }
 
@@ -186,7 +241,7 @@ const goToClearHoldings = () => {
 /* ========================================================================= */
 .top-actions {
   /* 模仿 AboutView 的顶部 padding */
-  padding: 16px 16px 0; 
+  padding: 16px 16px 0;
   margin-bottom: 8px; /* 按钮和下方内容之间的间距 */
 }
 
@@ -260,7 +315,7 @@ const goToClearHoldings = () => {
 .config-scroll-area {
   /* 调整高度以适应新的布局，如果内容本身是可滚动的，可以移除高度限制 */
   /* 这里暂时保留原有的高度定义 */
-  height: calc(100vh - 60px); 
+  height: calc(100vh - 60px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -312,6 +367,16 @@ const goToClearHoldings = () => {
 
 :root.dark .function-card:hover {
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+.function-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.function-card.disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .add-holding-card {
@@ -388,11 +453,19 @@ const goToClearHoldings = () => {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.card-title-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
 .card-title {
   font-size: 16px;
   font-weight: 600;
   color: #333;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 :root.dark .card-title {
@@ -435,6 +508,31 @@ const goToClearHoldings = () => {
   font-weight: 500;
 }
 
+/* VIP徽章样式 */
+.vip-badge {
+  background: linear-gradient(135deg, #FFD700, #FFA500, #FF8C00);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-left: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 图标过渡动画 */
+.icon-fade-enter-active,
+.icon-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.icon-fade-enter-from,
+.icon-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
 .footer-section {
   margin-top: 30px;
   text-align: center;
@@ -463,55 +561,7 @@ const goToClearHoldings = () => {
   100% { background-position: 0% 50%; }
 }
 
-.global-toast {
-  position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.85);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  max-width: 80%;
-  text-align: center;
-  animation: toastSlideIn 0.3s ease;
-}
-
-:root.dark .global-toast {
-  background: rgba(0, 0, 0, 0.9);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-.global-toast.success {
-  background: rgba(16, 185, 129, 0.9);
-}
-
-.global-toast.error {
-  background: rgba(239, 68, 68, 0.9);
-}
-
-.global-toast.warning {
-  background: rgba(245, 158, 11, 0.9);
-}
-
-.global-toast.info {
-  background: rgba(59, 130, 246, 0.9);
-}
-
-@keyframes toastSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
+/* 移除原有的全局toast样式，使用ToastMessage组件的样式 */
 
 @media (max-width: 768px) {
   .config-content-wrapper {
@@ -541,6 +591,11 @@ const goToClearHoldings = () => {
     font-size: 12px;
   }
   
+  .vip-badge {
+    font-size: 9px;
+    padding: 1px 5px;
+  }
+  
   .warning-note {
     padding: 5px 8px;
   }
@@ -563,12 +618,6 @@ const goToClearHoldings = () => {
   
   .gradient-text {
     font-size: 14px;
-  }
-  
-  .global-toast {
-    bottom: 70px;
-    padding: 10px 20px;
-    font-size: 13px;
   }
 }
 
@@ -595,18 +644,17 @@ const goToClearHoldings = () => {
     font-size: 11px;
   }
   
+  .vip-badge {
+    font-size: 8px;
+    padding: 1px 4px;
+  }
+  
   .footer-section {
     margin-top: 16px;
   }
   
   .footer-text {
     padding: 10px 0;
-  }
-  
-  .global-toast {
-    bottom: 60px;
-    padding: 8px 16px;
-    font-size: 12px;
   }
 }
 
@@ -628,6 +676,10 @@ const goToClearHoldings = () => {
   .function-card:active {
     transform: scale(0.98);
     transition: transform 0.1s ease;
+  }
+  
+  .function-card.disabled:active {
+    transform: none;
   }
 }
 
