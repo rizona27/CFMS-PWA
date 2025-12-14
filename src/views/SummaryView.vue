@@ -91,122 +91,122 @@
       </div>
     </div>
     
-    <div class="content-wrapper">
-      <div class="content-area">
-        <div v-if="holdings.length === 0" class="empty-state">
-          <div class="empty-icon">📊</div>
-          <h3>当前没有数据</h3>
-          <p>请导入数据开始使用</p>
+    <div class="main-content-wrapper">
+      <template v-if="holdings.length === 0 && !isRefreshing">
+        <EmptyState />
+      </template>
+      <template v-else-if="filteredHoldings.length === 0 && searchText && !isRefreshing">
+        <div class="no-results-container">
+          <NoFilterResults />
         </div>
-        
-        <div v-else-if="filteredHoldings.length === 0 && searchText" class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <h3>未找到匹配的内容</h3>
-          <p>请尝试其他搜索关键词</p>
-        </div>
-        
-        <div v-else class="funds-container">
-          <div
-            v-for="fundCode in sortedFundCodes"
-            :key="fundCode"
-            class="fund-card-wrapper"
-          >
-            <div
-              class="fund-pill-card"
-              :class="{ expanded: expandedFundCodes.has(fundCode) }"
-              @click="toggleFundCard(fundCode)"
-              :style="{ '--fund-pill-gradient': getFundPillGradient(fundCode) }"
-            >
-              <div class="fund-pill-content">
-                <div class="fund-pill-info">
-                  <div class="fund-name-code">
-                    <span class="fund-name">{{ getFundDisplayName(fundCode) }}</span>
-                    <span class="fund-code">({{ fundCode }})</span>
-                  </div>
-                  
-                  <div class="fund-right-stats">
-                    <div
-                      v-if="selectedSortKey !== 'none'"
-                      class="current-sort-return"
-                      :style="{ color: getReturnColor(getCurrentSortReturn(fundCode)) }"
-                    >
-                      {{ formatReturn(getCurrentSortReturn(fundCode)) }}
+      </template>
+      <template v-else>
+        <div class="content-wrapper">
+          <div class="content-area">
+            <div class="funds-container">
+              <div
+                v-for="fundCode in sortedFundCodes"
+                :key="fundCode"
+                class="fund-card-wrapper"
+              >
+                <div
+                  class="fund-pill-card"
+                  :class="{ expanded: expandedFundCodes.has(fundCode) }"
+                  @click="toggleFundCard(fundCode)"
+                  :style="{ '--fund-pill-gradient': getFundPillGradient(fundCode) }"
+                >
+                  <div class="fund-pill-content">
+                    <div class="fund-pill-info">
+                      <div class="fund-name-code">
+                        <span class="fund-name">{{ getFundDisplayName(fundCode) }}</span>
+                        <span class="fund-code">({{ fundCode }})</span>
+                      </div>
+                      
+                      <div class="fund-right-stats">
+                        <div
+                          v-if="selectedSortKey !== 'none'"
+                          class="current-sort-return"
+                          :style="{ color: getReturnColor(getCurrentSortReturn(fundCode)) }"
+                        >
+                          {{ formatReturn(getCurrentSortReturn(fundCode)) }}
+                        </div>
+                        
+                        <div v-if="selectedSortKey === 'none' && !isPrivacyMode" class="client-count">
+                          <span
+                            class="count-value"
+                            :style="{ color: getClientCountColor(groupedByFund[fundCode].length) }"
+                          >
+                            {{ groupedByFund[fundCode].length }}人
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     
-                    <div v-if="selectedSortKey === 'none' && !isPrivacyMode" class="client-count">
-                      <span
-                        class="count-value"
-                        :style="{ color: getClientCountColor(groupedByFund[fundCode].length) }"
-                      >
-                        {{ groupedByFund[fundCode].length }}人
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div v-if="expandedFundCodes.has(fundCode)" class="expanded-details">
-                  <div class="returns-grid-compact">
-                    <div class="returns-row">
-                      <div class="return-item">
-                        <span class="return-label">近1月:</span>
-                        <span
-                          class="return-value"
-                          :style="{ color: getReturnColor(getFundReturn(fundCode, '1m')) }"
-                        >
-                          {{ formatReturn(getFundReturn(fundCode, '1m')) }}
-                        </span>
+                    <div v-if="expandedFundCodes.has(fundCode)" class="expanded-details">
+                      <div class="returns-grid-compact">
+                        <div class="returns-row">
+                          <div class="return-item">
+                            <span class="return-label">近1月:</span>
+                            <span
+                              class="return-value"
+                              :style="{ color: getReturnColor(getFundReturn(fundCode, '1m')) }"
+                            >
+                              {{ formatReturn(getFundReturn(fundCode, '1m')) }}
+                            </span>
+                          </div>
+                          <div class="return-item">
+                            <span class="return-label">近3月:</span>
+                            <span
+                              class="return-value"
+                              :style="{ color: getReturnColor(getFundReturn(fundCode, '3m')) }"
+                            >
+                              {{ formatReturn(getFundReturn(fundCode, '3m')) }}
+                            </span>
+                          </div>
+                        </div>
+                        <div class="returns-row">
+                          <div class="return-item">
+                            <span class="return-label">近6月:</span>
+                            <span
+                              class="return-value"
+                              :style="{ color: getReturnColor(getFundReturn(fundCode, '6m')) }"
+                            >
+                              {{ formatReturn(getFundReturn(fundCode, '6m')) }}
+                            </span>
+                          </div>
+                          <div class="return-item">
+                            <span class="return-label">近1年:</span>
+                            <span
+                              class="return-value"
+                              :style="{ color: getReturnColor(getFundReturn(fundCode, '1y')) }"
+                            >
+                              {{ formatReturn(getFundReturn(fundCode, '1y')) }}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div class="return-item">
-                        <span class="return-label">近3月:</span>
-                        <span
-                          class="return-value"
-                          :style="{ color: getReturnColor(getFundReturn(fundCode, '3m')) }"
-                        >
-                          {{ formatReturn(getFundReturn(fundCode, '3m')) }}
-                        </span>
+                      
+                      <div v-if="expandedFundCodes.has(fundCode) && !isPrivacyMode" class="clients-section">
+                        <div class="clients-header">
+                          <span class="clients-label">持有客户:</span>
+                        </div>
+                        <div class="clients-list">
+                          <span
+                            v-for="(holding, index) in sortedHoldingsByClientReturn(fundCode)"
+                            :key="holding.id"
+                            class="client-item-simple"
+                          >
+                            <span class="client-name-simple">{{ processClientName(holding.clientName) }}</span>
+                            <span
+                              class="client-return-simple"
+                              :style="{ color: getReturnColor(getHoldingReturn(holding)) }"
+                            >
+                              ({{ formatReturn(getHoldingReturn(holding)) }})
+                            </span>
+                            <span v-if="index < sortedHoldingsByClientReturn(fundCode).length - 1" class="separator-simple">、</span>
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div class="returns-row">
-                      <div class="return-item">
-                        <span class="return-label">近6月:</span>
-                        <span
-                          class="return-value"
-                          :style="{ color: getReturnColor(getFundReturn(fundCode, '6m')) }"
-                        >
-                          {{ formatReturn(getFundReturn(fundCode, '6m')) }}
-                        </span>
-                      </div>
-                      <div class="return-item">
-                        <span class="return-label">近1年:</span>
-                        <span
-                          class="return-value"
-                          :style="{ color: getReturnColor(getFundReturn(fundCode, '1y')) }"
-                        >
-                          {{ formatReturn(getFundReturn(fundCode, '1y')) }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div v-if="expandedFundCodes.has(fundCode) && !isPrivacyMode" class="clients-section">
-                    <div class="clients-header">
-                      <span class="clients-label">持有客户:</span>
-                    </div>
-                    <div class="clients-list">
-                      <span
-                        v-for="(holding, index) in sortedHoldingsByClientReturn(fundCode)"
-                        :key="holding.id"
-                        class="client-item-simple"
-                      >
-                        <span class="client-name-simple">{{ processClientName(holding.clientName) }}</span>
-                        <span
-                          class="client-return-simple"
-                          :style="{ color: getReturnColor(getHoldingReturn(holding)) }"
-                        >
-                          ({{ formatReturn(getHoldingReturn(holding)) }})
-                        </span>
-                        <span v-if="index < sortedHoldingsByClientReturn(fundCode).length - 1" class="separator-simple">、</span>
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -214,7 +214,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
     
     <div v-if="isRefreshing" class="refresh-overlay">
@@ -265,6 +265,8 @@ import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
 import { fundService } from '@/services/fundService'
 import ToastMessage from '@/components/common/ToastMessage.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import NoFilterResults from '@/components/common/NoFilterResults.vue'
 
 const router = useRouter()
 const dataStore = useDataStore()
@@ -649,14 +651,11 @@ const handleRefresh = async () => {
   const total = holdings.value.length
   
   try {
-    // 🔴 修改：批量获取基金数据，利用后端缓存
     const fundCodes = [...new Set(holdings.value.map(h => h.fundCode))];
     
     try {
-      // 首先尝试批量获取
       const batchResults = await fundService.fetchMultipleFunds(fundCodes)
       
-      // 批量更新所有持有记录
       for (const holding of holdings.value) {
         const fundInfo = batchResults.find(f => f.code === holding.fundCode)
         if (fundInfo) {
@@ -675,12 +674,10 @@ const handleRefresh = async () => {
     } catch (batchError) {
       console.warn('批量获取失败，回退到逐个获取:', batchError)
       
-      // 回退到逐个获取
       for (let i = 0; i < total; i++) {
         const holding = holdings.value[i]
         
         try {
-          // 🔴 修改：使用 fetchFundInfo，它会自动使用数据库缓存
           const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
           
           await dataStore.updateHolding(holding.id, {
@@ -695,7 +692,6 @@ const handleRefresh = async () => {
           })
         } catch (error) {
           console.error('刷新基金数据失败:', error)
-          // 保留原始数据，仅标记为无效
           await dataStore.updateHolding(holding.id, {
             isValid: false
           })
@@ -710,7 +706,6 @@ const handleRefresh = async () => {
     isRefreshing.value = false
     stopUpdatingTextAnimation()
     
-    // 🔴 新增：检查是否有非最新日期的基金
     const outdatedCount = outdatedFundCodes.value.length
     if (outdatedCount > 0) {
       dataStore.showToastMessage(`数据刷新完成！有${outdatedCount}支基金非最新日期`, 'warning')
@@ -1089,11 +1084,18 @@ onUnmounted(() => {
   background: var(--text-primary);
 }
 
+.main-content-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+
 .content-wrapper {
   flex: 1;
   position: relative;
   overflow: hidden;
-  padding-bottom: 100px;
+  height: 100%;
 }
 
 .content-area {
@@ -1108,36 +1110,20 @@ onUnmounted(() => {
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
   overscroll-behavior: contain;
-  padding-bottom: 120px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--text-secondary);
-  background: var(--bg-card);
-  border-radius: 12px;
-  margin: 20px;
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-.empty-state h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
-
-.empty-state p {
-  font-size: 14px;
-  color: var(--text-secondary);
+.no-results-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 40px;
+  background: var(--bg-primary);
+  z-index: 1;
 }
 
 .funds-container {
@@ -1474,7 +1460,10 @@ onUnmounted(() => {
   
   .content-area {
     padding: 6px 12px 12px;
-    padding-bottom: 120px;
+  }
+  
+  .no-results-container {
+    padding-top: 30px;
   }
   
   .funds-container {

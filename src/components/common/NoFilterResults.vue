@@ -33,18 +33,20 @@ const props = defineProps<{
 <style scoped>
 .no-results-wrapper {
   width: 100%;
-  height: v-bind('props.fullHeight ? "calc(100vh - var(--header-height, 60px))" : "auto"');
-  min-height: v-bind('props.fullHeight ? "calc(100vh - var(--header-height, 60px) - 20px)" : "300px"');
+  height: auto;
+  min-height: 200px;
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* 改为顶部对齐 */
   justify-content: center;
   position: relative;
   overflow: hidden;
+  padding-top: 40px; /* 添加顶部内边距 */
+  margin-top: 20px;
   
   /* 移除边框和阴影，将渐变应用到整个区域 */
   background: linear-gradient(135deg, rgba(245, 247, 250, 0.95), rgba(230, 235, 240, 0.95));
-  border-radius: 0;
-  box-shadow: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .no-results-content {
@@ -127,7 +129,9 @@ const props = defineProps<{
 
 @media (max-width: 768px) {
   .no-results-wrapper {
-    min-height: 300px;
+    min-height: 180px;
+    padding-top: 30px;
+    margin-top: 15px;
   }
   
   .no-results-content {

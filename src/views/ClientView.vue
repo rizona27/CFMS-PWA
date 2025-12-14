@@ -67,262 +67,262 @@
       </div>
     </div>
     
-    <div class="content-wrapper">
-      <div class="content-area">
-        <div v-if="searchText" class="search-results">
-          <div v-if="searchResults.length === 0" class="empty-state">
-            <div class="empty-icon">🔍</div>
-            <h3>未找到匹配的内容</h3>
-            <p>请尝试其他搜索关键词</p>
-          </div>
-          
-          <div v-else class="search-results-list">
-            <div
-              v-for="holding in searchResults.slice(0, loadedSearchResultCount)"
-              :key="holding.id"
-              class="holding-card-compact"
-            >
-              <div class="holding-header-compact">
-                <div class="holding-info-compact">
-                  <div class="fund-name-row">
-                    <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}</h4>
-                    <span class="fund-code-inline">({{ holding.fundCode }})</span>
-                  </div>
-                  <div class="client-info-row">
-                    <div class="client-name-id-display">
-                      <span class="client-name-text">{{ getClientDisplayName(holding.clientName, holding.clientID).name }}</span>
-                      <span v-if="holding.clientID" class="client-id-text">({{ holding.clientID }})</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="nav-info-top-right">
-                  <span class="nav-with-date">
-                    {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
-                  </span>
-                </div>
-              </div>
-              
-              <div class="holding-details-compact">
-                <div class="detail-row detail-row-two-items">
-                  <span class="detail-label">购买金额:</span>
-                  <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                  <span class="detail-label detail-label-spacer">份额:</span>
-                  <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
-                </div>
-                
-                <div class="detail-row">
-                  <span class="detail-label">收益:</span>
-                  <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
-                    {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
-                  </span>
-                </div>
-                
-                <div class="detail-row">
-                  <span class="detail-label">收益率:</span>
-                  <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
-                    {{ formatPercentage(calculateProfit(holding).annualized) }}
-                  </span>
-                  <span class="detail-label-inline">[年化]</span>
-                  <span class="detail-value" :style="{ color: getReturnColor(absoluteReturnPercentage(holding)) }" style="margin-left: 8px;">
-                    {{ formatPercentage(absoluteReturnPercentage(holding)) }}
-                  </span>
-                  <span class="detail-label-inline">[绝对]</span>
-                </div>
-                
-                <div class="detail-row date-info-row detail-row-two-items">
-                  <span class="detail-label">购买日期:</span>
-                  <span class="detail-value">{{ formatPurchaseDate(new Date(holding.purchaseDate)) }}</span>
-                  <span class="detail-label detail-label-spacer">持有天数:</span>
-                  <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
-                </div>
-                
-                <div v-if="holding.remarks" class="detail-row remarks-with-actions">
-                  <span class="detail-label">备注:</span>
-                  <span class="detail-value remarks-text">{{ holding.remarks }}</span>
-                  <div class="inline-actions">
-                    <button
-                      class="holding-action-btn copy-btn"
-                      @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
-                      :disabled="!holding.clientID"
-                      :title="holding.clientID ? '复制客户号' : '无客户号'"
-                    >
-                      复制客户号
-                    </button>
-                    <button
-                      class="holding-action-btn report-btn"
-                      @click.stop="generateReport(holding)"
-                      title="生成报告"
-                    >
-                      复制报告
-                    </button>
-                  </div>
-                </div>
-                
-                <div v-else class="detail-row remarks-with-actions">
-                  <span class="detail-label placeholder-label"></span>
-                  <span class="detail-value placeholder-value"></span>
-                  <div class="inline-actions">
-                    <button
-                      class="holding-action-btn copy-btn"
-                      @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
-                      :disabled="!holding.clientID"
-                      :title="holding.clientID ? '复制客户号' : '无客户号'"
-                    >
-                      复制客户号
-                    </button>
-                    <button
-                      class="holding-action-btn report-btn"
-                      @click.stop="generateReport(holding)"
-                      title="生成报告"
-                    >
-                      复制报告
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div v-if="loadedSearchResultCount < searchResults.length" class="load-more">
-              <button @click="loadedSearchResultCount += 10">加载更多</button>
-            </div>
-          </div>
+    <div class="main-content-wrapper">
+      <template v-if="holdings.length === 0 && !isRefreshing">
+        <EmptyState />
+      </template>
+      <template v-else-if="searchText && searchResults.length === 0 && !isRefreshing">
+        <div class="no-results-container">
+          <NoFilterResults />
         </div>
-        
-        <div v-else class="client-groups">
-          <div v-if="holdings.length === 0" class="empty-state">
-            <div class="empty-icon">📊</div>
-            <h3>当前没有数据</h3>
-            <p>请导入数据开始使用</p>
-          </div>
-          
-          <div v-else class="clients-container">
-            <div
-              v-for="clientGroup in groupedHoldingsByClientName"
-              :key="clientGroup.id"
-              class="client-card-wrapper"
-            >
-              <div
-                class="client-pill-card"
-                :class="{ expanded: expandedClients.has(clientGroup.id) }"
-                @click="expandedClients.has(clientGroup.id) ? expandedClients.delete(clientGroup.id) : expandedClients.add(clientGroup.id)"
-                :style="{ '--client-pill-gradient': getClientPillGradient(clientGroup.clientName) }"
-              >
-                <div class="client-pill-content">
-                  <div class="client-pill-info">
-                    <div class="client-name-id-display-single">
-                      <span class="client-name-text-single">{{ getClientDisplayName(clientGroup.clientName, clientGroup.clientID).name }}</span>
-                      <span v-if="clientGroup.clientID" class="client-id-text-single">({{ clientGroup.clientID }})</span>
+      </template>
+      <template v-else>
+        <div class="content-wrapper">
+          <div class="content-area">
+            <div v-if="searchText" class="search-results">
+              <div class="search-results-list">
+                <div
+                  v-for="holding in searchResults.slice(0, loadedSearchResultCount)"
+                  :key="holding.id"
+                  class="holding-card-compact"
+                >
+                  <div class="holding-header-compact">
+                    <div class="holding-info-compact">
+                      <div class="fund-name-row">
+                        <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}</h4>
+                        <span class="fund-code-inline">({{ holding.fundCode }})</span>
+                      </div>
+                      <div class="client-info-row">
+                        <div class="client-name-id-display">
+                          <span class="client-name-text">{{ getClientDisplayName(holding.clientName, holding.clientID).name }}</span>
+                          <span v-if="holding.clientID" class="client-id-text">({{ holding.clientID }})</span>
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div v-if="!isPrivacyMode" class="client-right-stats">
-                      <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
-                        {{ clientGroup.holdings.length }}支
+                    <div class="nav-info-top-right">
+                      <span class="nav-with-date">
+                        {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
                       </span>
                     </div>
                   </div>
                   
-                  <div v-if="expandedClients.has(clientGroup.id)" class="group-content-single">
-                    <div
-                      v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
-                      :key="holding.id"
-                      class="holding-card-compact"
-                    >
-                      <div class="holding-header-compact">
-                        <div class="holding-info-compact">
-                          <div class="fund-name-row">
-                            <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}</h4>
-                            <span class="fund-code-inline">({{ holding.fundCode }})</span>
-                          </div>
+                  <div class="holding-details-compact">
+                    <div class="detail-row detail-row-two-items">
+                      <span class="detail-label">购买金额:</span>
+                      <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
+                      <span class="detail-label detail-label-spacer">份额:</span>
+                      <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <span class="detail-label">收益:</span>
+                      <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
+                        {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
+                      </span>
+                    </div>
+                    
+                    <div class="detail-row">
+                      <span class="detail-label">收益率:</span>
+                      <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
+                        {{ formatPercentage(calculateProfit(holding).annualized) }}
+                      </span>
+                      <span class="detail-label-inline">[年化]</span>
+                      <span class="detail-value" :style="{ color: getReturnColor(absoluteReturnPercentage(holding)) }" style="margin-left: 8px;">
+                        {{ formatPercentage(absoluteReturnPercentage(holding)) }}
+                      </span>
+                      <span class="detail-label-inline">[绝对]</span>
+                    </div>
+                    
+                    <div class="detail-row date-info-row detail-row-two-items">
+                      <span class="detail-label">购买日期:</span>
+                      <span class="detail-value">{{ formatPurchaseDate(new Date(holding.purchaseDate)) }}</span>
+                      <span class="detail-label detail-label-spacer">持有天数:</span>
+                      <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                    </div>
+                    
+                    <div v-if="holding.remarks" class="detail-row remarks-with-actions">
+                      <span class="detail-label">备注:</span>
+                      <span class="detail-value remarks-text">{{ holding.remarks }}</span>
+                      <div class="inline-actions">
+                        <button
+                          class="holding-action-btn copy-btn"
+                          @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                          :disabled="!holding.clientID"
+                          :title="holding.clientID ? '复制客户号' : '无客户号'"
+                        >
+                          复制客户号
+                        </button>
+                        <button
+                          class="holding-action-btn report-btn"
+                          @click.stop="generateReport(holding)"
+                          title="生成报告"
+                        >
+                          复制报告
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div v-else class="detail-row remarks-with-actions">
+                      <span class="detail-label placeholder-label"></span>
+                      <span class="detail-value placeholder-value"></span>
+                      <div class="inline-actions">
+                        <button
+                          class="holding-action-btn copy-btn"
+                          @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                          :disabled="!holding.clientID"
+                          :title="holding.clientID ? '复制客户号' : '无客户号'"
+                        >
+                          复制客户号
+                        </button>
+                        <button
+                          class="holding-action-btn report-btn"
+                          @click.stop="generateReport(holding)"
+                          title="生成报告"
+                        >
+                          复制报告
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-if="loadedSearchResultCount < searchResults.length" class="load-more">
+                  <button @click="loadedSearchResultCount += 10">加载更多</button>
+                </div>
+              </div>
+            </div>
+            
+            <div v-else class="client-groups">
+              <div class="clients-container">
+                <div
+                  v-for="clientGroup in groupedHoldingsByClientName"
+                  :key="clientGroup.id"
+                  class="client-card-wrapper"
+                >
+                  <div
+                    class="client-pill-card"
+                    :class="{ expanded: expandedClients.has(clientGroup.id) }"
+                    @click="expandedClients.has(clientGroup.id) ? expandedClients.delete(clientGroup.id) : expandedClients.add(clientGroup.id)"
+                    :style="{ '--client-pill-gradient': getClientPillGradient(clientGroup.clientName) }"
+                  >
+                    <div class="client-pill-content">
+                      <div class="client-pill-info">
+                        <div class="client-name-id-display-single">
+                          <span class="client-name-text-single">{{ getClientDisplayName(clientGroup.clientName, clientGroup.clientID).name }}</span>
+                          <span v-if="clientGroup.clientID" class="client-id-text-single">({{ clientGroup.clientID }})</span>
                         </div>
-                        <div class="nav-info-top-right">
-                          <span class="nav-with-date">
-                            {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
+                        
+                        <div v-if="!isPrivacyMode" class="client-right-stats">
+                          <span class="holdings-count-single" :style="{ color: colorForHoldingCount(clientGroup.holdings.length) }">
+                            {{ clientGroup.holdings.length }}支
                           </span>
                         </div>
                       </div>
                       
-                      <div class="holding-details-compact">
-                        <div class="detail-row detail-row-two-items">
-                          <span class="detail-label">购买金额:</span>
-                          <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
-                          <span class="detail-label detail-label-spacer">份额:</span>
-                          <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
-                        </div>
-                        
-                        <div class="detail-row">
-                          <span class="detail-label">收益:</span>
-                          <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
-                            {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
-                          </span>
-                        </div>
-                        
-                        <div class="detail-row">
-                          <span class="detail-label">收益率:</span>
-                          <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
-                            {{ formatPercentage(calculateProfit(holding).annualized) }}
-                          </span>
-                          <span class="detail-label-inline">[年化]</span>
-                          <span class="detail-value" :style="{ color: getReturnColor(absoluteReturnPercentage(holding)) }" style="margin-left: 8px;">
-                            {{ formatPercentage(absoluteReturnPercentage(holding)) }}
-                          </span>
-                          <span class="detail-label-inline">[绝对]</span>
-                        </div>
-                        
-                        <div class="detail-row date-info-row detail-row-two-items">
-                          <span class="detail-label">购买日期:</span>
-                          <span class="detail-value">{{ formatPurchaseDate(new Date(holding.purchaseDate)) }}</span>
-                          <span class="detail-label detail-label-spacer">持有天数:</span>
-                          <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
-                        </div>
-                        
-                        <div v-if="holding.remarks" class="detail-row remarks-with-actions">
-                          <span class="detail-label">备注:</span>
-                          <span class="detail-value remarks-text">{{ holding.remarks }}</span>
-                          <div class="inline-actions">
-                            <button
-                              class="holding-action-btn copy-btn"
-                              @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
-                              :disabled="!holding.clientID"
-                              :title="holding.clientID ? '复制客户号' : '无客户号'"
-                            >
-                              复制客户号
-                            </button>
-                            <button
-                              class="holding-action-btn report-btn"
-                              @click.stop="generateReport(holding)"
-                              title="生成报告"
-                            >
-                              复制报告
-                            </button>
+                      <div v-if="expandedClients.has(clientGroup.id)" class="group-content-single">
+                        <div
+                          v-for="holding in clientGroup.holdings.slice(0, loadedGroupedClientCount)"
+                          :key="holding.id"
+                          class="holding-card-compact"
+                        >
+                          <div class="holding-header-compact">
+                            <div class="holding-info-compact">
+                              <div class="fund-name-row">
+                                <h4 class="fund-name">{{ getFundDisplayName(holding.fundName, holding.fundCode) }}</h4>
+                                <span class="fund-code-inline">({{ holding.fundCode }})</span>
+                              </div>
+                            </div>
+                            <div class="nav-info-top-right">
+                              <span class="nav-with-date">
+                                {{ holding.currentNav.toFixed(4) }}<span class="nav-date-inline">({{ formatNavDate(new Date(holding.navDate)) }})</span>
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div class="holding-details-compact">
+                            <div class="detail-row detail-row-two-items">
+                              <span class="detail-label">购买金额:</span>
+                              <span class="detail-value">{{ formatCurrency(holding.purchaseAmount) }}</span>
+                              <span class="detail-label detail-label-spacer">份额:</span>
+                              <span class="detail-value">{{ holding.purchaseShares.toFixed(2) }}份</span>
+                            </div>
+                            
+                            <div class="detail-row">
+                              <span class="detail-label">收益:</span>
+                              <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).absolute) }">
+                                {{ calculateProfit(holding).absolute > 0 ? '+' : '' }}{{ calculateProfit(holding).absolute.toFixed(2) }}元
+                              </span>
+                            </div>
+                            
+                            <div class="detail-row">
+                              <span class="detail-label">收益率:</span>
+                              <span class="detail-value" :style="{ color: getReturnColor(calculateProfit(holding).annualized) }">
+                                {{ formatPercentage(calculateProfit(holding).annualized) }}
+                              </span>
+                              <span class="detail-label-inline">[年化]</span>
+                              <span class="detail-value" :style="{ color: getReturnColor(absoluteReturnPercentage(holding)) }" style="margin-left: 8px;">
+                                {{ formatPercentage(absoluteReturnPercentage(holding)) }}
+                              </span>
+                              <span class="detail-label-inline">[绝对]</span>
+                            </div>
+                            
+                            <div class="detail-row date-info-row detail-row-two-items">
+                              <span class="detail-label">购买日期:</span>
+                              <span class="detail-value">{{ formatPurchaseDate(new Date(holding.purchaseDate)) }}</span>
+                              <span class="detail-label detail-label-spacer">持有天数:</span>
+                              <span class="detail-value">{{ calculateHoldingDays(holding) }}天</span>
+                            </div>
+                            
+                            <div v-if="holding.remarks" class="detail-row remarks-with-actions">
+                              <span class="detail-label">备注:</span>
+                              <span class="detail-value remarks-text">{{ holding.remarks }}</span>
+                              <div class="inline-actions">
+                                <button
+                                  class="holding-action-btn copy-btn"
+                                  @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                                  :disabled="!holding.clientID"
+                                  :title="holding.clientID ? '复制客户号' : '无客户号'"
+                                >
+                                  复制客户号
+                                </button>
+                                <button
+                                  class="holding-action-btn report-btn"
+                                  @click.stop="generateReport(holding)"
+                                  title="生成报告"
+                                >
+                                  复制报告
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div v-else class="detail-row remarks-with-actions">
+                              <span class="detail-label placeholder-label"></span>
+                              <span class="detail-value placeholder-value"></span>
+                              <div class="inline-actions">
+                                <button
+                                  class="holding-action-btn copy-btn"
+                                  @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
+                                  :disabled="!holding.clientID"
+                                  :title="holding.clientID ? '复制客户号' : '无客户号'"
+                                >
+                                  复制客户号
+                                </button>
+                                <button
+                                  class="holding-action-btn report-btn"
+                                  @click.stop="generateReport(holding)"
+                                  title="生成报告"
+                                >
+                                  复制报告
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
                         
-                        <div v-else class="detail-row remarks-with-actions">
-                          <span class="detail-label placeholder-label"></span>
-                          <span class="detail-value placeholder-value"></span>
-                          <div class="inline-actions">
-                            <button
-                              class="holding-action-btn copy-btn"
-                              @click.stop="handleCopyClientID(holding.clientID, holding.clientName)"
-                              :disabled="!holding.clientID"
-                              :title="holding.clientID ? '复制客户号' : '无客户号'"
-                            >
-                              复制客户号
-                            </button>
-                            <button
-                              class="holding-action-btn report-btn"
-                              @click.stop="generateReport(holding)"
-                              title="生成报告"
-                            >
-                              复制报告
-                            </button>
-                          </div>
+                        <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
+                          <button @click="loadedGroupedClientCount += 10">加载更多</button>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div v-if="loadedGroupedClientCount < clientGroup.holdings.length" class="load-more">
-                      <button @click="loadedGroupedClientCount += 10">加载更多</button>
                     </div>
                   </div>
                 </div>
@@ -330,7 +330,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
     
     <div v-if="isRefreshing" class="refresh-overlay">
@@ -360,6 +360,8 @@ import { useDataStore } from '@/stores/dataStore'
 import { useAuthStore } from '@/stores/authStore'
 import { fundService } from '@/services/fundService'
 import ToastMessage from '@/components/common/ToastMessage.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import NoFilterResults from '@/components/common/NoFilterResults.vue'
 
 const router = useRouter()
 const dataStore = useDataStore()
@@ -688,14 +690,11 @@ const handleRefresh = async () => {
   const total = holdings.value.length
   
   try {
-    // 🔴 修改：使用批量获取方式，充分利用数据库缓存
     const fundCodes = [...new Set(holdings.value.map(h => h.fundCode))]
     
     try {
-      // 尝试批量获取基金数据
       const batchResults = await fundService.fetchMultipleFunds(fundCodes)
       
-      // 批量更新所有持有记录
       for (const holding of holdings.value) {
         const fundInfo = batchResults.find(f => f.code === holding.fundCode)
         if (fundInfo) {
@@ -715,12 +714,10 @@ const handleRefresh = async () => {
       console.warn('批量获取失败，回退到逐个获取:', batchError)
       dataStore.addLog('批量获取失败，回退到逐个获取', 'warning')
       
-      // 回退到逐个获取
       for (let i = 0; i < total; i++) {
         const holding = holdings.value[i]
         
         try {
-          // 🔴 修改：使用 fetchFundInfo，它会自动使用数据库缓存
           const fundInfo = await fundService.fetchFundInfo(holding.fundCode)
           
           if (fundInfo.name && fundInfo.nav > 0) {
@@ -735,7 +732,6 @@ const handleRefresh = async () => {
               navReturn1y: fundInfo.returns?.navReturn1y ?? holding.navReturn1y
             })
           } else {
-            // 数据无效，仅标记为无效
             await dataStore.updateHolding(holding.id, {
               isValid: false
             })
@@ -744,7 +740,6 @@ const handleRefresh = async () => {
           console.error('刷新基金数据失败:', error)
           const errorMessage = error instanceof Error ? error.message : String(error)
           dataStore.addLog(`刷新基金 ${holding.fundCode} 失败: ${errorMessage}`, 'error')
-          // 保留原始数据，仅标记为无效
           await dataStore.updateHolding(holding.id, {
             isValid: false
           })
@@ -759,7 +754,6 @@ const handleRefresh = async () => {
     isRefreshing.value = false
     stopUpdatingTextAnimation()
     
-    // 🔴 新增：检查数据状态
     const validHoldings = holdings.value.filter(h => h.isValid)
     const outdatedHoldings = holdings.value.filter(h => {
       if (!h.isValid) return false
@@ -1118,11 +1112,18 @@ onMounted(() => {
   background: var(--text-primary);
 }
 
+.main-content-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+
 .content-wrapper {
   flex: 1;
   position: relative;
   overflow: hidden;
-  padding-bottom: 100px;
+  height: 100%;
 }
 
 .content-area {
@@ -1137,36 +1138,20 @@ onMounted(() => {
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
   overscroll-behavior: contain;
-  padding-bottom: 120px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--text-secondary);
-  background: var(--bg-card);
-  border-radius: 12px;
-  margin: 20px;
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-.empty-state h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
-
-.empty-state p {
-  font-size: 14px;
-  color: var(--text-secondary);
+.no-results-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 40px;
+  background: var(--bg-primary);
+  z-index: 1;
 }
 
 .search-results-list {
@@ -1606,7 +1591,10 @@ onMounted(() => {
   
   .content-area {
     padding: 6px 12px 12px;
-    padding-bottom: 120px;
+  }
+  
+  .no-results-container {
+    padding-top: 30px;
   }
   
   .clients-container {
@@ -1673,22 +1661,6 @@ onMounted(() => {
     padding: 3px 6px;
   }
   
-  .empty-state {
-    padding: 40px 16px;
-  }
-  
-  .empty-icon {
-    font-size: 36px;
-  }
-  
-  .empty-state h3 {
-    font-size: 16px;
-  }
-  
-  .empty-state p {
-    font-size: 13px;
-  }
-  
   .status-pill,
   .refresh-pill {
     height: 30px;
@@ -1711,7 +1683,10 @@ onMounted(() => {
 @media (max-width: 480px) {
   .content-area {
     padding: 8px 10px 10px;
-    padding-bottom: 120px;
+  }
+  
+  .no-results-container {
+    padding-top: 30px;
   }
   
   .clients-container {

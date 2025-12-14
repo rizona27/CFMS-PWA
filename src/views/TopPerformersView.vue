@@ -1,7 +1,197 @@
+<template>
+  <div class="top-performers-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
+    <div class="fixed-header">
+      <div class="header-section" :class="{ 'with-filter': isFilterExpanded }">
+        <div class="header-row">
+          <div class="action-buttons">
+            <button
+              class="action-btn"
+              :class="{ active: isFilterExpanded }"
+              @click="toggleFilter"
+              :title="isFilterExpanded ? '隐藏筛选' : '显示筛选'"
+            >
+              {{ isFilterExpanded ? '✕' : '⧉' }}
+            </button>
+            
+            <div class="sort-group">
+              <button
+                class="sort-btn"
+                @click="cycleSortKey"
+                :title="selectedSortKey !== 'none' ? `按${sortKeyFullDisplay}排序` : '无排序'"
+                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
+              >
+                <span class="sort-text">{{ sortButtonText }}</span>
+              </button>
+              
+              <button
+                v-if="selectedSortKey !== 'none'"
+                class="sort-order-btn"
+                @click="toggleSortOrder"
+                :title="`${sortOrder === 'ascending' ? '升序' : '降序'}排序`"
+                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
+              >
+                <span class="sort-order-icon">
+                  {{ sortOrder === 'ascending' ? '↑' : '↓' }}
+                </span>
+              </button>
+            </div>
+          </div>
+          
+          <div v-if="isFilterExpanded" class="filter-actions">
+            <button class="filter-action-btn reset" @click="resetFilters">
+              重置
+            </button>
+            <button class="filter-action-btn apply" @click="applyFilters">
+              应用
+            </button>
+          </div>
+        </div>
+        
+        <div v-if="isFilterExpanded" class="filter-section">
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="filter-label">代码/名称</label>
+              <input
+                v-model="fundCodeFilterInput"
+                type="text"
+                placeholder="输入代码或名称"
+                class="filter-input"
+              />
+            </div>
+            <div class="filter-field">
+              <label class="filter-label">金额(万)</label>
+              <div class="range-inputs">
+                <input
+                  v-model="minAmountInput"
+                  type="number"
+                  placeholder="最低"
+                  class="filter-input range"
+                />
+                <span class="range-separator">-</span>
+                <input
+                  v-model="maxAmountInput"
+                  type="number"
+                  placeholder="最高"
+                  class="filter-input range"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div class="filter-row">
+            <div class="filter-field">
+              <label class="filter-label">持有天数</label>
+              <div class="range-inputs">
+                <input
+                  v-model="minDaysInput"
+                  type="number"
+                  placeholder="最低"
+                  class="filter-input range"
+                />
+                <span class="range-separator">-</span>
+                <input
+                  v-model="maxDaysInput"
+                  type="number"
+                  placeholder="最高"
+                  class="filter-input range"
+                />
+              </div>
+            </div>
+            <div class="filter-field">
+              <label class="filter-label">收益率(%)</label>
+              <div class="range-inputs">
+                <input
+                  v-model="minProfitInput"
+                  type="number"
+                  placeholder="最低"
+                  class="filter-input range"
+                />
+                <span class="range-separator">-</span>
+                <input
+                  v-model="maxProfitInput"
+                  type="number"
+                  placeholder="最高"
+                  class="filter-input range"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="main-content-wrapper">
+      <template v-if="isLoading">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>加载中...</p>
+        </div>
+      </template>
+      <template v-else-if="precomputedHoldings.length === 0">
+        <EmptyState />
+      </template>
+      <template v-else-if="filteredAndSortedHoldings.length === 0">
+        <div class="no-results-container">
+          <NoFilterResults />
+        </div>
+      </template>
+      <template v-else>
+        <div class="content-wrapper">
+          <div class="content-area">
+            <div class="performers-table-container">
+              <div class="table-header">
+                <div class="header-cell number">#</div>
+                <div class="header-cell code-name">代码/名称</div>
+                <div class="header-cell amount">金额(万)</div>
+                <div class="header-cell profit">收益(万)</div>
+                <div class="header-cell days">天数</div>
+                <div class="header-cell rate">收益率(%)</div>
+                <div class="header-cell client">客户</div>
+              </div>
+              
+              <div class="table-body">
+                <div
+                  v-for="(item, index) in filteredAndSortedHoldings"
+                  :key="item.holding.id"
+                  class="table-row"
+                  :class="{ 'zero-profit-divider': zeroProfitIndex === index }"
+                >
+                  <div class="row-cell number">{{ index + 1 }}.</div>
+                  <div class="row-cell code-name">
+                    <div class="fund-name">{{ truncateFundName(item.holding.fundName) }}</div>
+                    <div class="fund-code">{{ item.holding.fundCode }}</div>
+                  </div>
+                  <div class="row-cell amount">{{ formatAmountInTenThousands(item.holding.purchaseAmount) }}</div>
+                  <div class="row-cell profit" :style="{ color: getValueColor(item.profit.absolute) }">
+                    {{ formatAmountInTenThousands(item.profit.absolute) }}
+                  </div>
+                  <div class="row-cell days">{{ item.daysHeld }}</div>
+                  <div class="row-cell rate" :style="{ color: getValueColor(item.profit.absoluteReturn) }">
+                    {{ item.profit.absoluteReturn.toFixed(2) }}
+                  </div>
+                  <div class="row-cell client">
+                    {{ getClientNameOnly(item.holding.clientName) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+    
+    <div v-if="showingToast" class="global-toast info">
+      {{ toastMessage }}
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
+import EmptyState from '@/components/common/EmptyState.vue'
+import NoFilterResults from '@/components/common/NoFilterResults.vue'
 
 const router = useRouter()
 const dataStore = useDataStore()
@@ -379,191 +569,6 @@ onUnmounted(() => {
 })
 </script>
 
-<template>
-  <div class="top-performers-view" :key="`${refreshKey}-${themeKey}-${privacyKey}`">
-    <div class="fixed-header">
-      <div class="header-section" :class="{ 'with-filter': isFilterExpanded }">
-        <div class="header-row">
-          <div class="action-buttons">
-            <button
-              class="action-btn"
-              :class="{ active: isFilterExpanded }"
-              @click="toggleFilter"
-              :title="isFilterExpanded ? '隐藏筛选' : '显示筛选'"
-            >
-              {{ isFilterExpanded ? '✕' : '⧉' }}
-            </button>
-            
-            <div class="sort-group">
-              <button
-                class="sort-btn"
-                @click="cycleSortKey"
-                :title="selectedSortKey !== 'none' ? `按${sortKeyFullDisplay}排序` : '无排序'"
-                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
-              >
-                <span class="sort-text">{{ sortButtonText }}</span>
-              </button>
-              
-              <button
-                v-if="selectedSortKey !== 'none'"
-                class="sort-order-btn"
-                @click="toggleSortOrder"
-                :title="`${sortOrder === 'ascending' ? '升序' : '降序'}排序`"
-                :style="{ color: sortKeyColor, borderColor: sortKeyColor }"
-              >
-                <span class="sort-order-icon">
-                  {{ sortOrder === 'ascending' ? '↑' : '↓' }}
-                </span>
-              </button>
-            </div>
-          </div>
-          
-          <div v-if="isFilterExpanded" class="filter-actions">
-            <button class="filter-action-btn reset" @click="resetFilters">
-              重置
-            </button>
-            <button class="filter-action-btn apply" @click="applyFilters">
-              应用
-            </button>
-          </div>
-        </div>
-        
-        <div v-if="isFilterExpanded" class="filter-section">
-          <div class="filter-row">
-            <div class="filter-field">
-              <label class="filter-label">代码/名称</label>
-              <input
-                v-model="fundCodeFilterInput"
-                type="text"
-                placeholder="输入代码或名称"
-                class="filter-input"
-              />
-            </div>
-            <div class="filter-field">
-              <label class="filter-label">金额(万)</label>
-              <div class="range-inputs">
-                <input
-                  v-model="minAmountInput"
-                  type="number"
-                  placeholder="最低"
-                  class="filter-input range"
-                />
-                <span class="range-separator">-</span>
-                <input
-                  v-model="maxAmountInput"
-                  type="number"
-                  placeholder="最高"
-                  class="filter-input range"
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div class="filter-row">
-            <div class="filter-field">
-              <label class="filter-label">持有天数</label>
-              <div class="range-inputs">
-                <input
-                  v-model="minDaysInput"
-                  type="number"
-                  placeholder="最低"
-                  class="filter-input range"
-                />
-                <span class="range-separator">-</span>
-                <input
-                  v-model="maxDaysInput"
-                  type="number"
-                  placeholder="最高"
-                  class="filter-input range"
-                />
-              </div>
-            </div>
-            <div class="filter-field">
-              <label class="filter-label">收益率(%)</label>
-              <div class="range-inputs">
-                <input
-                  v-model="minProfitInput"
-                  type="number"
-                  placeholder="最低"
-                  class="filter-input range"
-                />
-                <span class="range-separator">-</span>
-                <input
-                  v-model="maxProfitInput"
-                  type="number"
-                  placeholder="最高"
-                  class="filter-input range"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="content-wrapper">
-      <div class="content-area">
-        <div v-if="isLoading" class="loading-state">
-          <div class="spinner"></div>
-          <p>加载中...</p>
-        </div>
-        
-        <div v-else-if="precomputedHoldings.length === 0" class="empty-state">
-          <div class="empty-icon">🏆</div>
-          <h3>当前没有数据</h3>
-          <p>请导入数据开始使用</p>
-        </div>
-        
-        <div v-else class="performers-table-container">
-          <div class="table-header">
-            <div class="header-cell number">#</div>
-            <div class="header-cell code-name">代码/名称</div>
-            <div class="header-cell amount">金额(万)</div>
-            <div class="header-cell profit">收益(万)</div>
-            <div class="header-cell days">天数</div>
-            <div class="header-cell rate">收益率(%)</div>
-            <div class="header-cell client">客户</div>
-          </div>
-          
-          <div class="table-body">
-            <div
-              v-for="(item, index) in filteredAndSortedHoldings"
-              :key="item.holding.id"
-              class="table-row"
-              :class="{ 'zero-profit-divider': zeroProfitIndex === index }"
-            >
-              <div class="row-cell number">{{ index + 1 }}.</div>
-              <div class="row-cell code-name">
-                <div class="fund-name">{{ truncateFundName(item.holding.fundName) }}</div>
-                <div class="fund-code">{{ item.holding.fundCode }}</div>
-              </div>
-              <div class="row-cell amount">{{ formatAmountInTenThousands(item.holding.purchaseAmount) }}</div>
-              <div class="row-cell profit" :style="{ color: getValueColor(item.profit.absolute) }">
-                {{ formatAmountInTenThousands(item.profit.absolute) }}
-              </div>
-              <div class="row-cell days">{{ item.daysHeld }}</div>
-              <div class="row-cell rate" :style="{ color: getValueColor(item.profit.absoluteReturn) }">
-                {{ item.profit.absoluteReturn.toFixed(2) }}
-              </div>
-              <div class="row-cell client">
-                {{ getClientNameOnly(item.holding.clientName) }}
-              </div>
-            </div>
-          </div>
-          
-          <div v-if="filteredAndSortedHoldings.length === 0" class="no-results">
-            没有符合筛选条件的记录
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div v-if="showingToast" class="global-toast info">
-      {{ toastMessage }}
-    </div>
-  </div>
-</template>
-
 <style scoped>
 .top-performers-view {
   position: fixed;
@@ -819,11 +824,18 @@ onUnmounted(() => {
   padding: 0 3px;
 }
 
+.main-content-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+
 .content-wrapper {
   flex: 1;
   position: relative;
   overflow: hidden;
-  padding-bottom: 100px;
+  height: 100%;
 }
 
 .content-area {
@@ -838,12 +850,36 @@ onUnmounted(() => {
   background: var(--bg-primary);
   transition: background-color 0.3s ease;
   overscroll-behavior: contain;
-  padding-bottom: 120px;
+}
+
+.no-results-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 40px;
+  background: var(--bg-primary);
+  z-index: 1;
 }
 
 .loading-state {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 60px 20px;
+  background: var(--bg-primary);
+  z-index: 1;
 }
 
 .spinner {
@@ -862,39 +898,6 @@ onUnmounted(() => {
 
 .loading-state p {
   font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--text-secondary);
-  background: var(--bg-card);
-  border-radius: 10px;
-  margin: 16px;
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-}
-
-:root.dark .empty-state {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.empty-icon {
-  font-size: 42px;
-  margin-bottom: 14px;
-  opacity: 0.5;
-}
-
-.empty-state h3 {
-  font-size: 17px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
-
-.empty-state p {
-  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -1074,7 +1077,10 @@ onUnmounted(() => {
   
   .content-area {
     padding: 6px 12px 12px;
-    padding-bottom: 120px;
+  }
+  
+  .no-results-container {
+    padding-top: 30px;
   }
   
   .action-btn {
@@ -1250,10 +1256,6 @@ onUnmounted(() => {
 
 .performers-table-container {
   margin-top: 4px;
-}
-
-.empty-state {
-  margin: 12px;
 }
 
 @media (hover: none) and (pointer: coarse) {
