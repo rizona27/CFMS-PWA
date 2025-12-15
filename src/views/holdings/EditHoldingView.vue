@@ -65,17 +65,9 @@
     <!-- 内容区域 -->
     <div class="content-wrapper">
       <div class="content-area">
-        <div v-if="dataStore.holdings.length === 0" class="empty-state">
-          <div class="empty-icon">👥</div>
-          <h3 class="empty-title">当前没有持仓数据</h3>
-          <p class="empty-description">请先导入持仓数据</p>
-        </div>
+        <EmptyState v-if="dataStore.holdings.length === 0" fullHeight />
 
-        <div v-else-if="filteredClientGroups.length === 0 && searchText" class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <h3 class="empty-title">未找到符合条件的客户</h3>
-          <p class="empty-description">请尝试其他搜索关键词</p>
-        </div>
+        <NoFilterResults v-else-if="filteredClientGroups.length === 0 && searchText" />
 
         <div v-else class="client-groups-list">
           <div
@@ -96,8 +88,8 @@
                     <span class="client-name-text-single">
                       {{ getClientDisplayName(clientGroup.displayClientName) }}
                     </span>
-                    <span v-if="clientGroup.clientID && !isPrivacyModeEnabled" class="client-id-text-single">
-                      ({{ clientGroup.clientID }})
+                    <span v-if="clientGroup.clientIDs && clientGroup.clientIDs.length > 0 && !isPrivacyModeEnabled" class="client-id-text-single">
+                      ({{ clientGroup.clientIDs.length > 1 ? `多个客户号` : clientGroup.clientIDs[0] }})
                     </span>
                     <span v-if="!isPrivacyModeEnabled" class="client-holdings-count">
                       {{ clientGroup.holdings.length }}支
@@ -126,6 +118,9 @@
                         <div class="fund-name-row">
                           <h4 class="fund-name">{{ holding.fundName }}</h4>
                           <span class="fund-code-inline">[{{ holding.fundCode }}]</span>
+                        </div>
+                        <div v-if="holding.clientID && !isPrivacyModeEnabled" class="client-id-display">
+                          客户号: {{ holding.clientID }}
                         </div>
                       </div>
                       <div class="holding-actions-icons">
@@ -171,7 +166,7 @@
       <div class="dialog-content" @click.stop>
         <h3 class="dialog-title">修改客户姓名</h3>
         <p class="dialog-message">
-          将客户 "{{ renameDialogClient?.displayClientName }}{{ renameDialogClient?.clientID ? '(' + renameDialogClient.clientID + ')' : '' }}" 下的所有持仓姓名修改为:
+          将客户 "{{ renameDialogClient?.displayClientName }}" 名下的 <strong>{{ renameDialogClient?.holdings.length }} 个持仓</strong> 的客户姓名统一修改为:
         </p>
         <input
           v-model="newClientName"
@@ -195,7 +190,7 @@
       <div class="dialog-content" @click.stop>
         <h3 class="dialog-title">删除客户持仓</h3>
         <p class="dialog-message">
-          您确定要删除客户 "{{ deleteDialogClient?.displayClientName }}{{ deleteDialogClient?.clientID ? '(' + deleteDialogClient.clientID + ')' : '' }}" 名下的所有基金持仓吗？此操作无法撤销。
+          您确定要删除客户 "{{ deleteDialogClient?.displayClientName }}" 名下的所有基金持仓吗？此操作无法撤销。
         </p>
         <div class="dialog-actions">
           <button class="dialog-button cancel-button" @click="closeDeleteDialog">
@@ -254,6 +249,8 @@ import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
 import type { FundHolding } from '@/stores/dataStore'
 import EditHoldingForm from './EditHoldingForm.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import NoFilterResults from '@/components/common/NoFilterResults.vue'
 
 const router = useRouter()
 const dataStore = useDataStore()
@@ -262,7 +259,7 @@ interface ClientGroupForManagement {
   id: string
   originalClientName: string
   displayClientName: string
-  clientID: string | null
+  clientIDs: string[]  // 存储所有客户号
   holdings: FundHolding[]
 }
 
@@ -285,36 +282,58 @@ const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
 const isPrivacyModeEnabled = computed(() => dataStore.isPrivacyMode)
 
 const groupedHoldings = computed((): ClientGroupForManagement[] => {
-  const groupedDictionary = new Map<string, FundHolding[]>()
+  const groupedDictionary = new Map<string, {
+    holdings: FundHolding[]
+    clientIDs: Set<string>
+  }>()
 
+  // 首先验证所有持仓数据
   dataStore.holdings.forEach(holding => {
-    const groupKey = `${holding.clientName}|${holding.clientID}`
-    if (!groupedDictionary.has(groupKey)) {
-      groupedDictionary.set(groupKey, [])
+    if (!holding.id) {
+      console.warn('发现无ID持仓:', holding)
+      holding.id = crypto.randomUUID()
     }
-    groupedDictionary.get(groupKey)!.push(holding)
+    
+    // 只使用客户名作为分组键
+    const groupKey = holding.clientName.trim()
+    if (!groupedDictionary.has(groupKey)) {
+      groupedDictionary.set(groupKey, {
+        holdings: [],
+        clientIDs: new Set()
+      })
+    }
+    
+    const group = groupedDictionary.get(groupKey)!
+    group.holdings.push(holding)
+    if (holding.clientID?.trim()) {
+      group.clientIDs.add(holding.clientID.trim())
+    }
   })
 
   const clientGroups: ClientGroupForManagement[] = []
 
-  groupedDictionary.forEach((holdings, groupKey) => {
-    const components = groupKey.split('|', 2)
-    const originalName = components[0]
-    const clientID = components.length > 1 && components[1] !== '' ? components[1] : null
-
+  groupedDictionary.forEach(({ holdings, clientIDs }, groupKey) => {
+    // 按购买日期排序
+    const sortedHoldings = [...holdings].sort((a, b) =>
+      new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime()
+    )
+    
     const group: ClientGroupForManagement = {
       id: groupKey,
-      originalClientName: originalName,
-      displayClientName: originalName,
-      clientID: clientID,
-      holdings: holdings
+      originalClientName: groupKey,
+      displayClientName: groupKey,
+      clientIDs: Array.from(clientIDs),
+      holdings: sortedHoldings
     }
+    
+    // 验证分组数据
+    validateClientGroupData(group)
+    
     clientGroups.push(group)
   })
 
-  clientGroups.sort((a, b) => a.displayClientName.localeCompare(b.displayClientName))
-
-  return clientGroups
+  // 按客户名排序
+  return clientGroups.sort((a, b) => a.displayClientName.localeCompare(b.displayClientName))
 })
 
 const filteredClientGroups = computed((): ClientGroupForManagement[] => {
@@ -329,7 +348,7 @@ const filteredClientGroups = computed((): ClientGroupForManagement[] => {
     return (
       displayName.toLowerCase().includes(searchLower) ||
       group.displayClientName.toLowerCase().includes(searchLower) ||
-      (group.clientID && group.clientID.toLowerCase().includes(searchLower)) ||
+      group.clientIDs.some(id => id.toLowerCase().includes(searchLower)) ||
       group.holdings.some(holding =>
         holding.fundName.toLowerCase().includes(searchLower) ||
         holding.fundCode.toLowerCase().includes(searchLower)
@@ -434,31 +453,156 @@ const confirmRename = async () => {
 
   const oldClientGroup = renameDialogClient.value
   const oldClientName = oldClientGroup.originalClientName
-  const oldClientID = oldClientGroup.clientID || ''
+  const newName = newClientName.value.trim()
 
-  if (oldClientName === newClientName.value.trim()) {
+  if (oldClientName === newName) {
     closeRenameDialog()
     return
   }
 
   try {
-    dataStore.holdings.forEach((holding, index) => {
-      if (holding.clientName === oldClientName && holding.clientID === oldClientID) {
-        const updatedHolding = { ...holding }
-        updatedHolding.clientName = newClientName.value.trim()
-        dataStore.updateHolding(updatedHolding.id, updatedHolding)
-      }
-    })
-
-    dataStore.addLog(`客户 '${oldClientName}' 已批量修改为 '${newClientName.value.trim()}'，涉及 ${oldClientGroup.holdings.length} 个持仓`, 'info')
+    // 验证新名称是否已存在其他客户
+    const existingGroups = groupedHoldings.value.filter(group =>
+      group.originalClientName === newName
+    )
     
-    showToastMessage('客户姓名修改成功', 'success')
+    if (existingGroups.length > 0) {
+      // 检查是否要合并
+      const confirmMerge = confirm(`客户 "${newName}" 已存在，是否合并持仓？`)
+      if (!confirmMerge) {
+        return
+      }
+    }
+
+    // 🔴 修复：获取所有同客户名的持仓
+    const holdingsToUpdate = dataStore.holdings.filter(holding =>
+      holding.clientName === oldClientName
+    )
+
+    if (holdingsToUpdate.length === 0) {
+      showToastMessage('未找到该客户的持仓记录', 'error')
+      return
+    }
+
+    console.log(`🔄 准备重命名客户 "${oldClientName}" 到 "${newName}"，涉及 ${holdingsToUpdate.length} 个持仓`)
+    
+    // 🔴 修复：批量更新，确保数据一致性
+    let successCount = 0
+    const errors: string[] = []
+    
+    // 先备份旧数据
+    const oldHoldingsData = holdingsToUpdate.map(h => ({
+      id: h.id,
+      clientName: h.clientName,
+      clientID: h.clientID,
+      fundCode: h.fundCode,
+      fundName: h.fundName
+    }))
+    
+    // 批量更新所有持仓
+    for (const holding of holdingsToUpdate) {
+      try {
+        console.log(`📝 更新持仓 ${holding.id}: ${holding.clientName} -> ${newName}`)
+        
+        // 创建更新对象，保留所有原始数据
+        const updateData = {
+          clientName: newName,
+          clientID: holding.clientID,
+          fundCode: holding.fundCode,
+          fundName: holding.fundName,
+          purchaseAmount: holding.purchaseAmount,
+          purchaseShares: holding.purchaseShares,
+          purchaseDate: holding.purchaseDate,
+          remarks: holding.remarks,
+          currentNav: holding.currentNav,
+          navDate: holding.navDate,
+          isPinned: holding.isPinned,
+          pinnedTimestamp: holding.pinnedTimestamp,
+          isValid: holding.isValid,
+          navReturn1m: holding.navReturn1m,
+          navReturn3m: holding.navReturn3m,
+          navReturn6m: holding.navReturn6m,
+          navReturn1y: holding.navReturn1y
+        }
+        
+        // 使用 updateHolding 方法
+        dataStore.updateHolding(holding.id, updateData)
+        successCount++
+        
+      } catch (error) {
+        const errorMsg = `持仓 ${holding.fundCode} 更新失败: ${error instanceof Error ? error.message : '未知错误'}`
+        console.error(errorMsg)
+        errors.push(errorMsg)
+      }
+    }
+    
+    // 🔴 强制保存数据到 localStorage
+    setTimeout(() => {
+      dataStore.saveData(true)
+      console.log('💾 强制保存数据完成')
+    }, 100)
+    
+    // 记录操作日志
+    if (successCount > 0) {
+      dataStore.addLog(`客户 "${oldClientName}" 已批量修改为 "${newName}"，成功更新 ${successCount} 个持仓`, 'info')
+      showToastMessage(`成功修改 ${successCount} 个持仓的客户姓名`, 'success')
+    }
+    
+    if (errors.length > 0) {
+      console.warn('部分持仓更新失败:', errors)
+      dataStore.addLog(`客户重命名: ${errors.length} 个持仓更新失败`, 'warning')
+    }
+    
     closeRenameDialog()
     
+    // 🔴 修复：刷新界面 - 延迟确保数据更新
+    setTimeout(() => {
+      expandedClientCodes.value.clear()
+      // 如果重命名后客户名已存在，展开新分组
+      if (groupedHoldings.value.some(g => g.originalClientName === newName)) {
+        expandedClientCodes.value.add(newName)
+      }
+      
+      // 调试：验证数据是否正确更新
+      console.log('🔍 重命名后数据验证:')
+      const updatedHoldings = dataStore.holdings.filter(h =>
+        oldHoldingsData.some(old => old.id === h.id)
+      )
+      updatedHoldings.forEach(h => {
+        console.log(`  - ${h.id}: ${h.clientName} (应为: ${newName}) ${h.clientName === newName ? '✅' : '❌'}`)
+      })
+      
+    }, 200)
+    
   } catch (error) {
-    console.error('重命名失败:', error)
-    showToastMessage('重命名失败，请重试', 'error')
+    console.error('❌ 重命名失败:', error)
+    showToastMessage(`重命名失败: ${error instanceof Error ? error.message : '请重试'}`, 'error')
   }
+}
+
+// 🔴 添加：数据验证函数
+const validateClientGroupData = (clientGroup: ClientGroupForManagement) => {
+  const holdings = dataStore.holdings.filter(h => h.clientName === clientGroup.originalClientName)
+  const issues = []
+  
+  // 检查数据一致性
+  if (holdings.length !== clientGroup.holdings.length) {
+    issues.push(`数据不一致: 实际持仓 ${holdings.length} 个，显示持仓 ${clientGroup.holdings.length} 个`)
+  }
+  
+  // 检查是否有重复ID
+  const holdingIds = holdings.map(h => h.id)
+  const uniqueIds = new Set(holdingIds)
+  if (holdingIds.length !== uniqueIds.size) {
+    issues.push(`存在重复的持仓ID`)
+  }
+  
+  if (issues.length > 0) {
+    console.warn(`客户 "${clientGroup.originalClientName}" 数据问题:`, issues)
+    return false
+  }
+  
+  return true
 }
 
 const confirmDeleteClientHoldings = (clientGroup: ClientGroupForManagement) => {
@@ -478,19 +622,20 @@ const deleteClientHoldings = async () => {
 
   const client = deleteDialogClient.value
   const clientName = client.originalClientName
-  const clientID = client.clientID || ''
 
   try {
-    const holdingsToDelete = dataStore.holdings.filter(
-      holding => holding.clientName === clientName && holding.clientID === clientID
+    // 找到该客户名下的所有持仓
+    const holdingsToDelete = dataStore.holdings.filter(holding =>
+      holding.clientName === clientName
     )
     
+    // 批量删除所有持仓
     holdingsToDelete.forEach(holding => {
       dataStore.deleteHolding(holding.id)
     })
 
     const deletedFundCodes = holdingsToDelete.map(h => h.fundCode).join(', ')
-    dataStore.addLog(`已批量删除客户 '${client.displayClientName}${clientID ? '(' + clientID + ')' : ''}' 名下的 ${holdingsToDelete.length} 个持仓。删除的基金代码: ${deletedFundCodes}`, 'warning')
+    dataStore.addLog(`已批量删除客户 '${client.displayClientName}' 名下的 ${holdingsToDelete.length} 个持仓。删除的基金代码: ${deletedFundCodes}`, 'warning')
     
     showToastMessage(`已删除${holdingsToDelete.length}个持仓`, 'success')
     closeDeleteDialog()
@@ -591,8 +736,46 @@ const showToastMessage = (message: string, type: 'info' | 'success' | 'error' | 
   }, 3000)
 }
 
+// 🔴 添加：数据刷新函数
+const refreshData = () => {
+  console.log('🔄 刷新数据...')
+  // 清除展开状态
+  expandedClientCodes.value.clear()
+  
+  // 强制重新计算
+  const groups = groupedHoldings.value
+  console.log(`刷新后分组: ${groups.length} 个客户`)
+  groups.forEach(group => {
+    console.log(`  - ${group.originalClientName}: ${group.holdings.length} 个持仓`)
+  })
+}
+
 onMounted(() => {
   dataStore.init()
+  
+  // 延迟验证数据
+  setTimeout(() => {
+    console.log('🔍 页面加载完成，验证数据...')
+    console.log(`总持仓数: ${dataStore.holdings.length}`)
+    console.log(`分组数: ${groupedHoldings.value.length}`)
+    
+    // 检查是否有重复的客户名
+    const clientNames = dataStore.holdings.map(h => h.clientName)
+    const uniqueNames = new Set(clientNames)
+    if (clientNames.length !== uniqueNames.size) {
+      console.warn('⚠️ 发现重复客户名')
+      // 找出重复的客户名
+      const nameCounts: Record<string, number> = {}
+      clientNames.forEach(name => {
+        nameCounts[name] = (nameCounts[name] || 0) + 1
+      })
+      Object.entries(nameCounts).forEach(([name, count]) => {
+        if (count > 1) {
+          console.warn(`  - "${name}": ${count} 次`)
+        }
+      })
+    }
+  }, 500)
 })
 
 onUnmounted(() => {
@@ -803,35 +986,6 @@ onUnmounted(() => {
   padding-bottom: 120px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--text-secondary);
-  background: var(--bg-card);
-  border-radius: 12px;
-  margin: 20px;
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-.empty-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
-
-.empty-description {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
 .client-groups-list {
   display: flex;
   flex-direction: column;
@@ -896,7 +1050,7 @@ onUnmounted(() => {
 
 .client-pill-content {
   position: relative;
-  z-index: 1;
+  z-index: 1
 }
 
 .client-pill-info {
@@ -1058,6 +1212,12 @@ onUnmounted(() => {
   color: var(--text-secondary);
   font-family: 'Monaco', 'Courier New', monospace;
   font-weight: normal;
+}
+
+.client-id-display {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
 }
 
 .holding-actions-icons {
@@ -1468,22 +1628,6 @@ onUnmounted(() => {
     width: 24px;
     height: 24px;
     font-size: 11px;
-  }
-  
-  .empty-state {
-    padding: 40px 16px;
-  }
-  
-  .empty-icon {
-    font-size: 36px;
-  }
-  
-  .empty-title {
-    font-size: 16px;
-  }
-  
-  .empty-description {
-    font-size: 13px;
   }
   
   .client-count-pill {

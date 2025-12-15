@@ -1,106 +1,78 @@
 <template>
   <div class="edit-holding-form">
-    <!-- 固定工具栏 -->
-    <div class="form-toolbar">
-      <button class="back-button-pill" @click="handleCancel">
-        <span class="back-icon">←</span>
-        返回
-      </button>
+    <!-- 固定顶部工具栏 -->
+    <div class="fixed-header">
+      <div class="form-toolbar">
+        <button class="back-button-pill" @click="handleCancel">
+          <span class="back-icon">←</span>
+          返回
+        </button>
+      </div>
     </div>
     
-    <!-- 表单内容区域（可滚动） -->
     <div class="form-scroll">
       <form @submit.prevent="handleSubmit" class="holding-form">
-        <!-- 客户信息部分 -->
-        <div class="form-section">
-          <div class="input-group" :class="{ 'error': errors.client_name }">
-            <div class="input-icon-wrapper">
-              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C15.3137 2 18 4.68629 18 8C18 11.3137 15.3137 14 12 14C8.68629 14 6 11.3137 6 8C6 4.68629 8.68629 2 12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 21V19C4 17.9391 4.42143 16.9217 5.17157 16.1716C5.92172 15.4214 6.93913 15 8 15H16C17.0609 15 18.0783 15.4214 18.8284 16.1716C19.5786 16.9217 20 17.9391 20 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <input
-                v-model="formData.client_name"
-                type="text"
-                placeholder="客户姓名 (必填, 2-10字符)"
-                class="form-input"
-                :class="{ 'error': errors.client_name }"
-                @input="validateClientName"
-                @blur="formatClientName"
-                maxlength="10"
-                required
-              />
-            </div>
-            <p class="error-message" v-if="errors.client_name">{{ errors.client_name }}</p>
+        <!-- 客户姓名 -->
+        <div class="input-group" :class="{ 'error': errors.client_name }">
+          <div class="input-icon-wrapper">
+            <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C15.3137 2 18 4.68629 18 8C18 11.3137 15.3137 14 12 14C8.68629 14 6 11.3137 6 8C6 4.68629 8.68629 2 12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 21V19C4 17.9391 4.42143 16.9217 5.17157 16.1716C5.92172 15.4214 6.93913 15 8 15H16C17.0609 15 18.0783 15.4214 18.8284 16.1716C19.5786 16.9217 20 17.9391 20 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <input
+              v-model="formData.client_name"
+              type="text"
+              placeholder="客户姓名 (必填)"
+              class="form-input"
+              :class="{ 'error': errors.client_name }"
+              @input="validateClientName"
+              @blur="formatClientName"
+              maxlength="10"
+              required
+            />
           </div>
-          
-          <div class="input-group" :class="{ 'error': errors.client_id }">
-            <div class="input-icon-wrapper">
-              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 7C10 8.10457 9.10457 9 8 9C6.89543 9 6 8.10457 6 7C6 5.89543 6.89543 5 8 5C9.10457 5 10 5.89543 10 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 8V14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 11H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <input
-                v-model="formData.client_id"
-                type="text"
-                inputmode="numeric"
-                placeholder="客户号 (选填, 最多12位数字)"
-                class="form-input"
-                :class="{ 'error': errors.client_id }"
-                maxlength="12"
-                @input="validateClientId"
-              />
-            </div>
-            <p class="error-message" v-if="errors.client_id">{{ errors.client_id }}</p>
-          </div>
+          <p class="error-message" v-if="errors.client_name">{{ errors.client_name }}</p>
         </div>
-        
-        <hr class="section-divider" />
-        
-        <!-- 基金信息部分 -->
-        <div class="form-section">
-          <div class="input-group" :class="{ 'error': errors.fund_code }">
-            <div class="input-icon-wrapper">
-              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <input
-                v-model="formData.fund_code"
-                type="text"
-                inputmode="numeric"
-                placeholder="基金代码 (必填, 6位数字)"
-                class="form-input"
-                :class="{ 'error': errors.fund_code }"
-                @input="validateFundCode"
-                maxlength="6"
-                required
-              />
-            </div>
-            <p class="error-message" v-if="errors.fund_code">{{ errors.fund_code }}</p>
-          </div>
-          
-          <div class="input-group">
-            <div class="input-icon-wrapper">
-              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V5C19 3.89543 18.1046 3 17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 13H15M9 9H15M10 17H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <input
-                v-model="formData.fund_name"
-                type="text"
-                class="form-input"
-                readonly
-                placeholder="基金名称 (根据基金代码自动获取)"
-                style="color: var(--text-secondary);"
-              />
-            </div>
-            <div class="hint-message">
-              基金名称根据基金代码自动获取
+
+        <!-- 基金代码和名称 -->
+        <div class="input-group" :class="{ 'error': errors.fund_code }">
+          <div class="input-icon-wrapper fund-code-row">
+            <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <input
+              v-model="formData.fund_code"
+              type="text"
+              inputmode="numeric"
+              placeholder="基金代码"
+              class="form-input fund-code-input"
+              :class="{ 'error': errors.fund_code }"
+              @input="validateFundCode"
+              maxlength="6"
+              required
+            />
+            <div class="fund-name-display">
+              {{ formData.fund_name || '基金名称' }}
             </div>
           </div>
+          <p class="error-message" v-if="errors.fund_code">{{ errors.fund_code }}</p>
         </div>
-        
-        <hr class="section-divider" />
-        
-        <!-- 购买信息部分 -->
-        <div class="form-section">
+
+        <!-- 购买金额、份额和日期 -->
+        <div class="input-row">
           <div class="input-group" :class="{ 'error': errors.purchase_amount }">
             <div class="input-icon-wrapper">
-              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 16V8M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 16V8M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
               <input
                 v-model.number="formData.purchase_amount"
                 type="number"
                 inputmode="decimal"
-                placeholder="购买金额 (¥)"
+                placeholder="购买金额"
                 class="form-input"
                 :class="{ 'error': errors.purchase_amount }"
                 @input="validateAmount('purchase_amount')"
@@ -112,15 +84,19 @@
             </div>
             <p class="error-message" v-if="errors.purchase_amount">{{ errors.purchase_amount }}</p>
           </div>
-          
+
           <div class="input-group" :class="{ 'error': errors.purchase_shares }">
             <div class="input-icon-wrapper">
-              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
               <input
                 v-model.number="formData.purchase_shares"
                 type="number"
                 inputmode="decimal"
-                placeholder="购买份额 (份)"
+                placeholder="持有份额"
                 class="form-input"
                 :class="{ 'error': errors.purchase_shares }"
                 @input="validateAmount('purchase_shares')"
@@ -132,47 +108,73 @@
             </div>
             <p class="error-message" v-if="errors.purchase_shares">{{ errors.purchase_shares }}</p>
           </div>
+        </div>
+
+        <div class="input-group">
+          <div class="date-input-wrapper">
+            <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <input
+              v-model="formData.purchase_date"
+              type="date"
+              class="form-input date-input-native-styled"
+              :max="maxDate"
+              @change="validateDate"
+              required
+            />
+            <span class="date-display">{{ formattedDate }}</span>
+            <span class="date-select-arrow">▼</span>
+          </div>
+          <p class="error-message" v-if="errors.purchase_date">{{ errors.purchase_date }}</p>
+        </div>
+
+        <!-- 客户号和备注 -->
+        <div class="input-row">
+          <div class="input-group" :class="{ 'error': errors.client_id }">
+            <div class="input-icon-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 7C10 8.10457 9.10457 9 8 9C6.89543 9 6 8.10457 6 7C6 5.89543 6.89543 5 8 5C9.10457 5 10 5.89543 10 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18 8V14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 11H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <input
+                v-model="formData.client_id"
+                type="text"
+                inputmode="numeric"
+                placeholder="客户号 (选填)"
+                class="form-input"
+                :class="{ 'error': errors.client_id }"
+                maxlength="12"
+                @input="validateClientId"
+              />
+            </div>
+            <p class="error-message" v-if="errors.client_id">{{ errors.client_id }}</p>
+          </div>
           
           <div class="input-group">
-            <div class="date-input-wrapper">
-              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <input
-                v-model="formData.purchase_date"
-                type="date"
-                class="form-input date-input-native-styled"
-                :max="maxDate"
-                @change="validateDate"
-                required
-              />
-              <span class="date-display">{{ formattedDate }}</span>
-              <span class="date-select-arrow">▼</span>
-            </div>
-            <p class="error-message" v-if="errors.purchase_date">{{ errors.purchase_date }}</p>
-          </div>
-        </div>
-        
-        <hr class="section-divider" />
-        
-        <!-- 备注信息部分 -->
-        <div class="form-section">
-          <div class="input-group">
-            <div class="input-icon-wrapper-textarea">
-              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="input-icon-wrapper-textarea remarks-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
               <textarea
                 v-model="formData.remarks"
-                class="form-textarea"
-                placeholder="备注 (最多255个字符)"
-                maxlength="255"
+                class="form-textarea remarks-textarea"
+                placeholder="备注 (选填，最多10个汉字)"
+                maxlength="10"
                 rows="1"
               ></textarea>
             </div>
             <div class="char-counter">
-              {{ formData.remarks?.length || 0 }}/255
+              {{ formData.remarks?.length || 0 }}/10
             </div>
           </div>
         </div>
-        
-        <!-- 表单操作按钮 -->
+
         <div class="form-actions">
           <button
             type="button"
@@ -219,10 +221,8 @@ const emit = defineEmits<{
 
 const dataStore = useDataStore()
 
-// 组件状态
 const isSubmitting = ref(false)
 
-// 表单数据 - 使用兼容格式
 const formData = ref({
   id: '',
   client_name: '',
@@ -243,7 +243,6 @@ const formData = ref({
   nav_return_1y: undefined as number | undefined
 })
 
-// 错误信息
 const errors = ref({
   client_name: '',
   client_id: '',
@@ -253,8 +252,6 @@ const errors = ref({
   purchase_date: ''
 })
 
-// ========== 辅助函数 ==========
-// 格式化购买金额
 const formatPurchaseAmount = () => {
   if (formData.value.purchase_amount) {
     const amount = parseFloat(formData.value.purchase_amount.toString())
@@ -264,7 +261,6 @@ const formatPurchaseAmount = () => {
   }
 }
 
-// 格式化购买份额
 const formatPurchaseShares = () => {
   if (formData.value.purchase_shares) {
     const shares = parseFloat(formData.value.purchase_shares.toString())
@@ -274,14 +270,12 @@ const formatPurchaseShares = () => {
   }
 }
 
-// 格式化客户姓名
 const formatClientName = () => {
   formData.value.client_name = formData.value.client_name.trim()
 }
 
-// 格式化日期显示
 const formattedDate = computed(() => {
-  if (!formData.value.purchase_date) return '购买日期 (必选)'
+  if (!formData.value.purchase_date) return '购买日期'
   try {
     const date = new Date(formData.value.purchase_date + 'T00:00:00')
     if (isNaN(date.getTime())) return '日期格式错误'
@@ -295,7 +289,6 @@ const formattedDate = computed(() => {
   }
 })
 
-// 加载表单数据
 const loadFormData = (holding: any) => {
   if (holding) {
     formData.value = {
@@ -326,18 +319,15 @@ const loadFormData = (holding: any) => {
       nav_return_1y: holding.navReturn1y || holding.nav_return_1y
     }
     
-    // 格式化数值显示
     formatPurchaseAmount()
     formatPurchaseShares()
   }
 }
 
-// 获取今日日期字符串
 const getTodayDate = (): string => {
   return new Date().toISOString().split('T')[0]
 }
 
-// 重置表单
 const resetForm = () => {
   const now = getTodayDate()
   
@@ -361,13 +351,11 @@ const resetForm = () => {
     nav_return_1y: undefined
   }
   
-  // 重置错误信息
   Object.keys(errors.value).forEach(key => {
     errors.value[key as keyof typeof errors.value] = ''
   })
 }
 
-// ========== 计算属性 ==========
 const maxDate = computed(() => {
   return getTodayDate()
 })
@@ -383,7 +371,6 @@ const isFormValid = computed(() => {
   )
 })
 
-// ========== 验证函数 ==========
 const validateClientName = () => {
   const name = formData.value.client_name.trim()
   
@@ -392,14 +379,12 @@ const validateClientName = () => {
     return
   }
   
-  // 检查是否包含非法字符
   const allowedPattern = /^[\u4e00-\u9fa5a-zA-Z\s]+$/
   if (!allowedPattern.test(name)) {
     errors.value.client_name = '姓名只能包含汉字、英文字母和空格'
     return
   }
   
-  // 检查中英文长度限制
   const hasChinese = /[\u4e00-\u9fa5]/.test(name)
   if (hasChinese) {
     if (name.length > 5) {
@@ -494,8 +479,6 @@ const validateDate = () => {
   errors.value.purchase_date = ''
 }
 
-// ========== 表单处理函数 ==========
-// 提交表单
 const handleSubmit = async () => {
   if (!isFormValid.value) {
     return
@@ -504,21 +487,17 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // 准备提交数据
     const updatedData = {
       ...formData.value,
       updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
     }
     
-    // 如果这是新持仓，添加创建时间
     if (!updatedData.created_at) {
       updatedData.created_at = new Date().toISOString().replace('T', ' ').substring(0, 19)
     }
     
-    // 记录日志
     dataStore.addLog(`编辑持仓: ${updatedData.client_name} - ${updatedData.fund_code}`, 'info')
     
-    // 触发保存事件
     emit('save', updatedData)
     
   } catch (error) {
@@ -529,27 +508,22 @@ const handleSubmit = async () => {
   }
 }
 
-// 取消编辑，返回上一页
 const handleCancel = () => {
   emit('cancel')
 }
 
-// 重置表单
 const handleReset = () => {
   if (confirm('确定要重置表单吗？所有修改将会丢失。')) {
     loadFormData(props.holding)
   }
 }
 
-// ========== 生命周期 ==========
-// 监听props变化，初始化表单数据
 watch(() => props.holding, (newHolding) => {
   if (newHolding) {
     loadFormData(newHolding)
   }
 }, { immediate: true })
 
-// 初始化
 onMounted(() => {
   if (!props.holding) {
     resetForm()
@@ -568,21 +542,29 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 固定工具栏 */
+/* 固定顶部工具栏 */
+.fixed-header {
+  flex-shrink: 0;
+  z-index: 100;
+  position: relative;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: 0;
+  background: var(--bg-primary);
+}
+
 .form-toolbar {
   flex-shrink: 0;
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-card);
   z-index: 10;
 }
 
-/* 返回按钮 - 药丸形状 */
 .back-button-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 6px 12px;
   background: var(--bg-hover, rgba(0, 0, 0, 0.05));
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 20px;
@@ -605,37 +587,32 @@ onMounted(() => {
   line-height: 1;
 }
 
-/* 表单内容区域 */
 .form-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  max-height: calc(85vh - 80px);
+  padding: 12px 20px;
+  max-height: calc(85vh - 60px);
 }
 
 .holding-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.form-section {
-  background: var(--bg-primary);
-  border-radius: 10px;
-  padding: 16px;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.section-divider {
-  border: 0;
-  height: 1px;
-  background: var(--border-color);
-  margin: 8px 0;
+.input-row .input-group {
+  flex: 1;
+  margin-bottom: 0;
 }
 
 .input-group {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   position: relative;
 }
 
@@ -647,30 +624,81 @@ onMounted(() => {
   display: flex;
   align-items: center;
   width: 100%;
-  border: 2px solid var(--border-color);
-  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   background: var(--bg-hover-light);
   transition: all 0.2s ease;
-  padding: 0 16px 0 8px;
-  min-height: 48px;
+  padding: 0 12px;
+  min-height: 42px;
+}
+
+.fund-code-row {
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+}
+
+.fund-code-input {
+  width: 50px; /* 调整基金代码输入框宽度 */
+  flex: 0 0 auto;
+  margin-right: 6px;
+  padding-right: 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+.fund-name-display {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  background: transparent;
+  border-left: 1px solid var(--border-color);
+  padding-left: 10px;
+  margin-left: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .input-icon-wrapper-textarea {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   width: 100%;
-  border: 2px solid var(--border-color);
-  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   background: var(--bg-hover-light);
   transition: all 0.2s ease;
-  padding: 12px 16px 12px 8px;
-  min-height: 48px;
+  padding: 0 12px;
+  min-height: 42px;
+}
+
+.remarks-wrapper {
+  min-height: 42px;
+}
+
+.remarks-textarea {
+  flex-grow: 1;
+  padding: 10px 0;
+  border: none;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: transparent;
+  outline: none;
+  resize: none;
+  height: 42px;
+  min-height: 42px;
+  max-height: 42px;
+  line-height: 1.4;
+  font-family: inherit;
 }
 
 .input-icon-wrapper:focus-within,
-.input-icon-wrapper-textarea:focus-within {
+.input-icon-wrapper-textarea:focus-within,
+.date-input-wrapper:focus-within {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.1);
+  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.1);
 }
 
 .input-icon {
@@ -680,26 +708,28 @@ onMounted(() => {
 }
 
 .input-group.error .input-icon-wrapper,
-.input-group.error .input-icon-wrapper-textarea {
+.input-group.error .input-icon-wrapper-textarea,
+.input-group.error .date-input-wrapper {
   border-color: #ff416c;
   background: rgba(255, 65, 108, 0.05);
 }
 
 .input-group.error .input-icon-wrapper:focus-within,
-.input-group.error .input-icon-wrapper-textarea:focus-within {
-  box-shadow: 0 0 0 3px rgba(255, 65, 108, 0.2);
+.input-group.error .input-icon-wrapper-textarea:focus-within,
+.input-group.error .date-input-wrapper:focus-within {
+  box-shadow: 0 0 0 2px rgba(255, 65, 108, 0.2);
 }
 
 .form-input {
   flex-grow: 1;
-  padding: 12px 0;
+  padding: 10px 0;
   border: none;
-  font-size: 16px;
+  font-size: 14px;
   color: var(--text-primary);
   background: transparent;
   outline: none;
   box-sizing: border-box;
-  min-height: 24px;
+  min-height: 22px;
 }
 
 .form-input::placeholder {
@@ -716,12 +746,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   width: 100%;
-  border: 2px solid var(--border-color);
-  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   background: var(--bg-hover-light);
   transition: all 0.2s ease;
-  padding: 0 16px 0 8px;
-  min-height: 48px;
+  padding: 0 12px;
+  min-height: 42px;
 }
 
 .date-input-native-styled {
@@ -738,12 +768,12 @@ onMounted(() => {
 
 .date-display {
   flex: 1;
-  padding: 12px 0 12px 0;
-  font-size: 16px;
+  padding: 10px 0;
+  font-size: 14px;
   color: var(--text-primary);
   z-index: 1;
   margin-left: 8px;
-  min-height: 24px;
+  min-height: 22px;
   display: flex;
   align-items: center;
 }
@@ -756,21 +786,6 @@ onMounted(() => {
   margin-left: 8px;
 }
 
-.form-textarea {
-  flex-grow: 1;
-  padding: 0;
-  border: none;
-  font-size: 16px;
-  color: var(--text-primary);
-  background: transparent;
-  outline: none;
-  resize: none;
-  min-height: 24px;
-  max-height: 120px;
-  line-height: 1.5;
-  font-family: inherit;
-}
-
 .form-textarea::placeholder {
   color: var(--text-secondary);
   opacity: 0.8;
@@ -779,16 +794,8 @@ onMounted(() => {
 .error-message {
   font-size: 12px;
   color: #ff416c;
-  margin: 4px 0 0 0;
+  margin: 2px 0 0 0;
   font-weight: 500;
-  padding-left: 28px;
-}
-
-.hint-message {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-  font-style: italic;
   padding-left: 28px;
 }
 
@@ -796,20 +803,20 @@ onMounted(() => {
   text-align: right;
   font-size: 12px;
   color: var(--text-secondary);
-  margin-top: 4px;
+  margin-top: 2px;
   padding-right: 4px;
 }
 
 .form-actions {
   display: flex;
-  gap: 12px;
-  padding: 16px 0 24px;
+  gap: 8px;
+  padding: 12px 0 16px;
   margin-top: 8px;
 }
 
 .form-button {
   flex: 1;
-  padding: 16px;
+  padding: 14px;
   border: none;
   border-radius: 12px;
   font-size: 16px;
@@ -839,14 +846,14 @@ onMounted(() => {
 }
 
 .form-button.submit {
-  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
-  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
 }
 
 .form-button.submit:hover:not(.disabled):not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
 }
 
 .form-button.submit.disabled,
@@ -876,10 +883,9 @@ onMounted(() => {
 }
 
 .form-spacer {
-  height: 20px;
+  height: 10px;
 }
 
-/* 滚动条样式 */
 .form-scroll::-webkit-scrollbar {
   width: 6px;
 }
@@ -897,7 +903,6 @@ onMounted(() => {
   background: var(--text-secondary);
 }
 
-/* 深色模式适配 */
 :root.dark .form-toolbar {
   background: var(--bg-card-dark);
   border-color: var(--border-color-dark);
@@ -927,6 +932,11 @@ onMounted(() => {
   color: var(--text-primary-dark);
 }
 
+:root.dark .fund-name-display {
+  color: var(--text-secondary-dark);
+  border-color: var(--border-color-dark);
+}
+
 :root.dark .form-button.cancel {
   background: var(--bg-hover-dark);
   color: var(--text-primary-dark);
@@ -945,53 +955,66 @@ onMounted(() => {
   }
   
   .form-toolbar {
-    padding: 12px;
+    padding: 8px 12px;
   }
   
   .back-button-pill {
-    padding: 6px 12px;
+    padding: 5px 10px;
     font-size: 13px;
   }
   
   .form-scroll {
-    padding: 16px;
-    max-height: calc(90vh - 60px);
+    padding: 8px 16px;
+    max-height: calc(90vh - 50px);
   }
   
-  .form-section {
-    padding: 14px;
+  .holding-form {
+    gap: 6px;
+  }
+  
+  .input-row {
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 6px;
   }
   
   .input-group {
-    margin-bottom: 14px;
+    margin-bottom: 6px;
   }
   
   .input-icon-wrapper,
   .input-icon-wrapper-textarea,
   .date-input-wrapper {
-    padding: 0 14px 0 8px;
-    min-height: 44px;
+    padding: 0 10px;
+    min-height: 40px;
   }
   
-  .input-icon-wrapper-textarea {
-    padding: 10px 14px 10px 8px;
+  .fund-code-input {
+    width: 45px; /* 移动端调整宽度 */
+    font-size: 13px;
   }
   
   .form-input,
   .form-textarea,
   .date-display {
-    padding: 10px 0;
-    font-size: 15px;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  
+  .fund-name-display {
+    font-size: 13px;
+    padding: 8px 0;
   }
   
   .form-actions {
     flex-direction: column;
-    gap: 8px;
-    padding: 12px 0 16px;
+    gap: 6px;
+    padding: 8px 0 12px;
   }
   
   .form-button {
-    padding: 14px;
+    padding: 12px;
+    font-size: 14px;
   }
 }
 
@@ -1001,60 +1024,63 @@ onMounted(() => {
   }
   
   .form-toolbar {
-    padding: 10px;
+    padding: 6px 10px;
   }
   
   .back-button-pill {
-    padding: 5px 10px;
+    padding: 4px 8px;
     font-size: 12px;
   }
   
   .form-scroll {
-    padding: 14px;
-    max-height: calc(90vh - 50px);
+    padding: 6px 14px;
+    max-height: calc(90vh - 45px);
   }
   
-  .form-section {
-    padding: 12px;
-    border-radius: 8px;
+  .holding-form {
+    gap: 4px;
   }
   
   .input-icon-wrapper,
   .input-icon-wrapper-textarea,
   .date-input-wrapper {
-    padding: 0 12px 0 8px;
-    min-height: 42px;
+    padding: 0 8px;
+    min-height: 38px;
+    border-radius: 6px;
   }
   
-  .input-icon-wrapper-textarea {
-    padding: 8px 12px 8px 8px;
+  .fund-code-input {
+    width: 40px; /* 移动端调整宽度 */
+    font-size: 12px;
   }
   
   .form-input,
   .form-textarea,
   .date-display {
-    padding: 8px 0;
-    font-size: 14px;
+    padding: 6px 0;
+    font-size: 13px;
   }
   
-  .form-textarea {
-    max-height: 100px;
+  .fund-name-display {
+    font-size: 12px;
+    padding: 6px 0;
+    padding-left: 6px;
+  }
+  
+  .remarks-textarea {
+    padding: 6px 0;
+    font-size: 13px;
   }
   
   .form-button {
-    padding: 12px;
+    padding: 10px;
     font-size: 14px;
     border-radius: 8px;
   }
   
   .error-message {
     font-size: 11px;
-    padding-left: 24px;
-  }
-  
-  .hint-message {
-    font-size: 10px;
-    padding-left: 24px;
+    padding-left: 20px;
   }
 }
 </style>
