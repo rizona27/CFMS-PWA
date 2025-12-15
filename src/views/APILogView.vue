@@ -11,84 +11,108 @@
       </template>
     </NavBar>
     
-    <div class="content">
-      <!-- 折叠的日志类型筛选器 -->
-      <div class="log-filter-section" v-if="showFilterPanel">
-        <div class="filter-buttons">
-          <button
-            v-for="type in allLogTypes"
-            :key="type"
-            class="filter-button-pill"
-            :class="{
-              'selected': selectedLogTypes.includes(type),
-              [type]: true
-            }"
-            @click="toggleLogType(type)"
-          >
-            <span class="filter-button-icon">
-              <span class="check-icon" v-if="selectedLogTypes.includes(type)">✓</span>
-            </span>
-            <span class="filter-button-text">{{ getLogTypeDisplayName(type) }}</span>
-            <span class="filter-count" v-if="getLogCountByType(type) > 0">
-              {{ getLogCountByType(type) }}
-            </span>
-          </button>
+    <!-- 固定顶部部分 - 筛选面板和分隔符 -->
+    <div class="fixed-top-section">
+      <div class="top-container">
+        <!-- 折叠的日志类型筛选器 -->
+        <div class="log-filter-section" v-if="showFilterPanel">
+          <div class="filter-buttons">
+            <button
+              v-for="type in allLogTypes"
+              :key="type"
+              class="filter-button-pill"
+              :class="{
+                'selected': selectedLogTypes.includes(type),
+                [type]: true
+              }"
+              @click="toggleLogType(type)"
+            >
+              <span class="filter-button-icon">
+                <span class="check-icon" v-if="selectedLogTypes.includes(type)">✓</span>
+              </span>
+              <span class="filter-button-text">{{ getLogTypeDisplayName(type) }}</span>
+              <span class="filter-count" v-if="getLogCountByType(type) > 0">
+                {{ getLogCountByType(type) }}
+              </span>
+            </button>
+          </div>
+          
+          <div class="filter-actions">
+            <button class="action-button-pill" @click="toggleSelectAll">
+              {{ isAllSelected ? '取消全选' : '全选' }}
+            </button>
+            <button class="action-button-pill danger" @click="clearLogs" :disabled="logEntries.length === 0">
+              清空日志
+            </button>
+          </div>
         </div>
         
-        <div class="filter-actions">
-          <button class="action-button-pill" @click="toggleSelectAll">
-            {{ isAllSelected ? '取消全选' : '全选' }}
-          </button>
-          <button class="action-button-pill danger" @click="clearLogs" :disabled="logEntries.length === 0">
-            清空日志
-          </button>
+        <!-- 固定分隔符 - 与 AboutView 一致，无底色 -->
+        <div class="stylish-divider">
+          <div class="divider-line"></div>
+          <div class="divider-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="13" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="2" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="13" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+            </svg>
+          </div>
+          <div class="divider-line"></div>
         </div>
       </div>
-      
-      <!-- 日志列表 -->
-      <div class="log-list-container" ref="logListContainer" @scroll="handleUserScroll">
-        <div v-if="logEntries.length === 0" class="empty-state">
-          <div class="empty-icon">📝</div>
-          <div class="empty-text">暂无 API 日志记录</div>
-          <div class="empty-subtext">API 操作日志将在这里显示</div>
-        </div>
-        
-        <div v-else-if="filteredLogs.length === 0" class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <div class="empty-text">没有匹配的日志记录</div>
-          <div class="empty-subtext">请调整筛选条件</div>
-        </div>
-        
-        <div v-else class="log-list">
-          <!-- 按类型分组的日志 -->
-          <div
-            v-for="type in filteredLogTypes"
-            :key="type"
-            class="log-type-pill"
-          >
-            <div class="log-type-header" @click="toggleExpandType(type)">
-              <div class="type-info">
-                <span class="type-dot" :class="type"></span>
-                <span class="type-name">{{ getLogTypeDisplayName(type) }}</span>
-                <span class="type-count">({{ getLogsByType(type).length }})</span>
-              </div>
-              <span class="expand-icon">
-                {{ isTypeExpanded(type) ? '▲' : '▼' }}
-              </span>
+    </div>
+    
+    <!-- 可滚动的内容区域 -->
+    <div class="scrollable-content-section">
+      <div class="content-scroll">
+        <div class="content-wrapper">
+          <!-- 日志列表 -->
+          <div class="log-list-container" ref="logListContainer" @scroll="handleUserScroll">
+            <div v-if="logEntries.length === 0" class="empty-state">
+              <div class="empty-icon">📝</div>
+              <div class="empty-text">暂无 API 日志记录</div>
+              <div class="empty-subtext">API 操作日志将在这里显示</div>
             </div>
             
-            <div class="log-items-pill" v-if="isTypeExpanded(type)">
+            <div v-else-if="filteredLogs.length === 0" class="empty-state">
+              <div class="empty-icon">🔍</div>
+              <div class="empty-text">没有匹配的日志记录</div>
+              <div class="empty-subtext">请调整筛选条件</div>
+            </div>
+            
+            <div v-else class="log-list">
+              <!-- 按类型分组的日志 -->
               <div
-                v-for="log in getLogsByType(type)"
-                :key="log.id"
-                class="log-item-pill"
-                :class="log.type"
+                v-for="type in filteredLogTypes"
+                :key="type"
+                class="log-type-pill"
               >
-                <div class="log-header">
-                  <span class="log-timestamp">{{ formatTimestamp(log.timestamp) }}</span>
-                  <span class="log-id">#{{ formatLogId(log.id) }}</span>
+                <div class="log-type-header" @click="toggleExpandType(type)">
+                  <div class="type-info">
+                    <span class="type-dot" :class="type"></span>
+                    <span class="type-name">{{ getLogTypeDisplayName(type) }}</span>
+                    <span class="type-count">({{ getLogsByType(type).length }})</span>
+                  </div>
+                  <span class="expand-icon">
+                    {{ isTypeExpanded(type) ? '▲' : '▼' }}
+                  </span>
                 </div>
-                <div class="log-message">{{ log.message }}</div>
+                
+                <div class="log-items-pill" v-if="isTypeExpanded(type)">
+                  <div
+                    v-for="log in getLogsByType(type)"
+                    :key="log.id"
+                    class="log-item-pill"
+                    :class="log.type"
+                  >
+                    <div class="log-header">
+                      <span class="log-timestamp">{{ formatTimestamp(log.timestamp) }}</span>
+                      <span class="log-id">#{{ formatLogId(log.id) }}</span>
+                    </div>
+                    <div class="log-message">{{ log.message }}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -347,84 +371,51 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ------------------------------------- */
+/* 页面整体布局 - 参考 AboutView 的布局 */
+/* ------------------------------------- */
 .api-log-view {
-  height: 100vh;
-  background: var(--bg-primary);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* 移除原有的固定顶部工具栏，因为现在使用 NavBar */
-.fixed-toolbar {
-  display: none;
+:root.dark .api-log-view {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-.top-actions {
-  display: none;
+/* 固定顶部部分 - 包括 NavBar、筛选面板和分隔符 */
+.fixed-top-section {
+  flex-shrink: 0;
+  z-index: 90;
+  padding-top: 0;
+  background: transparent; /* 透明背景，让整体渐变透上来 */
 }
 
-/* 筛选按钮样式 - 与返回按钮一致 */
-.filter-toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 20px;
-  color: var(--text-primary, #1e293b);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.top-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 16px;
 }
 
-.filter-toggle-btn:hover {
-  background: var(--accent-color, #3b82f6);
-  color: white;
-  border-color: var(--accent-color, #3b82f6);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-}
-
-.filter-icon {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.filter-text {
-  margin-left: 2px;
-}
-
-/* 深色模式适配 */
-:root.dark .filter-toggle-btn {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
-  border-color: var(--border-color, #334155);
-  color: var(--text-primary, #f1f5f9);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-:root.dark .filter-toggle-btn:hover {
-  background: var(--accent-color, #60a5fa);
-  border-color: var(--accent-color, #60a5fa);
-  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
-}
-
-.content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
+/* 筛选面板样式调整 */
 .log-filter-section {
-  padding: 16px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
+  padding: 16px 0 8px;
+  background: transparent; /* 无底色 */
+  border-bottom: none;
   flex-shrink: 0;
   animation: slideDown 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes slideDown {
@@ -438,138 +429,70 @@ onMounted(() => {
   }
 }
 
-/* 筛选按钮样式 - 改为药丸形 */
-.filter-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.filter-button-pill {
+/* 分隔符样式 - 与 AboutView 一致 */
+.stylish-divider {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  background: var(--bg-hover);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  gap: 12px;
+  padding: 8px 0 16px;
+  opacity: 0.6;
   position: relative;
+  z-index: 1;
+  background: transparent; /* 透明背景 */
 }
 
-.filter-button-pill:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.divider-line {
+  height: 1px;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, currentColor);
 }
 
-.filter-button-pill.selected {
-  border-color: transparent;
-  color: white;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+.divider-line:last-child {
+  background: linear-gradient(90deg, currentColor, transparent);
 }
 
-.filter-button-pill.info.selected {
-  background: linear-gradient(135deg, #ff9a00, #ff5e00);
-}
-
-.filter-button-pill.success.selected {
-  background: linear-gradient(135deg, #00b09b, #96c93d);
-}
-
-.filter-button-pill.error.selected {
-  background: linear-gradient(135deg, #ff416c, #ff4b2b);
-}
-
-.filter-button-pill.warning.selected {
-  background: linear-gradient(135deg, #ffd700, #ffa500);
-}
-
-.filter-button-pill.network.selected {
-  background: linear-gradient(135deg, #2196f3, #21cbf3);
-}
-
-.filter-button-pill.cache.selected {
-  background: linear-gradient(135deg, #9c27b0, #673ab7);
-}
-
-.filter-button-icon {
-  width: 16px;
-  height: 16px;
+.divider-icon {
+  color: currentColor;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 10px;
 }
 
-.check-icon {
-  font-weight: bold;
+:root.dark .stylish-divider {
+  color: rgba(255, 255, 255, 0.3);
 }
 
-.filter-button-text {
-  flex: 1;
-  text-align: center;
+.stylish-divider {
+  color: rgba(0, 0, 0, 0.2);
 }
 
-.filter-count {
-  font-size: 10px;
-  background: rgba(0, 0, 0, 0.2);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 10px;
-  min-width: 20px;
-  text-align: center;
-}
-
-/* 操作按钮样式 - 改为药丸形 */
-.filter-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.action-button-pill {
-  flex: 1;
-  padding: 10px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-button-pill:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--accent-color), #2196f3);
-  color: white;
-  border-color: transparent;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-.action-button-pill:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.action-button-pill.danger:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ff416c, #ff4b2b);
-  color: white;
-  border-color: transparent;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-}
-
-.log-list-container {
+/* 可滚动的内容区域 - 从分隔符下方开始 */
+.scrollable-content-section {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  -webkit-overflow-scrolling: touch;
+  background: transparent; /* 透明背景，让整体渐变透上来 */
+  position: relative;
+  z-index: 1;
+}
+
+.content-scroll {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.content-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 16px 100px;
+}
+
+/* ------------------------------------- */
+/* 日志列表相关样式 */
+/* ------------------------------------- */
+.log-list-container {
+  height: 100%;
+  overflow-y: auto;
 }
 
 .empty-state {
@@ -780,6 +703,189 @@ onMounted(() => {
   word-break: break-word;
 }
 
+/* ------------------------------------- */
+/* 筛选按钮和筛选面板样式 */
+/* ------------------------------------- */
+
+/* 筛选按钮样式 - 与返回按钮一致 */
+.filter-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 20px;
+  color: var(--text-primary, #1e293b);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.filter-toggle-btn:hover {
+  background: var(--accent-color, #3b82f6);
+  color: white;
+  border-color: var(--accent-color, #3b82f6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.filter-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.filter-text {
+  margin-left: 2px;
+}
+
+/* 深色模式适配 */
+:root.dark .filter-toggle-btn {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+  border-color: var(--border-color, #334155);
+  color: var(--text-primary, #f1f5f9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+:root.dark .filter-toggle-btn:hover {
+  background: var(--accent-color, #60a5fa);
+  border-color: var(--accent-color, #60a5fa);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+
+/* 筛选按钮样式 - 改为药丸形 */
+.filter-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-button-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.filter-button-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-button-pill.selected {
+  border-color: transparent;
+  color: white;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.filter-button-pill.info.selected {
+  background: linear-gradient(135deg, #ff9a00, #ff5e00);
+}
+
+.filter-button-pill.success.selected {
+  background: linear-gradient(135deg, #00b09b, #96c93d);
+}
+
+.filter-button-pill.error.selected {
+  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+}
+
+.filter-button-pill.warning.selected {
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+}
+
+.filter-button-pill.network.selected {
+  background: linear-gradient(135deg, #2196f3, #21cbf3);
+}
+
+.filter-button-pill.cache.selected {
+  background: linear-gradient(135deg, #9c27b0, #673ab7);
+}
+
+.filter-button-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.check-icon {
+  font-weight: bold;
+}
+
+.filter-button-text {
+  flex: 1;
+  text-align: center;
+}
+
+.filter-count {
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* 操作按钮样式 - 改为药丸形 */
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-button-pill {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-button-pill:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--accent-color), #2196f3);
+  color: white;
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.action-button-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-button-pill.danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* ------------------------------------- */
+/* Toast 消息样式 */
+/* ------------------------------------- */
 .toast-message {
   position: fixed;
   bottom: 100px;
@@ -851,6 +957,14 @@ onMounted(() => {
 
 /* 移动端优化 */
 @media (max-width: 768px) {
+  .top-container {
+    padding: 0 12px;
+  }
+  
+  .content-wrapper {
+    padding: 0 12px 80px;
+  }
+  
   .filter-toggle-btn {
     padding: 6px 12px;
     font-size: 13px;
@@ -886,24 +1000,28 @@ onMounted(() => {
 }
 
 /* 滚动条样式 */
-.log-list-container::-webkit-scrollbar,
+.content-scroll::-webkit-scrollbar,
 .log-items-pill::-webkit-scrollbar {
   width: 6px;
 }
 
-.log-list-container::-webkit-scrollbar-track,
+.content-scroll::-webkit-scrollbar-track,
 .log-items-pill::-webkit-scrollbar-track {
-  background: var(--bg-hover);
-  border-radius: 3px;
+  background: transparent;
 }
 
-.log-list-container::-webkit-scrollbar-thumb,
+.content-scroll::-webkit-scrollbar-thumb,
 .log-items-pill::-webkit-scrollbar-thumb {
-  background: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 3px;
 }
 
-.log-list-container::-webkit-scrollbar-thumb:hover,
+:root.dark .content-scroll::-webkit-scrollbar-thumb,
+:root.dark .log-items-pill::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.content-scroll::-webkit-scrollbar-thumb:hover,
 .log-items-pill::-webkit-scrollbar-thumb:hover {
   background: var(--accent-color);
 }

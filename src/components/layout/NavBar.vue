@@ -179,8 +179,8 @@ const handleBack = () => {
   }
 }
 
-/* 防止页面内容在滚动时遮挡NavBar */
-.custom-navbar::after {
+/* 移除底部分割线 */
+/* .custom-navbar::after {
   content: '';
   position: absolute;
   top: 100%;
@@ -189,7 +189,7 @@ const handleBack = () => {
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--border-color, #e2e8f0), transparent);
   pointer-events: none;
-}
+} */
 
 /* 确保NavBar在所有滚动场景下都可见 */
 .custom-navbar {

@@ -1,154 +1,169 @@
 <template>
   <div class="manage-holdings-view">
-    <!-- 固定顶部工具栏 -->
-    <div class="fixed-header">
-      <div class="form-toolbar">
-        <button class="back-button-pill" @click="goBack">
-          <span class="back-icon">←</span>
-          返回
-        </button>
+    <!-- 使用统一的 NavBar 组件 -->
+    <NavBar title="持仓管理" backText="返回" backRoute="/config" />
+    
+    <!-- 固定顶部部分 - 类似 AboutView 样式 -->
+    <div class="fixed-top-section">
+      <div class="top-container">
+        <!-- 固定分隔符 - 与 AboutView 一致，无底色 -->
+        <div class="stylish-divider">
+          <div class="divider-line"></div>
+          <div class="divider-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="13" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="2" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="13" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+            </svg>
+          </div>
+          <div class="divider-line"></div>
+        </div>
       </div>
     </div>
     
-    <div class="config-scroll-area">
-      <div class="config-content-wrapper">
-        <div class="config-content">
-          
-          <div class="functions-section">
-            <div class="function-grid">
-              <div
-                class="function-card add-holding-card"
-                @click="goToAddHolding"
-              >
-                <div class="card-content">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </div>
-                    <h4 class="card-title">新增持仓</h4>
-                  </div>
-                  <p class="card-description">添加新的客户持仓记录</p>
-                </div>
-              </div>
-              
-              <div
-                class="function-card edit-holding-card"
-                @click="goToEditHolding"
-              >
-                <div class="card-content">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </div>
-                    <h4 class="card-title">编辑持仓</h4>
-                  </div>
-                  <p class="card-description">修改现有持仓信息</p>
-                </div>
-              </div>
-              
-              <div
-                class="function-card import-holding-card"
-                :class="{ 'disabled': userType === 'free' }"
-                @click="goToImportHolding"
-              >
-                <div class="card-content">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <transition name="icon-fade" mode="out-in">
-                        <svg v-if="userType === 'free'" key="import-locked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M19 10C19.5304 10 20.0391 10.2107 20.4142 10.5858C20.7893 10.9609 21 11.4696 21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H13C12.4696 21 11.9609 20.7893 11.5858 20.4142C11.2107 20.0391 11 19.5304 11 19V12C11 11.4696 11.2107 10.9609 11.5858 10.5858C11.9609 10.2107 12.4696 10 13 10H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M13 10V7C13 5.34315 14.3431 4 16 4C17.6569 4 19 5.34315 19 7V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- 可滚动的内容区域 -->
+    <div class="scrollable-content-section">
+      <div class="content-scroll">
+        <div class="content-wrapper">
+          <div class="config-content">
+            
+            <div class="functions-section">
+              <div class="function-grid">
+                <div
+                  class="function-card add-holding-card"
+                  @click="goToAddHolding"
+                >
+                  <div class="card-content">
+                    <div class="card-header">
+                      <div class="card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <svg v-else key="import-unlocked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </transition>
+                      </div>
+                      <h4 class="card-title">新增持仓</h4>
                     </div>
-                    <div class="card-title-wrapper">
-                      <h4 class="card-title">
-                        导入持仓
-                        <span v-if="userType === 'free'" class="vip-badge">VIP</span>
-                      </h4>
-                    </div>
+                    <p class="card-description">添加新的客户持仓记录</p>
                   </div>
-                  <p class="card-description">从文件导入持仓数据</p>
                 </div>
-              </div>
-              
-              <div
-                class="function-card export-holding-card"
-                :class="{ 'disabled': userType === 'free' }"
-                @click="goToExportHolding"
-              >
-                <div class="card-content">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <transition name="icon-fade" mode="out-in">
-                        <svg v-if="userType === 'free'" key="export-locked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M19 10C19.5304 10 20.0391 10.2107 20.4142 10.5858C20.7893 10.9609 21 11.4696 21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H13C12.4696 21 11.9609 20.7893 11.5858 20.4142C11.2107 20.0391 11 19.5304 11 19V12C11 11.4696 11.2107 10.9609 11.5858 10.5858C11.9609 10.2107 12.4696 10 13 10H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M13 10V7C13 5.34315 14.3431 4 16 4C17.6569 4 19 5.34315 19 7V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M17 10L12 5L7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                
+                <div
+                  class="function-card edit-holding-card"
+                  @click="goToEditHolding"
+                >
+                  <div class="card-content">
+                    <div class="card-header">
+                      <div class="card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <svg v-else key="export-unlocked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M17 10L12 5L7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </transition>
+                      </div>
+                      <h4 class="card-title">编辑持仓</h4>
                     </div>
-                    <div class="card-title-wrapper">
-                      <h4 class="card-title">
-                        导出持仓
-                        <span v-if="userType === 'free'" class="vip-badge">VIP</span>
-                      </h4>
-                    </div>
+                    <p class="card-description">修改现有持仓信息</p>
                   </div>
-                  <p class="card-description">导出持仓数据到文件</p>
                 </div>
-              </div>
-              
-              <div
-                class="function-card clear-holding-card warning-card"
-                @click="goToClearHoldings"
-              >
-                <div class="card-content">
-                  <div class="card-header">
-                    <div class="card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 6H5M5 6H21M5 6V20C5 20.5304 5.21071 21.0391 5.58579 21.4142C5.96086 21.7893 6.46957 22 7 22H17C17.5304 22 18.0391 21.7893 18.4142 21.4142C18.7893 21.0391 19 20.5304 19 20V6H5ZM9 10V17M15 10V17M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
+                
+                <div
+                  class="function-card import-holding-card"
+                  :class="{ 'disabled': userType === 'free' }"
+                  @click="goToImportHolding"
+                >
+                  <div class="card-content">
+                    <div class="card-header">
+                      <div class="card-icon">
+                        <transition name="icon-fade" mode="out-in">
+                          <svg v-if="userType === 'free'" key="import-locked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 10C19.5304 10 20.0391 10.2107 20.4142 10.5858C20.7893 10.9609 21 11.4696 21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H13C12.4696 21 11.9609 20.7893 11.5858 20.4142C11.2107 20.0391 11 19.5304 11 19V12C11 11.4696 11.2107 10.9609 11.5858 10.5858C11.9609 10.2107 12.4696 10 13 10H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M13 10V7C13 5.34315 14.3431 4 16 4C17.6569 4 19 5.34315 19 7V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          <svg v-else key="import-unlocked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </transition>
+                      </div>
+                      <div class="card-title-wrapper">
+                        <h4 class="card-title">
+                          导入持仓
+                          <span v-if="userType === 'free'" class="vip-badge">VIP</span>
+                        </h4>
+                      </div>
                     </div>
-                    <h4 class="card-title">清空持仓</h4>
+                    <p class="card-description">从文件导入持仓数据</p>
                   </div>
-                  <p class="card-description warning-text">清空所有持仓数据（谨慎操作）</p>
-                  <div class="warning-note">
-                    <span class="warning-icon">⚠️</span>
-                    <span class="warning-note-text">此操作不可撤销</span>
+                </div>
+                
+                <div
+                  class="function-card export-holding-card"
+                  :class="{ 'disabled': userType === 'free' }"
+                  @click="goToExportHolding"
+                >
+                  <div class="card-content">
+                    <div class="card-header">
+                      <div class="card-icon">
+                        <transition name="icon-fade" mode="out-in">
+                          <svg v-if="userType === 'free'" key="export-locked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 10C19.5304 10 20.0391 10.2107 20.4142 10.5858C20.7893 10.9609 21 11.4696 21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H13C12.4696 21 11.9609 20.7893 11.5858 20.4142C11.2107 20.0391 11 19.5304 11 19V12C11 11.4696 11.2107 10.9609 11.5858 10.5858C11.9609 10.2107 12.4696 10 13 10H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M13 10V7C13 5.34315 14.3431 4 16 4C17.6569 4 19 5.34315 19 7V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M17 10L12 5L7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          <svg v-else key="export-unlocked" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 15V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H19C19.5304 21 20.0391 20.7893 20.4142 20.4142C20.7893 21.0391 21 19.5304 21 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M17 10L12 5L7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </transition>
+                      </div>
+                      <div class="card-title-wrapper">
+                        <h4 class="card-title">
+                          导出持仓
+                          <span v-if="userType === 'free'" class="vip-badge">VIP</span>
+                        </h4>
+                      </div>
+                    </div>
+                    <p class="card-description">导出持仓数据到文件</p>
+                  </div>
+                </div>
+                
+                <div
+                  class="function-card clear-holding-card warning-card"
+                  @click="goToClearHoldings"
+                >
+                  <div class="card-content">
+                    <div class="card-header">
+                      <div class="card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M3 6H5M5 6H21M5 6V20C5 20.5304 5.21071 21.0391 5.58579 21.4142C5.96086 21.7893 6.46957 22 7 22H17C17.5304 22 18.0391 21.7893 18.4142 21.4142C18.7893 21.0391 19 20.5304 19 20V6H5ZM9 10V17M15 10V17M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </div>
+                      <h4 class="card-title">清空持仓</h4>
+                    </div>
+                    <p class="card-description warning-text">清空所有持仓数据（谨慎操作）</p>
+                    <div class="warning-note">
+                      <span class="warning-icon">⚠️</span>
+                      <span class="warning-note-text">此操作不可撤销</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="footer-section">
-            <div class="footer-text">
-              <span class="gradient-text">Manage with caution, trade with confidence.</span>
+            <div class="footer-section">
+              <div class="footer-text">
+                <span class="gradient-text">Manage with caution, trade with confidence.</span>
+              </div>
             </div>
-          </div>
 
+          </div>
         </div>
       </div>
     </div>
@@ -168,6 +183,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/authStore'
 import { useDataStore } from '../../stores/dataStore'
 import ToastMessage from '../../components/common/ToastMessage.vue'
+import NavBar from '@/components/layout/NavBar.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -182,16 +198,9 @@ const userType = computed(() => {
   return authStore.userType || 'free'
 })
 
-// 返回逻辑常量
-const backRoute = '/config'
-
-// 函数名改为 goBack 与 AboutView.vue 保持一致
+// 修改：直接返回到ConfigView界面
 const goBack = () => {
-  if (backRoute) {
-    router.push(backRoute)
-  } else {
-    router.back()
-  }
+  router.push('/config')
 }
 
 const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
@@ -238,77 +247,98 @@ const goToClearHoldings = () => {
 </script>
 
 <style scoped>
+/* ------------------------------------- */
+/* 页面整体布局 - 参考 AboutView 的布局 */
+/* ------------------------------------- */
 .manage-holdings-view {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 :root.dark .manage-holdings-view {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-/* 固定顶部工具栏 */
-.fixed-header {
+/* 固定顶部部分 - 类似 AboutView 样式 */
+.fixed-top-section {
   flex-shrink: 0;
-  z-index: 100;
-  position: sticky;
-  top: 0;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: 0;
-  background: var(--bg-primary);
+  z-index: 90; /* 低于 NavBar */
+  padding-top: 0;
+  background: transparent; /* 无底色 */
 }
 
-.form-toolbar {
-  flex-shrink: 0;
-  padding: 12px 16px;
-  background: transparent;
-  border-bottom: none;
-  z-index: 10;
-}
-
-.back-button-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 20px;
-  color: var(--text-primary, #1e293b);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  width: fit-content;
-}
-
-.back-button-pill:hover {
-  background: var(--accent-color, #3b82f6);
-  color: white;
-  border-color: var(--accent-color, #3b82f6);
-  transform: translateX(-2px);
-}
-
-.back-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
-.config-scroll-area {
-  height: calc(100vh - 60px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.config-content-wrapper {
+.top-container {
   max-width: 800px;
   margin: 0 auto;
   padding: 0 16px;
 }
 
+/* 分隔符样式 - 与 AboutView 一致 */
+.stylish-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0 12px;
+  opacity: 0.6;
+}
+
+.divider-line {
+  height: 1px;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+
+.divider-line:last-child {
+  background: linear-gradient(90deg, currentColor, transparent);
+}
+
+.divider-icon {
+  color: currentColor;
+  display: flex;
+  align-items: center;
+}
+
+:root.dark .stylish-divider {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.stylish-divider {
+  color: rgba(0, 0, 0, 0.2);
+}
+
+/* 可滚动的内容区域 */
+.scrollable-content-section {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: transparent;
+}
+
+.content-scroll {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.content-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 16px 100px;
+}
+
+/* ------------------------------------- */
+/* 功能卡片样式 */
+/* ------------------------------------- */
 .config-content {
   padding: 16px 0 120px;
 }
@@ -544,9 +574,14 @@ const goToClearHoldings = () => {
   100% { background-position: 0% 50%; }
 }
 
+/* 移动端优化 */
 @media (max-width: 768px) {
-  .config-content-wrapper {
+  .top-container {
     padding: 0 12px;
+  }
+  
+  .content-wrapper {
+    padding: 0 12px 80px;
   }
   
   .function-grid {
@@ -640,7 +675,7 @@ const goToClearHoldings = () => {
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .config-scroll-area {
+  .scrollable-content-section {
     height: calc(100vh - 60px);
   }
   
@@ -668,5 +703,23 @@ const goToClearHoldings = () => {
   .config-content {
     padding-bottom: calc(120px + env(safe-area-inset-bottom));
   }
+}
+
+/* 滚动条样式 */
+.content-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+:root.dark .content-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
 }
 </style>
