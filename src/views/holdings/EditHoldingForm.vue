@@ -555,8 +555,8 @@ onMounted(() => {
 .form-toolbar {
   flex-shrink: 0;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-card);
+  background: transparent;
+  border-bottom: none;
   z-index: 10;
 }
 
@@ -564,7 +564,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 8px 16px;
   background: var(--bg-hover, rgba(0, 0, 0, 0.05));
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 20px;
@@ -573,6 +573,7 @@ onMounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  width: fit-content;
 }
 
 .back-button-pill:hover {
@@ -639,12 +640,13 @@ onMounted(() => {
 }
 
 .fund-code-input {
-  width: 50px; /* 调整基金代码输入框宽度 */
+  width: 80px; /* 调整为约8个阿拉伯数字的宽度 */
   flex: 0 0 auto;
-  margin-right: 6px;
+  margin-right: 8px;
   padding-right: 0;
   font-size: 14px;
-  text-align: center;
+  text-align: left; /* 靠左对齐 */
+  padding-left: 4px;
 }
 
 .fund-name-display {
@@ -655,11 +657,12 @@ onMounted(() => {
   color: var(--text-secondary);
   background: transparent;
   border-left: 1px solid var(--border-color);
-  padding-left: 10px;
-  margin-left: 6px;
+  padding-left: 12px;
+  margin-left: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: left;
 }
 
 .input-icon-wrapper-textarea {
@@ -904,7 +907,7 @@ onMounted(() => {
 }
 
 :root.dark .form-toolbar {
-  background: var(--bg-card-dark);
+  background: transparent;
   border-color: var(--border-color-dark);
 }
 
@@ -959,7 +962,7 @@ onMounted(() => {
   }
   
   .back-button-pill {
-    padding: 5px 10px;
+    padding: 6px 12px;
     font-size: 13px;
   }
   
@@ -990,8 +993,9 @@ onMounted(() => {
   }
   
   .fund-code-input {
-    width: 45px; /* 移动端调整宽度 */
+    width: 70px; /* 移动端调整宽度 */
     font-size: 13px;
+    padding-left: 4px;
   }
   
   .form-input,
@@ -1004,6 +1008,7 @@ onMounted(() => {
   .fund-name-display {
     font-size: 13px;
     padding: 8px 0;
+    padding-left: 10px;
   }
   
   .form-actions {
@@ -1028,7 +1033,7 @@ onMounted(() => {
   }
   
   .back-button-pill {
-    padding: 4px 8px;
+    padding: 5px 10px;
     font-size: 12px;
   }
   
@@ -1050,8 +1055,9 @@ onMounted(() => {
   }
   
   .fund-code-input {
-    width: 40px; /* 移动端调整宽度 */
+    width: 65px; /* 移动端调整宽度 */
     font-size: 12px;
+    padding-left: 3px;
   }
   
   .form-input,
@@ -1064,7 +1070,7 @@ onMounted(() => {
   .fund-name-display {
     font-size: 12px;
     padding: 6px 0;
-    padding-left: 6px;
+    padding-left: 8px;
   }
   
   .remarks-textarea {
