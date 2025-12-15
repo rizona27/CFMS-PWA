@@ -535,10 +535,9 @@ onMounted(() => {
 .edit-holding-form {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  max-height: 85vh;
-  background: var(--bg-card);
-  border-radius: 16px;
+  height: 100vh;
+  max-height: 100vh;
+  background: var(--bg-primary);
   overflow: hidden;
 }
 
@@ -546,7 +545,8 @@ onMounted(() => {
 .fixed-header {
   flex-shrink: 0;
   z-index: 100;
-  position: relative;
+  position: sticky;
+  top: 0;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: 0;
   background: var(--bg-primary);
@@ -592,7 +592,7 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 12px 20px;
-  max-height: calc(85vh - 60px);
+  max-height: calc(100vh - 60px);
 }
 
 .holding-form {
@@ -639,13 +639,14 @@ onMounted(() => {
   padding-right: 8px;
 }
 
+/* 修改基金代码栏宽度 */
 .fund-code-input {
-  width: 80px; /* 调整为约8个阿拉伯数字的宽度 */
+  width: 48px; /* 调整为刚好显示6位数字的宽度 */
   flex: 0 0 auto;
   margin-right: 8px;
   padding-right: 0;
   font-size: 14px;
-  text-align: left; /* 靠左对齐 */
+  text-align: left;
   padding-left: 4px;
 }
 
@@ -954,7 +955,7 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .edit-holding-form {
-    max-height: 90vh;
+    max-height: 100vh;
   }
   
   .form-toolbar {
@@ -968,7 +969,7 @@ onMounted(() => {
   
   .form-scroll {
     padding: 8px 16px;
-    max-height: calc(90vh - 50px);
+    max-height: calc(100vh - 50px);
   }
   
   .holding-form {
@@ -992,8 +993,9 @@ onMounted(() => {
     min-height: 40px;
   }
   
+  /* 移动端进一步减小基金代码栏宽度 */
   .fund-code-input {
-    width: 70px; /* 移动端调整宽度 */
+    width: 42px; /* 移动端调整为刚好显示6位数字 */
     font-size: 13px;
     padding-left: 4px;
   }
@@ -1039,7 +1041,7 @@ onMounted(() => {
   
   .form-scroll {
     padding: 6px 14px;
-    max-height: calc(90vh - 45px);
+    max-height: calc(100vh - 45px);
   }
   
   .holding-form {
@@ -1054,8 +1056,9 @@ onMounted(() => {
     border-radius: 6px;
   }
   
+  /* 移动端进一步减小基金代码栏宽度 */
   .fund-code-input {
-    width: 65px; /* 移动端调整宽度 */
+    width: 40px; /* 移动端调整为刚好显示6位数字 */
     font-size: 12px;
     padding-left: 3px;
   }

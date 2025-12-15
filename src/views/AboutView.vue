@@ -1,14 +1,10 @@
 <template>
   <div class="about-view">
+    <!-- 使用统一的 NavBar 组件 -->
+    <NavBar title="关于" backText="返回" :shadow="false" />
+    
     <div class="fixed-top-section">
       <div class="top-container">
-        <div class="top-header">
-          <button class="back-button-pill" @click="goBack">
-            <span class="back-icon">←</span>
-            返回
-          </button>
-        </div>
-        
         <div class="app-title-container">
           <h2 class="app-name">CFMS · 一基暴富</h2>
         </div>
@@ -111,10 +107,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import NavBar from '@/components/layout/NavBar.vue'
 import wxpayQR from '../assets/wxpay.png'
-
-const router = useRouter()
 
 interface UpdateLog {
   id: string
@@ -186,10 +180,6 @@ const resumeScroll = () => {
   animationId = requestAnimationFrame(startScrollAnimation)
 }
 
-const goBack = () => {
-  router.back()
-}
-
 onMounted(async () => {
   await nextTick()
   
@@ -231,10 +221,11 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
+/* 移除原有的固定顶部部分，因为现在使用 NavBar */
 .fixed-top-section {
   flex-shrink: 0;
-  z-index: 100;
-  padding-top: env(safe-area-inset-top, 0px);
+  z-index: 90; /* 低于 NavBar */
+  padding-top: 0;
   background: transparent;
 }
 
@@ -244,56 +235,15 @@ onUnmounted(() => {
   padding: 0 16px;
 }
 
+/* 移除原有的顶部工具栏，因为现在使用 NavBar */
 .top-header {
-  padding: 12px 0 8px;
-}
-
-.back-button-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 20px;
-  color: var(--text-primary, #1e293b);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.back-button-pill:hover {
-  background: var(--accent-color, #3b82f6);
-  color: white;
-  border-color: var(--accent-color, #3b82f6);
-  transform: translateX(-2px);
-}
-
-.back-button-pill:active {
-  transform: translateX(0) scale(0.98);
-}
-
-:root.dark .back-button-pill {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
-  border-color: var(--border-color, #334155);
-  color: var(--text-primary, #f1f5f9);
-}
-
-:root.dark .back-button-pill:hover {
-  background: var(--accent-color, #60a5fa);
-  border-color: var(--accent-color, #60a5fa);
-}
-
-.back-icon {
-  font-size: 16px;
-  line-height: 1;
+  display: none;
 }
 
 .app-title-container {
   text-align: center;
   margin-bottom: 16px;
+  margin-top: 8px;
 }
 
 .app-name {
@@ -447,7 +397,6 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-top: 4px;
   background: transparent;
 }
 
@@ -683,20 +632,10 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* 移动端样式覆盖 - 与APILogView保持一致 */
+/* 移动端样式覆盖 */
 @media (max-width: 768px) {
   .top-container {
     padding: 0 12px;
-  }
-  
-  .top-header {
-    padding: 12px 0 8px;
-  }
-  
-  /* 与APILogView完全相同的移动端按钮样式 */
-  .back-button-pill {
-    padding: 6px 12px;
-    font-size: 13px;
   }
   
   .app-name {
@@ -835,12 +774,8 @@ onUnmounted(() => {
   }
 }
 
-/* 触摸设备优化 - 移除min-height/min-width设置，与APILogView保持一致 */
+/* 触摸设备优化 */
 @media (hover: none) and (pointer: coarse) {
-  .back-button-pill:active {
-    transform: scale(0.95);
-  }
-  
   .feature-item:active {
     transform: scale(0.98);
   }
@@ -876,24 +811,6 @@ onUnmounted(() => {
   .auto-scroll-container {
     max-height: 200px;
     overflow: hidden;
-  }
-}
-
-.summary-view,
-.top-performers-view,
-.client-view,
-.about-view {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  height: 100vh;
-}
-
-@media (max-width: 768px) {
-  .summary-view .content-area,
-  .top-performers-view .content-area,
-  .client-view .content-area {
-    padding-bottom: calc(120px + env(safe-area-inset-bottom));
-    overflow-x: hidden;
   }
 }
 
@@ -937,7 +854,6 @@ onUnmounted(() => {
     color: black !important;
   }
   
-  .back-button-pill,
   .wxpay-qr {
     display: none !important;
   }

@@ -1,11 +1,13 @@
 <template>
   <div class="manage-holdings-view">
-    
-    <div class="top-actions">
-      <button class="back-button-pill" @click="goBack">
-        <span class="back-icon">←</span>
-        返回
-      </button>
+    <!-- 固定顶部工具栏 -->
+    <div class="fixed-header">
+      <div class="form-toolbar">
+        <button class="back-button-pill" @click="goBack">
+          <span class="back-icon">←</span>
+          返回
+        </button>
+      </div>
     </div>
     
     <div class="config-scroll-area">
@@ -236,70 +238,6 @@ const goToClearHoldings = () => {
 </script>
 
 <style scoped>
-/* ========================================================================= */
-/* 顶部操作区域和返回按钮样式 - 复制自 AboutView.vue 以保证统一 */
-/* ========================================================================= */
-.top-actions {
-  /* 模仿 AboutView 的顶部 padding */
-  padding: 16px 16px 0;
-  margin-bottom: 8px; /* 按钮和下方内容之间的间距 */
-}
-
-.back-button-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 20px; /* 药丸形状 */
-  color: var(--text-primary, #1e293b);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.back-button-pill:hover {
-  background: var(--accent-color, #3b82f6);
-  color: white;
-  border-color: var(--accent-color, #3b82f6);
-  transform: translateX(-2px); /* 悬停效果 */
-}
-
-.back-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
-/* 深色模式适配 */
-:root.dark .back-button-pill {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
-  border-color: var(--border-color, #334155);
-  color: var(--text-primary, #f1f5f9);
-}
-
-:root.dark .back-button-pill:hover {
-  background: var(--accent-color, #60a5fa);
-  border-color: var(--accent-color, #60a5fa);
-}
-
-@media (max-width: 768px) {
-  .top-actions {
-    padding: 10px 12px 0;
-    margin-bottom: 6px;
-  }
-  
-  .back-button-pill {
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-}
-
-/* ========================================================================= */
-/* 原有的样式继续保留 */
-/* ========================================================================= */
-
 .manage-holdings-view {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
@@ -312,9 +250,54 @@ const goToClearHoldings = () => {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
+/* 固定顶部工具栏 */
+.fixed-header {
+  flex-shrink: 0;
+  z-index: 100;
+  position: sticky;
+  top: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: 0;
+  background: var(--bg-primary);
+}
+
+.form-toolbar {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  background: transparent;
+  border-bottom: none;
+  z-index: 10;
+}
+
+.back-button-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 20px;
+  color: var(--text-primary, #1e293b);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: fit-content;
+}
+
+.back-button-pill:hover {
+  background: var(--accent-color, #3b82f6);
+  color: white;
+  border-color: var(--accent-color, #3b82f6);
+  transform: translateX(-2px);
+}
+
+.back-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
 .config-scroll-area {
-  /* 调整高度以适应新的布局，如果内容本身是可滚动的，可以移除高度限制 */
-  /* 这里暂时保留原有的高度定义 */
   height: calc(100vh - 60px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -560,8 +543,6 @@ const goToClearHoldings = () => {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-
-/* 移除原有的全局toast样式，使用ToastMessage组件的样式 */
 
 @media (max-width: 768px) {
   .config-content-wrapper {

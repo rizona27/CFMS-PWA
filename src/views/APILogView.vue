@@ -1,20 +1,15 @@
 <template>
   <div class="api-log-view">
-    <!-- 修改后的固定顶部工具栏 -->
-    <div class="fixed-toolbar">
-      <div class="top-actions">
-        <button class="back-button-pill" @click="goBack">
-          <span class="back-icon">←</span>
-          返回
-        </button>
-        
-        <!-- 筛选按钮 -->
+    <!-- 使用统一的 NavBar 组件，通过插槽添加筛选按钮 -->
+    <NavBar title="API日志" backText="返回">
+      <template #right-buttons>
+        <!-- 筛选按钮样式与返回按钮一致 -->
         <button class="filter-toggle-btn" @click="toggleFilterPanel">
           <span class="filter-icon">⚙️</span>
           <span class="filter-text">筛选</span>
         </button>
-      </div>
-    </div>
+      </template>
+    </NavBar>
     
     <div class="content">
       <!-- 折叠的日志类型筛选器 -->
@@ -114,6 +109,7 @@ import { useRouter } from 'vue-router'
 import { useDataStore } from '../stores/dataStore'
 import { useAuthStore } from '../stores/authStore'
 import type { LogEntry } from '../stores/dataStore'
+import NavBar from '@/components/layout/NavBar.vue'
 
 const router = useRouter()
 const dataStore = useDataStore()
@@ -359,59 +355,16 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 修改后的固定顶部工具栏样式 - 去掉底部边框和背景 */
+/* 移除原有的固定顶部工具栏，因为现在使用 NavBar */
 .fixed-toolbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  background: transparent; /* 背景设为透明 */
-  /* 移除 border-bottom: 1px solid var(--border-color); */
-  padding-top: env(safe-area-inset-top, 0);
-  padding-bottom: 8px; /* 添加一点底部内边距 */
+  display: none;
 }
 
 .top-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 12px;
-  flex-shrink: 0;
-  background: transparent; /* 确保按钮容器背景也是透明的 */
+  display: none;
 }
 
-/* 返回按钮样式 - 药丸形 */
-.back-button-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 20px;
-  color: var(--text-primary, #1e293b);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* 添加轻微阴影，使按钮更突出 */
-}
-
-.back-button-pill:hover {
-  background: var(--accent-color, #3b82f6);
-  color: white;
-  border-color: var(--accent-color, #3b82f6);
-  transform: translateX(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-}
-
-.back-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
-/* 筛选按钮样式 - 改为药丸形，与返回按钮配套 */
+/* 筛选按钮样式 - 与返回按钮一致 */
 .filter-toggle-btn {
   display: flex;
   align-items: center;
@@ -446,7 +399,6 @@ onMounted(() => {
 }
 
 /* 深色模式适配 */
-:root.dark .back-button-pill,
 :root.dark .filter-toggle-btn {
   background: var(--bg-hover, rgba(255, 255, 255, 0.05));
   border-color: var(--border-color, #334155);
@@ -454,7 +406,6 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-:root.dark .back-button-pill:hover,
 :root.dark .filter-toggle-btn:hover {
   background: var(--accent-color, #60a5fa);
   border-color: var(--accent-color, #60a5fa);
@@ -466,7 +417,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin-top: 60px; /* 给固定工具栏留出空间 */
 }
 
 .log-filter-section {
@@ -901,16 +851,6 @@ onMounted(() => {
 
 /* 移动端优化 */
 @media (max-width: 768px) {
-  .fixed-toolbar {
-    padding-top: env(safe-area-inset-top, 0);
-    padding-bottom: 6px;
-  }
-  
-  .top-actions {
-    padding: 12px 12px 10px;
-  }
-  
-  .back-button-pill,
   .filter-toggle-btn {
     padding: 6px 12px;
     font-size: 13px;
