@@ -43,7 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 后端API地址 - 修改为新的后端域名
   const API_BASE_URL = import.meta.env.PROD 
-    ? 'https://cfms.crnas.uk:8315/api'
+    ? 'https://cfms.crnas.uk/api'
     : '/api'  // 开发时使用代理
   
   // 验证码相关状态

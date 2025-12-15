@@ -1,7 +1,7 @@
 import { useDataStore } from '@/stores/dataStore'
 
 // 【重要修改】定义正确的 API 基础 URL，解决因域名不一致导致的 404/401 错误
-const API_BASE_URL = 'https://cfms.crnas.uk:8315'
+const API_BASE_URL = 'https://cfms.crnas.uk'
 
 export interface FundInfo {
   code: string

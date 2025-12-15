@@ -171,10 +171,10 @@ const handleFeature = (featureName: string) => {
   dataStore.safeAddLog(`用户操作: 点击${featureName}功能`, 'info', false)
 }
 
-const handleUpgrade = (e: Event) => {
-  e.preventDefault()
-  showNotification('正在跳转到升级页面...', 'info')
-  dataStore.safeAddLog('用户点击升级按钮', 'info', false)
+// 🔴 修改：跳转到激活页面
+const handleUpgrade = () => {
+  router.push('/activation')
+  dataStore.safeAddLog('用户点击升级按钮，跳转到激活页面', 'info', false)
 }
 
 const handleLogout = async () => {
