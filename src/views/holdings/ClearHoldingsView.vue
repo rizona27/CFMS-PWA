@@ -1,56 +1,35 @@
 <template>
   <div class="clear-holdings-view">
-    <!-- 固定顶部工具栏 -->
-    <div class="fixed-header">
+    <!-- 顶部工具栏 -->
+    <div class="fixed-header transparent-header">
       <div class="form-toolbar">
+        <!-- 药丸形状返回按钮 -->
         <button class="back-button-pill" @click="goBack">
           <span class="back-icon">←</span>
           返回
         </button>
       </div>
+      
+      <!-- 分隔符 -->
+      <div class="stylish-divider">
+        <div class="divider-line"></div>
+        <div class="divider-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+            <rect x="13" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+            <rect x="2" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+            <rect x="13" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+          </svg>
+        </div>
+        <div class="divider-line"></div>
+      </div>
     </div>
     
     <div class="content-scroll">
       <div class="content-area">
-        <!-- 数据统计卡片 -->
-        <div class="stats-card">
-          <div class="card-header">
-            <div class="card-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 8C21 6.34315 19.6569 5 18 5H16C14.3431 5 13 6.34315 13 8V16C13 17.6569 14.3431 19 16 19H18C19.6569 19 21 17.6569 21 16V8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M11 8C11 6.34315 9.65685 5 8 5H6C4.34315 5 3 6.34315 3 8V16C3 17.6569 4.34315 19 6 19H8C9.65685 19 11 17.6569 11 16V8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M13 12H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M3 12H11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <h3 class="card-title">当前数据统计</h3>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-value">{{ stats.totalHoldings }}</div>
-              <div class="stat-label">总持仓数</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ stats.totalClients }}</div>
-              <div class="stat-label">客户数</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ stats.totalValue }}</div>
-              <div class="stat-label">总价值</div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 警告信息卡片 -->
-        <div class="warning-card">
-          <div class="card-header">
-            <div class="card-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 9V11M12 15H12.01M5.07183 19H18.9282C20.4678 19 21.4301 17.3333 20.6603 16L13.7321 4C12.9623 2.66667 11.0377 2.66667 10.2679 4L3.33975 16C2.56995 17.3333 3.53216 19 5.07183 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <h3 class="card-title">重要警告</h3>
-          </div>
+        <!-- 重要警告 -->
+        <div class="warning-section">
+          <h3 class="warning-title">⚠️ 重要警告</h3>
           <div class="warning-content">
             <ul class="warning-list">
               <li>此操作无法撤销，数据将永久删除</li>
@@ -59,58 +38,67 @@
             </ul>
           </div>
         </div>
-        
-        <!-- 确认操作卡片 -->
-        <div class="confirmation-card">
-          <div class="card-header">
-            <div class="card-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+
+        <!-- 数据统计 - 网格布局 -->
+        <div class="stats-section">
+          <div class="stats-grid">
+            <div class="stat-card holdings-card">
+              <div class="stat-content">
+                <div class="stat-label">总持仓数</div>
+                <div class="stat-value">{{ stats.totalHoldings }}</div>
+              </div>
             </div>
-            <h3 class="card-title">确认操作</h3>
+            <div class="stat-card clients-card">
+              <div class="stat-content">
+                <div class="stat-label">客户数</div>
+                <div class="stat-value">{{ stats.totalClients }}</div>
+              </div>
+            </div>
+            <div class="stat-card value-card">
+              <div class="stat-content">
+                <div class="stat-label">总价值</div>
+                <div class="stat-value">{{ stats.totalValue }}</div>
+              </div>
+            </div>
           </div>
-          <div class="confirmation-content">
-            <div class="confirmation-item">
-              <input
-                type="checkbox"
-                id="understoodRisk"
-                v-model="confirmations.understoodRisk"
-                class="confirmation-checkbox"
-              />
-              <label for="understoodRisk" class="confirmation-label">
-                我理解此操作的风险，确认要继续
-              </label>
-            </div>
-            
-            <div class="confirmation-item">
-              <input
-                type="checkbox"
-                id="hasBackup"
-                v-model="confirmations.hasBackup"
-                class="confirmation-checkbox"
-              />
-              <label for="hasBackup" class="confirmation-label">
-                我已备份数据或确认不需要备份
-              </label>
-            </div>
-            
-            <!-- 清空按钮 -->
-            <button
-              class="clear-button"
-              :class="{ 'enabled': canClear }"
-              :disabled="!canClear || isClearing"
-              @click="showFinalConfirmation"
-            >
-              <span v-if="isClearing" class="spinner"></span>
-              <span v-else>清空所有持仓数据</span>
-            </button>
-            
-            <!-- 取消按钮 -->
-            <button class="cancel-button" @click="goBack">
-              取消
-            </button>
+        </div>
+
+        <!-- 确认操作 -->
+        <div class="confirmation-section">
+          <div class="confirmation-item">
+            <input
+              type="checkbox"
+              id="understoodRisk"
+              v-model="confirmations.understoodRisk"
+              class="confirmation-checkbox"
+            />
+            <label for="understoodRisk" class="confirmation-label">
+              我理解此操作的风险，确认要继续
+            </label>
           </div>
+          
+          <div class="confirmation-item">
+            <input
+              type="checkbox"
+              id="hasBackup"
+              v-model="confirmations.hasBackup"
+              class="confirmation-checkbox"
+            />
+            <label for="hasBackup" class="confirmation-label">
+              我已备份数据或确认不需要备份
+            </label>
+          </div>
+          
+          <!-- 清空按钮 -->
+          <button
+            class="clear-button"
+            :class="{ 'enabled': canClear }"
+            :disabled="!canClear || isClearing"
+            @click="showFinalConfirmation"
+          >
+            <span v-if="isClearing" class="spinner"></span>
+            <span v-else>清空所有持仓数据</span>
+          </button>
         </div>
       </div>
     </div>
@@ -280,12 +268,17 @@ onMounted(() => {
   top: 0;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: 0;
-  background: var(--bg-primary);
+  background: transparent;
+}
+
+.transparent-header {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .form-toolbar {
   flex-shrink: 0;
-  padding: 12px 16px;
+  padding: 8px 16px;
   background: transparent;
   border-bottom: none;
   z-index: 10;
@@ -296,7 +289,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  background: var(--bg-hover, rgba(0, 0, 0, 0.1));
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 20px;
   color: var(--text-primary, #1e293b);
@@ -305,6 +298,8 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.3s ease;
   width: fit-content;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .back-button-pill:hover {
@@ -312,6 +307,7 @@ onMounted(() => {
   color: white;
   border-color: var(--accent-color, #3b82f6);
   transform: translateX(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .back-icon {
@@ -319,10 +315,44 @@ onMounted(() => {
   line-height: 1;
 }
 
+/* 分隔符 */
+.stylish-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 0 8px;
+  opacity: 0.6;
+}
+
+.divider-line {
+  height: 1px;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+
+.divider-line:last-child {
+  background: linear-gradient(90deg, currentColor, transparent);
+}
+
+.divider-icon {
+  color: currentColor;
+  display: flex;
+  align-items: center;
+}
+
+:root.dark .stylish-divider {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.stylish-divider {
+  color: rgba(0, 0, 0, 0.2);
+}
+
 .content-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 16px;
+  padding: 8px 16px;
   max-height: calc(100vh - 60px);
 }
 
@@ -335,110 +365,23 @@ onMounted(() => {
   width: 100%;
 }
 
-/* 卡片样式 */
-.stats-card,
-.warning-card,
-.confirmation-card {
-  background: var(--bg-card);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-}
-
-:root.dark .stats-card,
-:root.dark .warning-card,
-:root.dark .confirmation-card {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: rgba(59, 130, 246, 0.1);
-}
-
-.stats-card .card-icon {
-  background: rgba(59, 130, 246, 0.1);
-}
-
-.warning-card .card-icon {
-  background: rgba(255, 193, 7, 0.1);
-}
-
-.confirmation-card .card-icon {
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.card-icon svg {
-  color: var(--accent-color);
-}
-
-.warning-card .card-icon svg {
-  color: #ffc107;
-}
-
-.card-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-/* 统计数据网格 */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 16px 12px;
-  background: var(--bg-hover);
+/* 重要警告 */
+.warning-section {
+  background: rgba(220, 53, 69, 0.08);
+  border: 1px solid rgba(220, 53, 69, 0.3);
   border-radius: 12px;
-  transition: all 0.3s ease;
-  border: 1px solid var(--border-color);
+  padding: 16px;
+  margin-bottom: 4px;
 }
 
-.stat-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
-
-.stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--accent-color);
-  margin-bottom: 6px;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-/* 警告卡片 */
-.warning-card {
-  background: rgba(255, 193, 7, 0.1);
-  border: 1px solid rgba(255, 193, 7, 0.3);
-}
-
-.warning-content {
-  margin-top: 8px;
+.warning-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #dc3545;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .warning-list {
@@ -448,47 +391,148 @@ onMounted(() => {
 }
 
 .warning-list li {
-  padding: 10px 0;
-  color: #ffc107;
+  padding: 6px 0;
+  color: #dc3545;
   position: relative;
-  padding-left: 24px;
+  padding-left: 20px;
   font-size: 14px;
-  border-bottom: 1px solid rgba(255, 193, 7, 0.2);
-}
-
-.warning-list li:last-child {
-  border-bottom: none;
+  line-height: 1.4;
 }
 
 .warning-list li:before {
-  content: '⚠️';
+  content: '•';
   position: absolute;
-  left: 0;
-  font-size: 14px;
+  left: 8px;
+  font-weight: bold;
 }
 
-:root.dark .warning-card {
-  background: rgba(255, 193, 7, 0.15);
-  border-color: rgba(255, 193, 7, 0.4);
+:root.dark .warning-section {
+  background: rgba(220, 53, 69, 0.12);
+  border-color: rgba(220, 53, 69, 0.4);
 }
 
 :root.dark .warning-list li {
-  color: #ffd54f;
+  color: #f56565;
 }
 
-/* 确认操作卡片 */
-.confirmation-content {
-  margin-top: 8px;
+/* 数据统计 - 网格布局 */
+.stats-section {
+  margin: 8px 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 12px;
+}
+
+.stat-card {
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  border: 1px solid;
+  min-height: 80px;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 总持仓数卡片 - 蓝色系 */
+.holdings-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.08) 100%);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* 客户数卡片 - 紫色系 */
+.clients-card {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(124, 58, 237, 0.08) 100%);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* 总价值卡片 - 绿色系，跨两列 */
+.value-card {
+  grid-column: span 2;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(22, 163, 74, 0.08) 100%);
+  border-color: rgba(34, 197, 94, 0.3);
+  min-height: 90px;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.value-card .stat-value {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+/* 深色模式适配 */
+:root.dark .holdings-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.15) 100%);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+:root.dark .clients-card {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.15) 100%);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+:root.dark .value-card {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.15) 100%);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+/* 确认操作 */
+.confirmation-section {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.08) 0%, rgba(234, 88, 12, 0.08) 100%);
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 4px;
+}
+
+:root.dark .confirmation-section {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.12) 0%, rgba(234, 88, 12, 0.12) 100%);
+  border-color: rgba(251, 146, 60, 0.4);
 }
 
 .confirmation-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
-  padding: 14px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
   background: var(--bg-hover);
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--border-color);
 }
 
@@ -502,23 +546,24 @@ onMounted(() => {
 
 .confirmation-label {
   flex: 1;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text-primary);
   cursor: pointer;
+  line-height: 1.4;
 }
 
 .clear-button {
   width: 100%;
-  padding: 18px;
+  padding: 16px;
   background: var(--bg-hover);
   border: 2px solid var(--border-color);
   border-radius: 12px;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: not-allowed;
   transition: all 0.3s ease;
-  margin-bottom: 12px;
+  margin-top: 8px;
   position: relative;
 }
 
@@ -550,24 +595,6 @@ onMounted(() => {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-.cancel-button {
-  width: 100%;
-  padding: 16px;
-  background: transparent;
-  border: 2px solid var(--border-color);
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.cancel-button:hover {
-  background: var(--bg-hover);
-  border-color: var(--accent-color);
 }
 
 /* 最终确认模态框 */
@@ -702,108 +729,125 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .content-scroll {
-    padding: 10px 12px;
+    padding: 8px 12px;
   }
   
   .content-area {
     gap: 12px;
   }
   
-  .stats-card,
-  .warning-card,
-  .confirmation-card {
-    padding: 16px;
-    border-radius: 14px;
+  .warning-section,
+  .confirmation-section {
+    padding: 14px;
+    border-radius: 10px;
   }
   
   .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 8px;
   }
   
-  .stat-item {
-    padding: 14px 10px;
+  .stat-card {
+    padding: 14px;
+    min-height: 75px;
+  }
+  
+  .value-card {
+    min-height: 85px;
+  }
+  
+  .stat-label {
+    font-size: 13px;
+    margin-bottom: 6px;
   }
   
   .stat-value {
     font-size: 20px;
   }
   
+  .value-card .stat-value {
+    font-size: 22px;
+  }
+  
   .confirmation-item {
-    padding: 12px;
-    margin-bottom: 14px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
   }
   
   .confirmation-label {
-    font-size: 14px;
+    font-size: 13px;
   }
   
   .clear-button {
-    padding: 16px;
-    font-size: 16px;
-  }
-  
-  .cancel-button {
     padding: 14px;
+    font-size: 15px;
   }
   
-  .card-title {
-    font-size: 17px;
+  .warning-title {
+    font-size: 15px;
+  }
+  
+  .warning-list li {
+    font-size: 13px;
   }
 }
 
 @media (max-width: 480px) {
   .content-scroll {
-    padding: 8px 10px;
+    padding: 6px 10px;
   }
   
-  .stats-card,
-  .warning-card,
-  .confirmation-card {
-    padding: 14px;
-    border-radius: 12px;
+  .form-toolbar {
+    padding: 6px 12px;
+  }
+  
+  .back-button-pill {
+    padding: 6px 14px;
+    font-size: 13px;
+  }
+  
+  .warning-section,
+  .confirmation-section {
+    padding: 12px;
   }
   
   .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 6px;
   }
   
-  .stat-item {
-    padding: 12px 10px;
+  .stat-card {
+    padding: 12px;
+    min-height: 70px;
   }
   
-  .card-header {
-    margin-bottom: 14px;
+  .value-card {
+    min-height: 80px;
   }
   
-  .card-icon {
-    width: 36px;
-    height: 36px;
+  .stat-label {
+    font-size: 12px;
+    margin-bottom: 4px;
   }
   
-  .warning-list li {
-    padding: 8px 0 8px 24px;
-    font-size: 13px;
+  .stat-value {
+    font-size: 18px;
+  }
+  
+  .value-card .stat-value {
+    font-size: 20px;
   }
   
   .confirmation-item {
-    padding: 10px;
-    margin-bottom: 12px;
+    padding: 8px;
+    margin-bottom: 8px;
   }
   
   .confirmation-label {
-    font-size: 13px;
+    font-size: 12px;
   }
   
   .clear-button {
-    padding: 14px;
-    font-size: 15px;
-  }
-  
-  .cancel-button {
     padding: 12px;
-    font-size: 15px;
+    font-size: 14px;
   }
   
   .final-modal {
@@ -813,5 +857,22 @@ onMounted(() => {
   .modal-text {
     font-size: 14px;
   }
+}
+
+/* 深色模式适配 */
+:root.dark .fixed-header {
+  background: transparent;
+}
+
+:root.dark .back-button-pill {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--border-color, #334155);
+  color: var(--text-primary, #f1f5f9);
+}
+
+:root.dark .back-button-pill:hover {
+  background: var(--accent-color, #60a5fa);
+  border-color: var(--accent-color, #60a5fa);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
 }
 </style>
