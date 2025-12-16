@@ -46,6 +46,117 @@
     <div class="scrollable-content-section">
       <div class="content-scroll">
         <div class="content-wrapper">
+          <!-- 去掉系统统计标题，直接显示统计卡片 -->
+          <div class="stats-section">
+            <!-- 基金缓存统计 -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <div class="stat-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="3.29 7 12 12 20.71 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="12" y1="22" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h4 class="stat-title">基金数据缓存</h4>
+              </div>
+              <div class="stat-content">
+                <div class="stat-item">
+                  <span class="stat-label">缓存基金数量:</span>
+                  <span class="stat-value">{{ fundCacheStats.totalCount || '加载中...' }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">最后更新时间:</span>
+                  <span class="stat-value">{{ fundCacheStats.lastUpdated ? formatDate(fundCacheStats.lastUpdated) : '加载中...' }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 用户分布统计 -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <div class="stat-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 16a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" stroke-width="2"/>
+                    <path d="M4.93 4.93l14.14 14.14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <h4 class="stat-title">用户分布</h4>
+              </div>
+              <div class="stat-content">
+                <div v-if="userLocationStats.loading" class="loading-indicator">
+                  <div class="loading-spinner"></div>
+                  <span>正在分析用户数据...</span>
+                </div>
+                <div v-else-if="userLocationStats.error" class="error-message">
+                  {{ userLocationStats.error }}
+                </div>
+                <div v-else>
+                  <div class="location-summary">
+                    <div class="location-item">
+                      <span class="location-label">累计用户:</span>
+                      <span class="location-value">{{ userLocationStats.totalCount || 0 }} 人</span>
+                    </div>
+                  </div>
+                  
+                  <div v-if="userLocationStats.locations && userLocationStats.locations.length > 0" class="location-list">
+                    <div class="sub-title">用户地域分布:</div>
+                    <div class="location-list-content">
+                      <div v-for="(location, index) in userLocationStats.locations" :key="index" class="location-item-detail">
+                        <span class="location-name">{{ location.name }}</span>
+                        <span class="location-count">{{ location.count }}人</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 用户登录时间段 -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <div class="stat-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h4 class="stat-title">用户登录时间段</h4>
+              </div>
+              <div class="stat-content">
+                <div v-if="loginTimeStats.loading" class="loading-indicator">
+                  <div class="loading-spinner"></div>
+                  <span>正在分析登录数据...</span>
+                </div>
+                <div v-else-if="loginTimeStats.error" class="error-message">
+                  {{ loginTimeStats.error }}
+                </div>
+                <div v-else>
+                  <div class="time-periods">
+                    <div class="time-period" v-for="(period, index) in loginTimeStats.periods" :key="index">
+                      <div class="period-info">
+                        <span class="period-name">{{ period.name }}</span>
+                        <span class="period-count">{{ period.count }}次</span>
+                      </div>
+                      <div class="period-bar">
+                        <div
+                          class="bar-fill"
+                          :style="{
+                            width: `${period.percentage}%`,
+                            backgroundColor: getPeriodColor(index)
+                          }"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="divider decorative"></div>
+          
           <div class="update-log-section">
             <h3 class="section-title">更新日志</h3>
             <div class="auto-scroll-container">
@@ -69,36 +180,6 @@
               <div class="scroll-mask bottom-mask"></div>
             </div>
           </div>
-
-          <div class="divider"></div>
-
-          <div class="features-section">
-            <h3 class="section-title">功能介绍</h3>
-            <p class="features-intro">跟踪管理多客户基金持仓，提供最新净值查询、收益统计等功能。</p>
-            
-            <p class="features-subtitle">主要包括：</p>
-            
-            <div class="features-list">
-              <div class="feature-item">
-                <span class="bullet-point" style="color: #3498DB;">●</span>
-                <span class="feature-text">数据自动化：自动更新净值数据。</span>
-              </div>
-              <div class="feature-item">
-                <span class="bullet-point" style="color: #2ECC71;">●</span>
-                <span class="feature-text">数据持久化：本地/云保存数据。</span>
-              </div>
-              <div class="feature-item">
-                <span class="bullet-point" style="color: #E74C3C;">●</span>
-                <span class="feature-text">客户多重管理：分组查看管理持仓。</span>
-              </div>
-              <div class="feature-item">
-                <span class="bullet-point" style="color: #F39C12;">●</span>
-                <span class="feature-text">报告一键生成：模板总结持仓收益。</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="divider decorative"></div>
         </div>
       </div>
     </div>
@@ -131,6 +212,181 @@ let singleSetHeight = 0
 let animationId: number | null = null
 let lastTimestamp: number | null = null
 let isPaused = false
+
+// 基金缓存统计
+const fundCacheStats = ref({
+  totalCount: 0,
+  lastUpdated: '',
+  loading: false,
+  error: ''
+})
+
+// 用户地域分布统计
+const userLocationStats = ref({
+  totalCount: 0,
+  locations: [] as Array<{name: string, count: number}>,
+  loading: false,
+  error: ''
+})
+
+// 用户登录时间段
+const loginTimeStats = ref({
+  periods: [
+    { name: '凌晨(0-6)', count: 0, percentage: 0 },
+    { name: '上午(6-12)', count: 0, percentage: 0 },
+    { name: '下午(12-18)', count: 0, percentage: 0 },
+    { name: '晚上(18-24)', count: 0, percentage: 0 }
+  ],
+  loading: false,
+  error: ''
+})
+
+// 格式化日期
+const formatDate = (dateString: string) => {
+  if (!dateString) return '未知'
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (e) {
+    return dateString
+  }
+}
+
+// 获取时间段颜色
+const getPeriodColor = (index: number) => {
+  const colors = ['#3498DB', '#2ECC71', '#F39C12', '#E74C3C']
+  return colors[index % colors.length]
+}
+
+// 获取基金缓存统计
+const fetchFundCacheStats = async () => {
+  fundCacheStats.value.loading = true
+  try {
+    const baseURL = import.meta.env.PROD
+      ? 'https://cfms.crnas.uk/api'
+      : '/api'
+    
+    // 从后端获取基金缓存统计
+    const response = await fetch(`${baseURL}/stats/fund-cache`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      if (data.success) {
+        fundCacheStats.value = {
+          totalCount: data.totalCount || 0,
+          lastUpdated: data.lastUpdated || '',
+          loading: false,
+          error: ''
+        }
+      } else {
+        fundCacheStats.value.error = data.error || '获取失败'
+        fundCacheStats.value.loading = false
+      }
+    } else {
+      fundCacheStats.value.error = '网络请求失败'
+      fundCacheStats.value.loading = false
+    }
+    
+  } catch (error) {
+    fundCacheStats.value.error = '获取基金缓存统计失败'
+    fundCacheStats.value.loading = false
+  }
+}
+
+// 获取用户分布统计
+const fetchUserLocationStats = async () => {
+  userLocationStats.value.loading = true
+  try {
+    const baseURL = import.meta.env.PROD
+      ? 'https://cfms.crnas.uk/api'
+      : '/api'
+    
+    // 从后端获取用户分布统计
+    const response = await fetch(`${baseURL}/stats/user-distribution`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      if (data.success) {
+        userLocationStats.value = {
+          totalCount: data.totalCount || 0,
+          locations: data.locations || [],
+          loading: false,
+          error: ''
+        }
+      } else {
+        userLocationStats.value.error = data.error || '获取失败'
+        userLocationStats.value.loading = false
+      }
+    } else {
+      userLocationStats.value.error = '网络请求失败'
+      userLocationStats.value.loading = false
+    }
+  } catch (error) {
+    userLocationStats.value.error = '获取用户分布统计失败'
+    userLocationStats.value.loading = false
+  }
+}
+
+// 获取用户登录时间段
+const fetchLoginTimeStats = async () => {
+  loginTimeStats.value.loading = true
+  try {
+    const baseURL = import.meta.env.PROD
+      ? 'https://cfms.crnas.uk/api'
+      : '/api'
+    
+    // 从后端获取登录时间段统计
+    const response = await fetch(`${baseURL}/stats/login-time-distribution`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      if (data.success) {
+        loginTimeStats.value = {
+          periods: data.periods || [],
+          loading: false,
+          error: ''
+        }
+      } else {
+        loginTimeStats.value.error = data.error || '获取失败'
+        loginTimeStats.value.loading = false
+      }
+    } else {
+      loginTimeStats.value.error = '网络请求失败'
+      loginTimeStats.value.loading = false
+    }
+  } catch (error) {
+    loginTimeStats.value.error = '获取登录时间段统计失败'
+    loginTimeStats.value.loading = false
+  }
+}
+
+// 初始化统计
+const initStats = () => {
+  fetchFundCacheStats()
+  fetchUserLocationStats()
+  fetchLoginTimeStats()
+}
 
 const calculateSingleSetHeight = () => {
   if (!scrollContentRef.value) return 0
@@ -192,6 +448,9 @@ onMounted(async () => {
       animationId = requestAnimationFrame(startScrollAnimation)
     }
   }, 100)
+  
+  // 初始化统计数据
+  initStats()
 })
 
 onUnmounted(() => {
@@ -221,10 +480,9 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-/* 移除原有的固定顶部部分，因为现在使用 NavBar */
 .fixed-top-section {
   flex-shrink: 0;
-  z-index: 90; /* 低于 NavBar */
+  z-index: 90;
   padding-top: 0;
   background: transparent;
 }
@@ -233,11 +491,6 @@ onUnmounted(() => {
   max-width: 800px;
   margin: 0 auto;
   padding: 0 16px;
-}
-
-/* 移除原有的顶部工具栏，因为现在使用 NavBar */
-.top-header {
-  display: none;
 }
 
 .app-title-container {
@@ -423,6 +676,289 @@ onUnmounted(() => {
   color: #e5e7eb;
 }
 
+/* 统计卡片样式 */
+.stats-section {
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+:root.dark .stat-card {
+  background: rgba(45, 45, 65, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:root.dark .stat-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 184, 166, 0.1);
+  color: #14B8A6;
+}
+
+.stat-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+:root.dark .stat-title {
+  color: #e5e7eb;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+:root.dark .stat-item {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+:root.dark .stat-label {
+  color: #9ca3af;
+}
+
+.stat-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+:root.dark .stat-value {
+  color: #e5e7eb;
+}
+
+/* 加载指示器 */
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  color: #666;
+}
+
+:root.dark .loading-indicator {
+  color: #9ca3af;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #14B8A6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  padding: 20px;
+  color: #e74c3c;
+  text-align: center;
+  font-size: 14px;
+}
+
+:root.dark .error-message {
+  color: #ef5350;
+}
+
+/* 用户分布样式调整 */
+.location-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.location-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.location-label {
+  font-size: 14px;
+  color: #666;
+}
+
+:root.dark .location-label {
+  color: #9ca3af;
+}
+
+.location-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+:root.dark .location-value {
+  color: #e5e7eb;
+}
+
+.sub-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+:root.dark .sub-title {
+  color: #e5e7eb;
+}
+
+.location-list-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.location-item-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+:root.dark .location-item-detail {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.location-name {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+}
+
+:root.dark .location-name {
+  color: #e5e7eb;
+}
+
+.location-count {
+  font-size: 13px;
+  color: #14B8A6;
+  font-weight: 600;
+}
+
+/* 时间偏好样式 */
+.time-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.time-period {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.period-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.period-name {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+:root.dark .period-name {
+  color: #e5e7eb;
+}
+
+.period-count {
+  font-size: 13px;
+  color: #666;
+}
+
+:root.dark .period-count {
+  color: #9ca3af;
+}
+
+.period-bar {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+:root.dark .period-bar {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* 更新日志样式 */
+.update-log-section {
+  margin-top: 24px;
+}
+
 .auto-scroll-container {
   position: relative;
   background: rgba(255, 255, 255, 0.8);
@@ -537,101 +1073,6 @@ onUnmounted(() => {
   opacity: 0.5;
 }
 
-.features-section {
-  margin-top: 24px;
-}
-
-.features-intro {
-  font-size: 16px;
-  color: #666;
-  margin-bottom: 16px;
-  line-height: 1.5;
-  text-align: left;
-}
-
-:root.dark .features-intro {
-  color: #9ca3af;
-}
-
-.features-subtitle {
-  font-size: 17px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
-  text-align: left;
-}
-
-:root.dark .features-subtitle {
-  color: #e5e7eb;
-}
-
-.features-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  text-align: left;
-}
-
-:root.dark .feature-item {
-  background: rgba(45, 45, 65, 0.8);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.feature-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(20, 184, 166, 0.1);
-}
-
-.bullet-point {
-  font-size: 20px;
-  line-height: 1;
-  margin-top: 2px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-  flex-shrink: 0;
-}
-
-.feature-text {
-  font-size: 15px;
-  color: #333;
-  line-height: 1.4;
-  flex: 1;
-  text-align: left;
-}
-
-:root.dark .feature-text {
-  color: #e5e7eb;
-}
-
-.content-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.content-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.content-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
-}
-
-:root.dark .content-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-}
-
 /* 移动端样式覆盖 */
 @media (max-width: 768px) {
   .top-container {
@@ -662,6 +1103,23 @@ onUnmounted(() => {
     font-size: 13px;
   }
   
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .stat-title {
+    font-size: 16px;
+  }
+  
+  .location-list-content {
+    max-height: 120px;
+  }
+  
   .auto-scroll-container {
     height: 180px;
   }
@@ -680,14 +1138,6 @@ onUnmounted(() => {
   
   .scroll-mask {
     height: 30px;
-  }
-  
-  .features-list {
-    gap: 8px;
-  }
-  
-  .feature-item {
-    padding: 12px;
   }
 }
 
@@ -720,6 +1170,36 @@ onUnmounted(() => {
   
   .content-wrapper {
     padding: 0 12px 80px;
+  }
+  
+  .stat-card {
+    padding: 14px;
+  }
+  
+  .stat-header {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  
+  .stat-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .stat-title {
+    font-size: 15px;
+  }
+  
+  .stat-label {
+    font-size: 13px;
+  }
+  
+  .stat-value {
+    font-size: 14px;
+  }
+  
+  .location-list-content {
+    max-height: 100px;
   }
   
   .auto-scroll-container {
@@ -776,7 +1256,7 @@ onUnmounted(() => {
 
 /* 触摸设备优化 */
 @media (hover: none) and (pointer: coarse) {
-  .feature-item:active {
+  .stat-card:active {
     transform: scale(0.98);
   }
   
@@ -841,11 +1321,6 @@ onUnmounted(() => {
 .scroll-content {
   position: relative;
   z-index: 1;
-}
-
-:root.dark .log-description,
-:root.dark .features-intro {
-  color: #b0b7c3;
 }
 
 @media print {

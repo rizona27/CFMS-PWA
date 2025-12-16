@@ -10,6 +10,23 @@
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05)'
             }"
           >
+            <!-- 绶带式用户类型标签 - 右上角 -->
+            <div
+              class="ribbon-tag-top"
+              :class="{
+                'ribbon-vip': authStore.userType === 'vip',
+                'ribbon-subscribed': authStore.userType === 'subscribed',
+                'ribbon-free': authStore.userType === 'free'
+              }"
+              :style="{ animation: showRibbonAnimation ? 'ribbonGlow 1s ease-in-out' : 'none' }"
+              @animationend="ribbonAnimationEnd"
+            >
+              <span class="ribbon-content">
+                {{ userTypeDisplay }}
+              </span>
+              <div class="ribbon-tail"></div>
+            </div>
+            
             <div class="user-content">
               <div class="user-header-row">
                 <div class="avatar-section">
@@ -33,67 +50,24 @@
                   </div>
                 </div>
                 
-                <div class="user-header-right">
-                  <div
-                    class="user-type-ribbon"
-                    :class="authStore.userType"
-                    :style="{
-                      background: authStore.userType === 'vip' ?
-                                'linear-gradient(135deg, #FFD700, #FFA500, #FF8C00)' :
-                                authStore.userType === 'subscribed' ?
-                                'linear-gradient(135deg, #E0E0E0, #B0B0B0, #909090)' :
-                                'linear-gradient(135deg, #9E9E9E, #757575, #616161)',
-                      color: authStore.userType === 'subscribed' ? '#424242' : 'white'
-                    }"
-                  >
-                    {{ userTypeDisplay }}
+                <!-- 仅对体验用户显示订阅信息 -->
+                <div v-if="authStore.userType === 'subscribed' && subscriptionEndDate" class="subscription-info-section">
+                  <div class="subscription-info">
+                    <div class="subscription-item">
+                      <span class="subscription-label">到期日:</span>
+                      <span class="subscription-value">{{ subscriptionEndDate.date }}</span>
+                    </div>
+                    <div class="subscription-item">
+                      <span class="subscription-label">状态:</span>
+                      <span class="subscription-status" :class="{ 'expired': subscriptionEndDate.isExpired }">
+                        {{ subscriptionEndDate.isExpired ? '已过期' : `剩余${subscriptionEndDate.daysLeft}天` }}
+                      </span>
+                    </div>
                   </div>
-                  
-                  <!-- 添加体验用户到期时间提示 -->
-                  <div
-                    v-if="authStore.userType === 'subscribed' && subscriptionEndDate"
-                    class="subscription-expiry"
-                    :class="{ 'expired': subscriptionEndDate.isExpired }"
-                  >
-                    <span class="expiry-icon">⏰</span>
-                    <span class="expiry-text">
-                      {{ subscriptionEndDate.isExpired ? '已过期' : `剩余${subscriptionEndDate.daysLeft}天` }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 添加体验用户详细信息 -->
-              <div
-                v-if="authStore.userType === 'subscribed' && subscriptionEndDate"
-                class="subscription-details"
-              >
-                <div class="detail-item">
-                  <span class="detail-label">体验到期:</span>
-                  <span class="detail-value" :class="{ 'expired': subscriptionEndDate.isExpired }">
-                    {{ subscriptionEndDate.date }}
-                  </span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">状态:</span>
-                  <span class="detail-value status-badge" :class="subscriptionEndDate.isExpired ? 'status-expired' : 'status-active'">
-                    {{ subscriptionEndDate.isExpired ? '已过期' : '进行中' }}
-                  </span>
                 </div>
               </div>
               
               <div class="user-info-footer">
-                <div class="user-type-info" v-if="authStore.userType === 'subscribed' || authStore.userType === 'vip'">
-                  <span
-                    class="type-tag"
-                    :style="{
-                      backgroundColor: authStore.userType === 'vip' ? 'rgba(255, 215, 0, 0.2)' : 'rgba(255, 152, 0, 0.2)',
-                      color: authStore.userType === 'vip' ? '#B8860B' : '#f57c00'
-                    }"
-                  >
-                    {{ authStore.userType === 'vip' ? '永久有效' : '体验用户' }}
-                  </span>
-                </div>
                 <button
                   class="logout-btn"
                   @click="handleLogout"
@@ -273,7 +247,6 @@
                 </div>
               </div>
 
-              <!-- 日志查询卡片替换原来的数据接口卡片位置 -->
               <div class="function-card log-card" @click="handleFeature('APILog')">
                 <div class="card-content">
                   <div class="card-header">
@@ -340,6 +313,13 @@ const router = useRouter()
 const authStore = useAuthStore()
 const dataStore = useDataStore()
 
+// 添加绶带动画控制
+const showRibbonAnimation = ref(true)
+
+const ribbonAnimationEnd = () => {
+  showRibbonAnimation.value = false
+}
+
 const privacyKey = ref(0)
 const refreshKey = ref(0)
 
@@ -358,11 +338,9 @@ const showNotification = (message: string, type: 'info' | 'success' | 'error' | 
     showToast.value = false
   }, 3000)
   
-  // 使用安全的日志记录，避免递归
   dataStore.safeAddLog(`系统提示: ${message}`, type, false)
 }
 
-// 计算体验用户到期时间
 const subscriptionEndDate = computed(() => {
   if (authStore.currentUser?.subscription_end) {
     const endDate = new Date(authStore.currentUser.subscription_end)
@@ -371,13 +349,13 @@ const subscriptionEndDate = computed(() => {
     
     if (daysLeft > 0) {
       return {
-        date: endDate.toLocaleDateString('zh-CN'),
+        date: endDate.toLocaleDateString('zh-CN').replace(/\//g, '/'),
         daysLeft: daysLeft,
         isExpired: false
       }
     } else {
       return {
-        date: endDate.toLocaleDateString('zh-CN'),
+        date: endDate.toLocaleDateString('zh-CN').replace(/\//g, '/'),
         daysLeft: 0,
         isExpired: true
       }
@@ -386,18 +364,17 @@ const subscriptionEndDate = computed(() => {
   return null
 })
 
-// 修改用户类型显示逻辑
 const userTypeDisplay = computed(() => {
   switch (authStore.userType) {
-    case 'vip': return 'VIP'
+    case 'vip': return 'VIP用户'
     case 'subscribed':
       if (subscriptionEndDate.value?.isExpired) {
-        return '体验(已过期)'
+        return '体验用户(已过期)'
       } else {
-        return '体验'
+        return '体验用户'
       }
     case 'free':
-    default: return '基础'
+    default: return '基础用户'
   }
 })
 
@@ -471,7 +448,6 @@ const themeModes = [
 
 const selectedTheme = ref(dataStore.userPreferences.themeMode || 'system')
 
-// 🔴 修复：添加标志防止递归调用
 let isThemeChanging = false
 
 const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
@@ -486,22 +462,14 @@ const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
   isThemeChanging = true
   
   try {
-    console.log(`主题切换: ${oldMode} -> ${mode}`)
-    
-    // 先更新本地状态
     selectedTheme.value = mode
     
-    // 🔴 修复：直接调用 updateThemeMode，避免中间层
     dataStore.updateThemeMode(mode)
     
     const modeName = mode === 'system' ? '系统' : mode === 'light' ? '浅色' : '深色'
     showNotification(`主题已切换为: ${modeName}`, 'success')
     
-    // 🔴 移除手动触发的事件，已在 updateThemeMode 中处理
-    // 移除手动日志记录，已在 updateThemeMode 中处理
-    
   } finally {
-    // 延迟重置标志，避免快速连续点击
     setTimeout(() => {
       isThemeChanging = false
     }, 300)
@@ -532,7 +500,6 @@ const handleFeature = (featureName: string) => {
   dataStore.safeAddLog(`用户操作: 点击${featureName}功能`, 'info', false)
 }
 
-// 🔴 修改：跳转到激活页面
 const handleUpgrade = () => {
   router.push('/activation')
   dataStore.safeAddLog('用户点击升级按钮，跳转到激活页面', 'info', false)
@@ -573,6 +540,9 @@ const togglePrivacyMode = (value: boolean) => {
 }
 
 onMounted(() => {
+  // 每次进入页面时重置绶带动画
+  showRibbonAnimation.value = true
+  
   dataStore.loadData()
   selectedTheme.value = dataStore.userPreferences.themeMode
   
@@ -665,9 +635,14 @@ onUnmounted(() => {
 }
 
 .fixed-top-section {
-  flex-shrink: 0;
-  z-index: 100;
-  padding-top: env(safe-area-inset-top, 0px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: transparent;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
 }
 
 .scrollable-content-section {
@@ -695,7 +670,7 @@ onUnmounted(() => {
 .user-info-card {
   position: relative;
   border-radius: 20px;
-  overflow: hidden;
+  overflow: visible;
   transition: all 0.3s ease;
   margin: 12px 0 12px;
 }
@@ -712,6 +687,7 @@ onUnmounted(() => {
   gap: 12px;
   padding: 0 0 8px;
   opacity: 0.6;
+  background: transparent;
 }
 
 .divider-line {
@@ -745,128 +721,57 @@ onUnmounted(() => {
   margin-bottom: 12px;
 }
 
-.user-header-right {
+/* 订阅信息区域 */
+.subscription-info-section {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  min-width: 120px;
 }
 
-.user-type-ribbon {
-  padding: 3px 10px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  margin-left: auto;
-}
-
-.user-type-ribbon.vip {
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  0% { opacity: 0.8; }
-  50% { opacity: 1; }
-  100% { opacity: 0.8; }
-}
-
-/* 添加体验用户到期时间样式 */
-.subscription-expiry {
+.subscription-info {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 4px;
-  margin-top: 4px;
-  padding: 3px 8px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  background: rgba(255, 193, 7, 0.2);
-  color: #ff9800;
-  animation: pulse 2s infinite;
 }
 
-.subscription-expiry.expired {
-  background: rgba(244, 67, 54, 0.2);
-  color: #f44336;
-  animation: none;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.expiry-icon {
-  font-size: 10px;
-}
-
-.expiry-text {
-  white-space: nowrap;
-}
-
-/* 体验用户详细信息样式 */
-.subscription-details {
-  margin-top: 12px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  border: 1px solid rgba(255, 193, 7, 0.3);
-}
-
-:root.dark .subscription-details {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 193, 7, 0.2);
-}
-
-.detail-item {
+.subscription-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-  font-size: 13px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 
-.detail-item:last-child {
-  margin-bottom: 0;
-}
-
-.detail-label {
+.subscription-label {
+  font-size: 11px;
   color: #666;
   font-weight: 500;
 }
 
-:root.dark .detail-label {
+:root.dark .subscription-label {
   color: #9ca3af;
 }
 
-.detail-value {
-  color: #333;
+.subscription-value {
+  font-size: 12px;
   font-weight: 600;
+  color: #333;
 }
 
-:root.dark .detail-value {
+:root.dark .subscription-value {
   color: #e5e7eb;
 }
 
-.detail-value.expired {
-  color: #f44336;
-}
-
-.status-badge {
-  padding: 2px 8px;
-  border-radius: 6px;
+.subscription-status {
   font-size: 11px;
-  font-weight: 700;
-}
-
-.status-active {
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
   background: rgba(76, 175, 80, 0.2);
   color: #4caf50;
 }
 
-.status-expired {
+.subscription-status.expired {
   background: rgba(244, 67, 54, 0.2);
   color: #f44336;
 }
@@ -936,19 +841,150 @@ onUnmounted(() => {
 .user-info-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: nowrap;
   gap: 8px;
   margin-top: 4px;
   width: 100%;
 }
 
-.type-tag {
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
+/* 绶带顶部样式 */
+.ribbon-tag-top {
+  position: absolute;
+  top: 12px;
+  right: -8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  border-radius: 4px 0 0 4px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  z-index: 10;
+}
+
+.ribbon-tag-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -8px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 15px 0 15px 8px;
+  border-color: transparent transparent transparent currentColor;
+}
+
+.ribbon-tag-top::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -8px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 15px 8px 15px 0;
+  border-color: transparent currentColor transparent transparent;
+}
+
+.ribbon-vip {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  border-left: 2px solid #FF8C00;
+}
+
+.ribbon-vip::before {
+  border-left-color: #FFD700;
+}
+
+.ribbon-vip::after {
+  border-right-color: #FFD700;
+}
+
+.ribbon-subscribed {
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+  border-left: 2px solid #1B5E20;
+}
+
+.ribbon-subscribed::before {
+  border-left-color: #4CAF50;
+}
+
+.ribbon-subscribed::after {
+  border-right-color: #4CAF50;
+}
+
+.ribbon-free {
+  background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
+  border-left: 2px solid #1565C0;
+}
+
+.ribbon-free::before {
+  border-left-color: #2196F3;
+}
+
+.ribbon-free::after {
+  border-right-color: #2196F3;
+}
+
+.ribbon-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.ribbon-tail {
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 6px 0 6px 6px;
+  border-color: transparent transparent transparent rgba(0, 0, 0, 0.3);
+}
+
+@keyframes ribbonGlow {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    transform: translateX(10px) scale(1);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    transform: translateX(0) scale(1.05);
+  }
+  70% {
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+  }
+  100% {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+    transform: translateX(0) scale(1);
+  }
+}
+
+.ribbon-vip {
+  animation: ribbonGlow 1s ease-in-out;
+}
+
+.ribbon-subscribed {
+  animation: ribbonGlow 1s ease-in-out;
+}
+
+.ribbon-free {
+  animation: ribbonGlow 1s ease-in-out;
 }
 
 .logout-btn {
@@ -1071,7 +1107,6 @@ onUnmounted(() => {
   box-shadow: none;
 }
 
-/* 重新设计卡片颜色 - 从左到右，从上到下的渐变 */
 .cloud-sync-card {
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
 }
@@ -1384,9 +1419,21 @@ onUnmounted(() => {
     margin-bottom: 6px;
   }
   
-  .user-type-ribbon {
+  .subscription-info-section {
+    min-width: 100px;
+  }
+  
+  .subscription-label {
     font-size: 10px;
-    padding: 3px 8px;
+  }
+  
+  .subscription-value {
+    font-size: 11px;
+  }
+  
+  .subscription-status {
+    font-size: 10px;
+    padding: 1px 5px;
   }
   
   .user-info-footer {
@@ -1395,9 +1442,22 @@ onUnmounted(() => {
     margin-top: 0;
   }
   
-  .type-tag {
+  .ribbon-tag-top {
+    top: 8px;
+    right: -6px;
+    height: 26px;
+    padding: 0 14px;
     font-size: 11px;
-    padding: 3px 8px;
+  }
+  
+  .ribbon-tag-top::before {
+    border-width: 13px 0 13px 6px;
+    left: -6px;
+  }
+  
+  .ribbon-tag-top::after {
+    border-width: 13px 6px 13px 0;
+    right: -6px;
   }
   
   .logout-btn {
@@ -1464,27 +1524,6 @@ onUnmounted(() => {
   .gradient-text {
     font-size: 14px;
   }
-  
-  /* 响应式调整订阅信息 */
-  .subscription-expiry {
-    font-size: 10px;
-    padding: 2px 6px;
-  }
-  
-  .subscription-details {
-    padding: 8px;
-    margin-top: 10px;
-  }
-  
-  .detail-item {
-    font-size: 12px;
-    margin-bottom: 4px;
-  }
-  
-  .status-badge {
-    font-size: 10px;
-    padding: 1px 6px;
-  }
 }
 
 @media (max-width: 480px) {
@@ -1507,6 +1546,41 @@ onUnmounted(() => {
   
   .user-email {
     font-size: 11px;
+  }
+  
+  .subscription-info-section {
+    min-width: 90px;
+  }
+  
+  .subscription-label {
+    font-size: 9px;
+  }
+  
+  .subscription-value {
+    font-size: 10px;
+  }
+  
+  .subscription-status {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+  
+  .ribbon-tag-top {
+    top: 6px;
+    right: -5px;
+    height: 24px;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+  
+  .ribbon-tag-top::before {
+    border-width: 12px 0 12px 5px;
+    left: -5px;
+  }
+  
+  .ribbon-tag-top::after {
+    border-width: 12px 5px 12px 0;
+    right: -5px;
   }
   
   .function-card {
@@ -1532,20 +1606,6 @@ onUnmounted(() => {
   
   .footer-text {
     padding: 10px 0;
-  }
-  
-  /* 小屏幕调整订阅信息 */
-  .subscription-expiry {
-    font-size: 9px;
-    padding: 2px 4px;
-  }
-  
-  .subscription-details {
-    padding: 6px;
-  }
-  
-  .detail-item {
-    font-size: 11px;
   }
 }
 
