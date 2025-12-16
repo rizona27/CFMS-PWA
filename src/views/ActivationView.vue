@@ -111,8 +111,8 @@ const redeemCode = async () => {
       return
     }
     
-    // 兑换成功，提示重新登录
-    showMessage('兑换成功，请重新登录', 'success')
+    // 兑换成功，提示刷新
+    showMessage('兑换成功，返回后刷新', 'success')
     dataStore.safeAddLog(`权益兑换成功: ${redeemResponse.message}`, 'success', false)
     
     // 更新用户信息

@@ -1,288 +1,3 @@
-<script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/authStore'
-import { useDataStore } from '../stores/dataStore'
-import ToastMessage from '../components/common/ToastMessage.vue'
-
-const router = useRouter()
-const authStore = useAuthStore()
-const dataStore = useDataStore()
-
-const privacyKey = ref(0)
-const refreshKey = ref(0)
-
-const showToast = ref(false)
-const toastMessage = ref('')
-const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
-
-let isPrivacyInitialized = false
-
-const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
-  toastMessage.value = message
-  toastType.value = type
-  showToast.value = true
-  
-  setTimeout(() => {
-    showToast.value = false
-  }, 3000)
-  
-  // 使用安全的日志记录，避免递归
-  dataStore.safeAddLog(`系统提示: ${message}`, type, false)
-}
-
-watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
-  if (isPrivacyInitialized && oldValue !== newValue) {
-    showNotification(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')
-  }
-  
-  const event = new CustomEvent('privacy-mode-changed-global', {
-    detail: {
-      enabled: newValue,
-      oldValue: oldValue,
-      timestamp: Date.now(),
-      source: 'ConfigView'
-    },
-    bubbles: true,
-    composed: true
-  })
-  
-  window.dispatchEvent(event)
-  
-  const legacyEvent = new CustomEvent('privacy-mode-changed', {
-    detail: {
-      enabled: newValue,
-      oldValue: oldValue
-    },
-    bubbles: true,
-    composed: true
-  })
-  
-  window.dispatchEvent(legacyEvent)
-  
-  nextTick(() => {
-    window.dispatchEvent(new CustomEvent('force-privacy-sync'))
-  })
-})
-
-const displayName = computed(() => {
-  return authStore.displayName || '用户'
-})
-
-const userTypeDisplay = computed(() => {
-  switch (authStore.userType) {
-    case 'vip': return 'VIP'
-    case 'subscribed': return '体验'
-    case 'free':
-    default: return '基础'
-  }
-})
-
-const getUserColors = () => {
-  switch (authStore.userType) {
-    case 'vip':
-      return {
-        cardBg: 'linear-gradient(135deg, rgba(255, 253, 231, 0.95) 0%, rgba(255, 248, 200, 0.95) 100%)',
-        textColor: '#B8860B',
-        iconColor: '#B8860B'
-      }
-    case 'subscribed':
-      return {
-        cardBg: 'linear-gradient(135deg, rgba(245, 245, 245, 0.95) 0%, rgba(235, 235, 235, 0.95) 100%)',
-        textColor: '#606060',
-        iconColor: '#606060'
-      }
-    case 'free':
-    default:
-      return {
-        cardBg: 'linear-gradient(135deg, rgba(240, 248, 255, 0.95) 0%, rgba(225, 240, 255, 0.95) 100%)',
-        textColor: '#007bff',
-        iconColor: '#007bff'
-      }
-  }
-}
-
-const themeModes = [
-  { name: '系统', value: 'system', icon: 'system', color: '#6b7280' },
-  { name: '浅色', value: 'light', icon: 'light', color: '#f59e0b' },
-  { name: '深色', value: 'dark', icon: 'dark', color: '#3b82f6' }
-]
-
-const selectedTheme = ref(dataStore.userPreferences.themeMode || 'system')
-
-// 🔴 修复：添加标志防止递归调用
-let isThemeChanging = false
-
-const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
-  if (isThemeChanging) {
-    console.warn('主题切换正在进行中，跳过本次调用')
-    return
-  }
-  
-  const oldMode = dataStore.userPreferences.themeMode
-  if (oldMode === mode) return
-  
-  isThemeChanging = true
-  
-  try {
-    console.log(`主题切换: ${oldMode} -> ${mode}`)
-    
-    // 先更新本地状态
-    selectedTheme.value = mode
-    
-    // 🔴 修复：直接调用 updateThemeMode，避免中间层
-    dataStore.updateThemeMode(mode)
-    
-    const modeName = mode === 'system' ? '系统' : mode === 'light' ? '浅色' : '深色'
-    showNotification(`主题已切换为: ${modeName}`, 'success')
-    
-    // 🔴 移除手动触发的事件，已在 updateThemeMode 中处理
-    // 移除手动日志记录，已在 updateThemeMode 中处理
-    
-  } finally {
-    // 延迟重置标志，避免快速连续点击
-    setTimeout(() => {
-      isThemeChanging = false
-    }, 300)
-  }
-}
-
-const handleFeature = (featureName: string) => {
-  switch (featureName) {
-    case 'About':
-      router.push('/about')
-      break
-    case 'ManageHoldings':
-      router.push('/holdings/manage')
-      break
-    case 'APILog':
-      router.push('/logs')
-      break
-    case 'CloudSync':
-      if (authStore.userType === 'free') {
-        showNotification('该功能需要升级到VIP用户', 'warning')
-      } else {
-        showNotification('云端同步功能正在开发中...', 'info')
-      }
-      break
-    default:
-      showNotification(`功能 ${featureName} 正在开发中...`, 'info')
-  }
-  dataStore.safeAddLog(`用户操作: 点击${featureName}功能`, 'info', false)
-}
-
-// 🔴 修改：跳转到激活页面
-const handleUpgrade = () => {
-  router.push('/activation')
-  dataStore.safeAddLog('用户点击升级按钮，跳转到激活页面', 'info', false)
-}
-
-const handleLogout = async () => {
-  try {
-    dataStore.safeAddLog('用户执行退出登录操作', 'info', false)
-    showNotification('您已成功退出登录', 'success')
-    setTimeout(() => {
-      authStore.logout()
-      dataStore.safeAddLog('用户已成功退出登录', 'success', false)
-    }, 800)
-  } catch (error) {
-    console.error('退出登录失败:', error)
-    dataStore.safeAddLog('退出登录失败: ' + (error as Error).message, 'error', false)
-    showNotification('退出登录失败，请重试', 'error')
-  }
-}
-
-const togglePrivacyMode = (value: boolean) => {
-  if (dataStore.isPrivacyMode === value) return
-  const newValue = value
-  dataStore.updateUserPreferences({ isPrivacyMode: newValue })
-  localStorage.setItem('privacy_mode', newValue.toString())
-  dataStore.safeAddLog(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info', false)
-  
-  const event = new CustomEvent('privacy-mode-changed-global', {
-    detail: {
-      enabled: newValue,
-      timestamp: Date.now(),
-      source: 'toggle-switch'
-    },
-    bubbles: true,
-    composed: true
-  })
-  window.dispatchEvent(event)
-}
-
-onMounted(() => {
-  dataStore.loadData()
-  selectedTheme.value = dataStore.userPreferences.themeMode
-  
-  const disableZoom = () => {
-    let metaViewport = document.querySelector('meta[name="viewport"]')
-    if (!metaViewport) {
-      metaViewport = document.createElement('meta')
-      metaViewport.setAttribute('name', 'viewport')
-      document.head.appendChild(metaViewport)
-    }
-    metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover')
-    
-    let lastTouchEnd = 0
-    document.addEventListener('touchstart', (event) => {
-      if (event.touches.length > 1) {
-        event.preventDefault()
-      }
-    }, { passive: false })
-    
-    document.addEventListener('touchend', (event) => {
-      const now = Date.now()
-      if (now - lastTouchEnd <= 300) {
-        event.preventDefault()
-      }
-      lastTouchEnd = now
-    }, false)
-    
-    document.addEventListener('gesturestart', (event) => {
-      event.preventDefault()
-    })
-    
-    document.addEventListener('keydown', (event) => {
-      if ((event.ctrlKey === true || event.metaKey === true) &&
-          (event.keyCode === 107 || event.keyCode === 109 || event.keyCode === 187 || event.keyCode === 189)) {
-        event.preventDefault()
-      }
-    })
-  }
-  
-  disableZoom()
-  
-  nextTick(() => {
-    const savedPrivacyMode = localStorage.getItem('privacy_mode')
-    if (savedPrivacyMode !== null) {
-      const isPrivacyEnabled = savedPrivacyMode === 'true'
-      dataStore.updateUserPreferences({ isPrivacyMode: isPrivacyEnabled })
-      dataStore.isPrivacyMode = isPrivacyEnabled
-    } else {
-      dataStore.updateUserPreferences({ isPrivacyMode: true })
-      dataStore.isPrivacyMode = true
-      localStorage.setItem('privacy_mode', 'true')
-    }
-    setTimeout(() => {
-      isPrivacyInitialized = true
-    }, 100)
-  })
-  
-  dataStore.safeAddLog('用户访问配置页面', 'info', false)
-  window.addEventListener('force-privacy-sync', handleForcePrivacySync)
-})
-
-const handleForcePrivacySync = () => {
-  const privacyMode = dataStore.isPrivacyMode
-  privacyKey.value = Date.now()
-}
-
-onUnmounted(() => {
-  window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
-})
-</script>
-
 <template>
   <div class="config-view">
     <div class="fixed-top-section">
@@ -333,6 +48,37 @@ onUnmounted(() => {
                   >
                     {{ userTypeDisplay }}
                   </div>
+                  
+                  <!-- 添加体验用户到期时间提示 -->
+                  <div
+                    v-if="authStore.userType === 'subscribed' && subscriptionEndDate"
+                    class="subscription-expiry"
+                    :class="{ 'expired': subscriptionEndDate.isExpired }"
+                  >
+                    <span class="expiry-icon">⏰</span>
+                    <span class="expiry-text">
+                      {{ subscriptionEndDate.isExpired ? '已过期' : `剩余${subscriptionEndDate.daysLeft}天` }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 添加体验用户详细信息 -->
+              <div
+                v-if="authStore.userType === 'subscribed' && subscriptionEndDate"
+                class="subscription-details"
+              >
+                <div class="detail-item">
+                  <span class="detail-label">体验到期:</span>
+                  <span class="detail-value" :class="{ 'expired': subscriptionEndDate.isExpired }">
+                    {{ subscriptionEndDate.date }}
+                  </span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">状态:</span>
+                  <span class="detail-value status-badge" :class="subscriptionEndDate.isExpired ? 'status-expired' : 'status-active'">
+                    {{ subscriptionEndDate.isExpired ? '已过期' : '进行中' }}
+                  </span>
                 </div>
               </div>
               
@@ -583,6 +329,321 @@ onUnmounted(() => {
   </div>
 </template>
 
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
+import { useDataStore } from '../stores/dataStore'
+import ToastMessage from '../components/common/ToastMessage.vue'
+
+const router = useRouter()
+const authStore = useAuthStore()
+const dataStore = useDataStore()
+
+const privacyKey = ref(0)
+const refreshKey = ref(0)
+
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref<'info' | 'success' | 'error' | 'warning'>('info')
+
+let isPrivacyInitialized = false
+
+const showNotification = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+  
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+  
+  // 使用安全的日志记录，避免递归
+  dataStore.safeAddLog(`系统提示: ${message}`, type, false)
+}
+
+// 计算体验用户到期时间
+const subscriptionEndDate = computed(() => {
+  if (authStore.currentUser?.subscription_end) {
+    const endDate = new Date(authStore.currentUser.subscription_end)
+    const now = new Date()
+    const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    
+    if (daysLeft > 0) {
+      return {
+        date: endDate.toLocaleDateString('zh-CN'),
+        daysLeft: daysLeft,
+        isExpired: false
+      }
+    } else {
+      return {
+        date: endDate.toLocaleDateString('zh-CN'),
+        daysLeft: 0,
+        isExpired: true
+      }
+    }
+  }
+  return null
+})
+
+// 修改用户类型显示逻辑
+const userTypeDisplay = computed(() => {
+  switch (authStore.userType) {
+    case 'vip': return 'VIP'
+    case 'subscribed':
+      if (subscriptionEndDate.value?.isExpired) {
+        return '体验(已过期)'
+      } else {
+        return '体验'
+      }
+    case 'free':
+    default: return '基础'
+  }
+})
+
+watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
+  if (isPrivacyInitialized && oldValue !== newValue) {
+    showNotification(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info')
+  }
+  
+  const event = new CustomEvent('privacy-mode-changed-global', {
+    detail: {
+      enabled: newValue,
+      oldValue: oldValue,
+      timestamp: Date.now(),
+      source: 'ConfigView'
+    },
+    bubbles: true,
+    composed: true
+  })
+  
+  window.dispatchEvent(event)
+  
+  const legacyEvent = new CustomEvent('privacy-mode-changed', {
+    detail: {
+      enabled: newValue,
+      oldValue: oldValue
+    },
+    bubbles: true,
+    composed: true
+  })
+  
+  window.dispatchEvent(legacyEvent)
+  
+  nextTick(() => {
+    window.dispatchEvent(new CustomEvent('force-privacy-sync'))
+  })
+})
+
+const displayName = computed(() => {
+  return authStore.displayName || '用户'
+})
+
+const getUserColors = () => {
+  switch (authStore.userType) {
+    case 'vip':
+      return {
+        cardBg: 'linear-gradient(135deg, rgba(255, 253, 231, 0.95) 0%, rgba(255, 248, 200, 0.95) 100%)',
+        textColor: '#B8860B',
+        iconColor: '#B8860B'
+      }
+    case 'subscribed':
+      return {
+        cardBg: 'linear-gradient(135deg, rgba(245, 245, 245, 0.95) 0%, rgba(235, 235, 235, 0.95) 100%)',
+        textColor: '#606060',
+        iconColor: '#606060'
+      }
+    case 'free':
+    default:
+      return {
+        cardBg: 'linear-gradient(135deg, rgba(240, 248, 255, 0.95) 0%, rgba(225, 240, 255, 0.95) 100%)',
+        textColor: '#007bff',
+        iconColor: '#007bff'
+      }
+  }
+}
+
+const themeModes = [
+  { name: '系统', value: 'system', icon: 'system', color: '#6b7280' },
+  { name: '浅色', value: 'light', icon: 'light', color: '#f59e0b' },
+  { name: '深色', value: 'dark', icon: 'dark', color: '#3b82f6' }
+]
+
+const selectedTheme = ref(dataStore.userPreferences.themeMode || 'system')
+
+// 🔴 修复：添加标志防止递归调用
+let isThemeChanging = false
+
+const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
+  if (isThemeChanging) {
+    console.warn('主题切换正在进行中，跳过本次调用')
+    return
+  }
+  
+  const oldMode = dataStore.userPreferences.themeMode
+  if (oldMode === mode) return
+  
+  isThemeChanging = true
+  
+  try {
+    console.log(`主题切换: ${oldMode} -> ${mode}`)
+    
+    // 先更新本地状态
+    selectedTheme.value = mode
+    
+    // 🔴 修复：直接调用 updateThemeMode，避免中间层
+    dataStore.updateThemeMode(mode)
+    
+    const modeName = mode === 'system' ? '系统' : mode === 'light' ? '浅色' : '深色'
+    showNotification(`主题已切换为: ${modeName}`, 'success')
+    
+    // 🔴 移除手动触发的事件，已在 updateThemeMode 中处理
+    // 移除手动日志记录，已在 updateThemeMode 中处理
+    
+  } finally {
+    // 延迟重置标志，避免快速连续点击
+    setTimeout(() => {
+      isThemeChanging = false
+    }, 300)
+  }
+}
+
+const handleFeature = (featureName: string) => {
+  switch (featureName) {
+    case 'About':
+      router.push('/about')
+      break
+    case 'ManageHoldings':
+      router.push('/holdings/manage')
+      break
+    case 'APILog':
+      router.push('/logs')
+      break
+    case 'CloudSync':
+      if (authStore.userType === 'free') {
+        showNotification('该功能需要升级到VIP用户', 'warning')
+      } else {
+        showNotification('云端同步功能正在开发中...', 'info')
+      }
+      break
+    default:
+      showNotification(`功能 ${featureName} 正在开发中...`, 'info')
+  }
+  dataStore.safeAddLog(`用户操作: 点击${featureName}功能`, 'info', false)
+}
+
+// 🔴 修改：跳转到激活页面
+const handleUpgrade = () => {
+  router.push('/activation')
+  dataStore.safeAddLog('用户点击升级按钮，跳转到激活页面', 'info', false)
+}
+
+const handleLogout = async () => {
+  try {
+    dataStore.safeAddLog('用户执行退出登录操作', 'info', false)
+    showNotification('您已成功退出登录', 'success')
+    setTimeout(() => {
+      authStore.logout()
+      dataStore.safeAddLog('用户已成功退出登录', 'success', false)
+    }, 800)
+  } catch (error) {
+    console.error('退出登录失败:', error)
+    dataStore.safeAddLog('退出登录失败: ' + (error as Error).message, 'error', false)
+    showNotification('退出登录失败，请重试', 'error')
+  }
+}
+
+const togglePrivacyMode = (value: boolean) => {
+  if (dataStore.isPrivacyMode === value) return
+  const newValue = value
+  dataStore.updateUserPreferences({ isPrivacyMode: newValue })
+  localStorage.setItem('privacy_mode', newValue.toString())
+  dataStore.safeAddLog(`隐私模式已${newValue ? '开启' : '关闭'}`, 'info', false)
+  
+  const event = new CustomEvent('privacy-mode-changed-global', {
+    detail: {
+      enabled: newValue,
+      timestamp: Date.now(),
+      source: 'toggle-switch'
+    },
+    bubbles: true,
+    composed: true
+  })
+  window.dispatchEvent(event)
+}
+
+onMounted(() => {
+  dataStore.loadData()
+  selectedTheme.value = dataStore.userPreferences.themeMode
+  
+  const disableZoom = () => {
+    let metaViewport = document.querySelector('meta[name="viewport"]')
+    if (!metaViewport) {
+      metaViewport = document.createElement('meta')
+      metaViewport.setAttribute('name', 'viewport')
+      document.head.appendChild(metaViewport)
+    }
+    metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover')
+    
+    let lastTouchEnd = 0
+    document.addEventListener('touchstart', (event) => {
+      if (event.touches.length > 1) {
+        event.preventDefault()
+      }
+    }, { passive: false })
+    
+    document.addEventListener('touchend', (event) => {
+      const now = Date.now()
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault()
+      }
+      lastTouchEnd = now
+    }, false)
+    
+    document.addEventListener('gesturestart', (event) => {
+      event.preventDefault()
+    })
+    
+    document.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey === true || event.metaKey === true) &&
+          (event.keyCode === 107 || event.keyCode === 109 || event.keyCode === 187 || event.keyCode === 189)) {
+        event.preventDefault()
+      }
+    })
+  }
+  
+  disableZoom()
+  
+  nextTick(() => {
+    const savedPrivacyMode = localStorage.getItem('privacy_mode')
+    if (savedPrivacyMode !== null) {
+      const isPrivacyEnabled = savedPrivacyMode === 'true'
+      dataStore.updateUserPreferences({ isPrivacyMode: isPrivacyEnabled })
+      dataStore.isPrivacyMode = isPrivacyEnabled
+    } else {
+      dataStore.updateUserPreferences({ isPrivacyMode: true })
+      dataStore.isPrivacyMode = true
+      localStorage.setItem('privacy_mode', 'true')
+    }
+    setTimeout(() => {
+      isPrivacyInitialized = true
+    }, 100)
+  })
+  
+  dataStore.safeAddLog('用户访问配置页面', 'info', false)
+  window.addEventListener('force-privacy-sync', handleForcePrivacySync)
+})
+
+const handleForcePrivacySync = () => {
+  const privacyMode = dataStore.isPrivacyMode
+  privacyKey.value = Date.now()
+}
+
+onUnmounted(() => {
+  window.removeEventListener('force-privacy-sync', handleForcePrivacySync)
+})
+</script>
+
 <style scoped>
 .config-view {
   position: fixed;
@@ -709,6 +770,105 @@ onUnmounted(() => {
   0% { opacity: 0.8; }
   50% { opacity: 1; }
   100% { opacity: 0.8; }
+}
+
+/* 添加体验用户到期时间样式 */
+.subscription-expiry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 193, 7, 0.2);
+  color: #ff9800;
+  animation: pulse 2s infinite;
+}
+
+.subscription-expiry.expired {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.expiry-icon {
+  font-size: 10px;
+}
+
+.expiry-text {
+  white-space: nowrap;
+}
+
+/* 体验用户详细信息样式 */
+.subscription-details {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+:root.dark .subscription-details {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 193, 7, 0.2);
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.detail-item:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  color: #666;
+  font-weight: 500;
+}
+
+:root.dark .detail-label {
+  color: #9ca3af;
+}
+
+.detail-value {
+  color: #333;
+  font-weight: 600;
+}
+
+:root.dark .detail-value {
+  color: #e5e7eb;
+}
+
+.detail-value.expired {
+  color: #f44336;
+}
+
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-active {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.status-expired {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
 }
 
 .user-content {
@@ -1304,6 +1464,27 @@ onUnmounted(() => {
   .gradient-text {
     font-size: 14px;
   }
+  
+  /* 响应式调整订阅信息 */
+  .subscription-expiry {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+  
+  .subscription-details {
+    padding: 8px;
+    margin-top: 10px;
+  }
+  
+  .detail-item {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  
+  .status-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1351,6 +1532,20 @@ onUnmounted(() => {
   
   .footer-text {
     padding: 10px 0;
+  }
+  
+  /* 小屏幕调整订阅信息 */
+  .subscription-expiry {
+    font-size: 9px;
+    padding: 2px 4px;
+  }
+  
+  .subscription-details {
+    padding: 6px;
+  }
+  
+  .detail-item {
+    font-size: 11px;
   }
 }
 
