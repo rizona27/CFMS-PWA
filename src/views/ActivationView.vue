@@ -111,8 +111,8 @@ const redeemCode = async () => {
       return
     }
     
-    // 兑换成功
-    showMessage(redeemResponse.message || '兑换成功！', 'success')
+    // 兑换成功，提示重新登录
+    showMessage('兑换成功，请重新登录', 'success')
     dataStore.safeAddLog(`权益兑换成功: ${redeemResponse.message}`, 'success', false)
     
     // 更新用户信息
@@ -125,7 +125,7 @@ const redeemCode = async () => {
     
     // 2秒后返回
     setTimeout(() => {
-      router.back()
+      router.push('/login')
     }, 2000)
     
   } catch (error) {
@@ -329,6 +329,24 @@ onMounted(() => {
       :shadow="false"
     />
     
+    <!-- 分隔符 - 类似 ManageHoldingsView -->
+    <div class="fixed-top-section">
+      <div class="top-container">
+        <div class="stylish-divider">
+          <div class="divider-line"></div>
+          <div class="divider-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="13" y="2" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="2" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+              <rect x="13" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.4"/>
+            </svg>
+          </div>
+          <div class="divider-line"></div>
+        </div>
+      </div>
+    </div>
+    
     <!-- 成功动画 -->
     <component
       v-if="showSuccessAnimation"
@@ -339,21 +357,6 @@ onMounted(() => {
     <div class="scrollable-content-section">
       <div class="config-content-wrapper">
         <div class="config-content">
-          
-          <!-- 欢迎卡片 -->
-          <div class="welcome-card">
-            <div class="gift-icon">
-              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 12V22H4V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M22 7H2V12H22V7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 22V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 7H7.5C6.83696 7 6.20107 6.73661 5.73223 6.26777C5.26339 5.79893 5 5.16304 5 4.5C5 3.83696 5.26339 3.20107 5.73223 2.73223C6.20107 2.26339 6.83696 2 7.5 2C11 2 12 7 12 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 7H16.5C17.163 7 17.7989 6.73661 18.2678 6.26777C18.7366 5.79893 19 5.16304 19 4.5C19 3.83696 18.7366 3.20107 18.2678 2.73223C17.7989 2.26339 17.163 2 16.5 2C13 2 12 7 12 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <h1 class="welcome-title">尊享权益兑换</h1>
-            <p class="welcome-subtitle">请输入8位兑换码解锁高级功能</p>
-          </div>
           
           <!-- 兑换码输入卡片 -->
           <div
@@ -373,7 +376,7 @@ onMounted(() => {
                   </svg>
                 </div>
                 <div class="card-title-wrapper">
-                  <h4 class="card-title">输入兑换码</h4>
+                  <h4 class="card-title">尊享权益兑换</h4>
                 </div>
               </div>
               
@@ -382,7 +385,7 @@ onMounted(() => {
                   type="text"
                   v-model="redemptionCode"
                   @input="handleCodeInput"
-                  placeholder="请输入8位大写字母和数字"
+                  placeholder="请输入兑换码"
                   maxlength="8"
                   class="code-input"
                   :disabled="isLoading"
@@ -490,9 +493,9 @@ onMounted(() => {
               
               <div class="code-types-list">
                 <div class="code-type-item">
-                  <div class="code-type-badge trial">试用</div>
+                  <div class="code-type-badge trial">体验</div>
                   <div class="code-type-info">
-                    <div class="code-type-title">7天试用兑换码</div>
+                    <div class="code-type-title">7天体验兑换码</div>
                     <div class="code-type-desc">激活后享受7天VIP完整功能体验</div>
                   </div>
                 </div>
@@ -533,6 +536,54 @@ onMounted(() => {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
+/* 固定顶部部分 - 类似 ManageHoldingsView 样式 */
+.fixed-top-section {
+  flex-shrink: 0;
+  z-index: 90; /* 低于 NavBar */
+  padding-top: 0;
+  background: transparent; /* 无底色 */
+}
+
+.top-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* 分隔符样式 - 与 ManageHoldingsView 一致 */
+.stylish-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0 12px;
+  opacity: 0.6;
+}
+
+.divider-line {
+  height: 1px;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+
+.divider-line:last-child {
+  background: linear-gradient(90deg, currentColor, transparent);
+}
+
+.divider-icon {
+  color: currentColor;
+  display: flex;
+  align-items: center;
+}
+
+:root.dark .stylish-divider {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.stylish-divider {
+  color: rgba(0, 0, 0, 0.2);
+}
+
 .scrollable-content-section {
   flex: 1;
   overflow-y: auto;
@@ -548,68 +599,6 @@ onMounted(() => {
 
 .config-content {
   padding: 0 0 120px;
-}
-
-/* 欢迎卡片样式 */
-.welcome-card {
-  text-align: center;
-  margin: 12px 0 16px;
-  padding: 24px 16px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-:root.dark .welcome-card {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.gift-icon {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 16px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: #667eea;
-}
-
-:root.dark .gift-icon {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
-  border: 2px solid rgba(102, 126, 234, 0.4);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.welcome-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 8px 0;
-  letter-spacing: -0.5px;
-}
-
-:root.dark .welcome-title {
-  color: #e5e7eb;
-}
-
-.welcome-subtitle {
-  font-size: 15px;
-  color: #666;
-  margin: 0;
-  font-weight: 400;
-  opacity: 0.8;
-}
-
-:root.dark .welcome-subtitle {
-  color: #9ca3af;
 }
 
 /* 卡片通用样式 */
@@ -1168,25 +1157,6 @@ onMounted(() => {
     padding: 0 12px;
   }
   
-  .welcome-card {
-    padding: 20px 14px;
-    margin: 8px 0 12px;
-  }
-  
-  .gift-icon {
-    width: 70px;
-    height: 70px;
-    margin-bottom: 14px;
-  }
-  
-  .welcome-title {
-    font-size: 22px;
-  }
-  
-  .welcome-subtitle {
-    font-size: 14px;
-  }
-  
   .function-card {
     padding: 14px;
     min-height: 100px;
@@ -1253,25 +1223,15 @@ onMounted(() => {
   .success-text {
     font-size: 22px;
   }
+  
+  .top-container {
+    padding: 0 12px;
+  }
 }
 
 @media (max-width: 480px) {
   .config-content {
     padding: 0 0 100px;
-  }
-  
-  .welcome-card {
-    padding: 18px 12px;
-  }
-  
-  .gift-icon {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 12px;
-  }
-  
-  .welcome-title {
-    font-size: 20px;
   }
   
   .function-card {
@@ -1282,6 +1242,10 @@ onMounted(() => {
   .card-header {
     gap: 10px;
     margin-bottom: 14px;
+  }
+  
+  .card-title {
+    font-size: 14px;
   }
   
   .code-input {
@@ -1338,17 +1302,6 @@ onMounted(() => {
 @media (orientation: landscape) and (max-height: 500px) {
   .scrollable-content-section {
     height: calc(100vh - 60px);
-  }
-  
-  .welcome-card {
-    padding: 16px;
-    margin: 6px 0 10px;
-  }
-  
-  .gift-icon {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 10px;
   }
   
   .function-card {
