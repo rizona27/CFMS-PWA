@@ -285,6 +285,18 @@
             </div>
           </div>
           
+          <!-- 导入日志 -->
+          <div v-if="importLogs.length > 0" class="import-logs">
+            <h3>导入日志</h3>
+            <div class="logs-container">
+              <div v-for="(log, index) in importLogs" :key="index" class="log-item">
+                <span class="log-time">{{ log.time }}</span>
+                <span class="log-separator">-</span>
+                <span class="log-message">{{ log.message }}</span>
+              </div>
+            </div>
+          </div>
+          
           <div class="step-actions">
             <button class="prev-btn" @click="prevStep">
               ← 上一步
@@ -356,6 +368,18 @@
           </div>
         </div>
         
+        <!-- 导入日志 -->
+        <div v-if="importLogs.length > 0" class="import-logs">
+          <h3>导入执行日志</h3>
+          <div class="logs-container">
+            <div v-for="(log, index) in importLogs" :key="index" class="log-item">
+              <span class="log-time">{{ log.time }}</span>
+              <span class="log-separator">-</span>
+              <span class="log-message">{{ log.message }}</span>
+            </div>
+          </div>
+        </div>
+        
         <div class="result-actions-compact">
           <button class="action-btn primary" @click="goToHoldings">
             📋 查看持仓
@@ -392,6 +416,7 @@ const rawHeaders = ref<string[]>([])
 const rawData = ref<any[][]>([])
 const previewData = ref<StoreFundHolding[]>([])
 const importResult = ref<any>(null)
+const importLogs = ref<Array<{time: string, message: string}>>([])
 
 interface FieldConfig {
   id: string
@@ -637,6 +662,26 @@ const autoSuggestions = computed(() => {
   return suggestions.slice(0, 3)
 })
 
+// 添加日志函数
+const addImportLog = (message: string) => {
+  const now = new Date()
+  const timeStr = now.toLocaleTimeString('zh-CN', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+  importLogs.value.unshift({
+    time: timeStr,
+    message: message
+  })
+  
+  // 只保留最近的50条日志
+  if (importLogs.value.length > 50) {
+    importLogs.value = importLogs.value.slice(0, 50)
+  }
+}
+
 const handleFileSelect = async (event: Event) => {
   const input = event.target as HTMLInputElement
   if (input.files && input.files.length > 0) {
@@ -658,6 +703,7 @@ const clearSelection = () => {
   previewData.value = []
   importResult.value = null
   fileFormatDetected.value = ''
+  importLogs.value = []
   fieldConfigs.value.forEach(field => field.columnIndex = null)
   
   const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
@@ -721,9 +767,12 @@ const processSelectedFile = async () => {
     fileProcessed.value = true
     autoDetectFieldMappings()
     
+    addImportLog(`文件加载完成: ${file.name}, 共${rawData.value.length}行数据`)
+    
   } catch (error) {
     console.error('文件处理失败:', error)
     showNotification(`文件处理失败: ${error}`, 'error')
+    addImportLog(`文件处理失败: ${error}`)
   }
 }
 
@@ -785,34 +834,62 @@ const processExcelFile = async (file: File) => {
     const firstSheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[firstSheetName]
     
+    // 修改：使用默认值，不跳过空行
     const jsonData = XLSX.utils.sheet_to_json(worksheet, {
       header: 1,
       defval: '',
-      blankrows: true
+      blankrows: false // 修改：不跳过空行
     })
     
     if (jsonData.length === 0) {
       throw new Error('工作表为空')
     }
     
+    addImportLog(`Excel文件读取完成，原始数据行数: ${jsonData.length}`)
+    
+    // 修改：增强的头部检测逻辑
     let headerRowIndex = 0
     let maxColumns = 0
+    let maxHeaderScore = 0
     
-    for (let i = 0; i < Math.min(20, jsonData.length); i++) {
+    // 尝试前5行作为可能的头部
+    for (let i = 0; i < Math.min(5, jsonData.length); i++) {
       const row = jsonData[i] as any[]
       if (!Array.isArray(row)) continue
       
-      const nonEmptyCells = row.filter(cell =>
-        cell !== null &&
-        cell !== undefined &&
-        cell.toString().trim() !== ''
-      ).length
+      let nonEmptyCells = 0
+      let headerScore = 0
       
-      if (nonEmptyCells > maxColumns) {
+      // 计算头部分数：包含特定关键字的列越多，越可能是头部
+      for (let j = 0; j < row.length; j++) {
+        const cell = String(row[j] || '').trim()
+        if (cell) {
+          nonEmptyCells++
+          
+          // 检查是否包含典型的头部关键字
+          const lowerCell = cell.toLowerCase()
+          if (lowerCell.includes('客户') || lowerCell.includes('基金') ||
+              lowerCell.includes('金额') || lowerCell.includes('份额') ||
+              lowerCell.includes('日期') || lowerCell.includes('代码')) {
+            headerScore += 3
+          } else if (lowerCell.includes('号') || lowerCell.includes('id') ||
+                     lowerCell.includes('name') || lowerCell.includes('date')) {
+            headerScore += 2
+          } else if (cell.length > 0) {
+            headerScore += 1
+          }
+        }
+      }
+      
+      // 如果这行看起来更像是头部（有更高的分数）
+      if (nonEmptyCells > maxColumns || (nonEmptyCells === maxColumns && headerScore > maxHeaderScore)) {
         maxColumns = nonEmptyCells
+        maxHeaderScore = headerScore
         headerRowIndex = i
       }
     }
+    
+    addImportLog(`检测到头部行: 第${headerRowIndex + 1}行，最大列数: ${maxColumns}，头部分数: ${maxHeaderScore}`)
     
     const headerRow = jsonData[headerRowIndex] as any[]
     rawHeaders.value = headerRow.map((cell, index) => {
@@ -823,10 +900,15 @@ const processExcelFile = async (file: File) => {
       return value || `列${index + 1}`
     })
     
-    rawData.value = jsonData.slice(headerRowIndex + 1).map((row, rowIndex) => {
-      if (!Array.isArray(row)) return []
+    addImportLog(`原始头部: ${rawHeaders.value.join(' | ')}`)
+    
+    // 提取数据行（从头部行之后开始）
+    rawData.value = []
+    for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
+      const row = jsonData[i] as any[]
+      if (!Array.isArray(row)) continue
       
-      return rawHeaders.value.map((_, colIndex) => {
+      const dataRow = rawHeaders.value.map((_, colIndex) => {
         const cell = row[colIndex]
         
         if (cell === null || cell === undefined) {
@@ -845,12 +927,30 @@ const processExcelFile = async (file: File) => {
         }
         
         if (typeof cell === 'number') {
-          return cell.toFixed(2)
+          // 保留足够的精度
+          return cell.toFixed(4)
         }
         
         return String(cell).trim()
       })
-    }).filter(row => row.some(cell => cell !== ''))
+      
+      // 检查这一行是否有实际数据
+      const hasData = dataRow.some(cell => {
+        if (typeof cell === 'string') {
+          return cell.trim() !== ''
+        }
+        return cell !== null && cell !== undefined && cell !== ''
+      })
+      
+      if (hasData) {
+        rawData.value.push(dataRow)
+      }
+    }
+    
+    addImportLog(`处理后数据行数: ${rawData.value.length}`)
+    if (rawData.value.length > 0) {
+      addImportLog(`第一行数据示例: ${JSON.stringify(rawData.value[0].slice(0, 10))}`)
+    }
     
   } catch (error) {
     throw new Error(`处理Excel文件失败: ${error}`)
@@ -923,6 +1023,12 @@ const parseCSVLine = (line: string, delimiter: string): string[] => {
 const autoDetectFieldMappings = () => {
   fieldConfigs.value.forEach(field => field.columnIndex = null)
   
+  // 调试：打印所有列名
+  addImportLog(`开始自动映射，共${rawHeaders.value.length}列`)
+  rawHeaders.value.forEach((header, index) => {
+    addImportLog(`列${index + 1}: "${header}"`)
+  })
+  
   // 第一轮：精确匹配
   for (let colIndex = 0; colIndex < rawHeaders.value.length; colIndex++) {
     const columnName = rawHeaders.value[colIndex].toLowerCase()
@@ -934,32 +1040,40 @@ const autoDetectFieldMappings = () => {
       
       // 客户号映射 - 优先精确匹配
       if (fieldId === 'clientID') {
-        if (columnName === '客户号' || columnName === '核心客户号' || columnName === '客户编号') {
+        if (columnName === '客户号' || columnName === '核心客户号' || columnName === '客户编号' ||
+            columnName === '客户代码' || columnName === '客户id') {
           field.columnIndex = colIndex
+          addImportLog(`精确映射: "${rawHeaders.value[colIndex]}" -> 客户号`)
           break
         }
       }
       
       // 基金代码映射 - 优先精确匹配
       if (fieldId === 'fundCode') {
-        if (columnName === '基金代码' || columnName === '代码') {
+        if (columnName === '基金代码' || columnName === '代码' || columnName === '基金编码' ||
+            columnName === 'fund code' || columnName === 'fund_code') {
           field.columnIndex = colIndex
+          addImportLog(`精确映射: "${rawHeaders.value[colIndex]}" -> 基金代码`)
           break
         }
       }
       
       // 购买金额映射 - 优先精确匹配
       if (fieldId === 'purchaseAmount') {
-        if (columnName === '购买金额' || columnName === '持仓成本(元)') {
+        if (columnName === '购买金额' || columnName === '持仓成本(元)' || columnName === '购买金额(元)' ||
+            columnName === 'amount' || columnName === 'purchase amount') {
           field.columnIndex = colIndex
+          addImportLog(`精确映射: "${rawHeaders.value[colIndex]}" -> 购买金额`)
           break
         }
       }
       
       // 购买份额映射 - 优先精确匹配
       if (fieldId === 'purchaseShares') {
-        if (columnName === '购买份额' || columnName === '当前份额') {
+        if (columnName === '购买份额' || columnName === '当前份额' || columnName === '持仓份额' ||
+            columnName === 'shares' || columnName === 'purchase shares') {
           field.columnIndex = colIndex
+          addImportLog(`精确映射: "${rawHeaders.value[colIndex]}" -> 购买份额`)
           break
         }
       }
@@ -968,18 +1082,23 @@ const autoDetectFieldMappings = () => {
       if (fieldId === 'purchaseDate') {
         if (columnName.includes('最早购买日期')) {
           field.columnIndex = colIndex
+          addImportLog(`精确映射: "${rawHeaders.value[colIndex]}" -> 购买日期（最早）`)
           break
         }
-        if (columnName === '购买日期') {
+        if (columnName === '购买日期' || columnName === '交易日期' || columnName === 'date' ||
+            columnName === 'purchase date') {
           field.columnIndex = colIndex
+          addImportLog(`精确映射: "${rawHeaders.value[colIndex]}" -> 购买日期`)
           break
         }
       }
       
       // 客户姓名映射 - 避免映射到综合客户经理
       if (fieldId === 'clientName') {
-        if ((columnName === '客户姓名' || columnName === '姓名') && !columnName.includes('综合客户经理')) {
+        if ((columnName === '客户姓名' || columnName === '姓名' || columnName === '客户名称') &&
+            !columnName.includes('综合客户经理')) {
           field.columnIndex = colIndex
+          addImportLog(`精确映射: "${rawHeaders.value[colIndex]}" -> 客户姓名`)
           break
         }
       }
@@ -987,6 +1106,7 @@ const autoDetectFieldMappings = () => {
       // 备注映射
       if (fieldId === 'remarks' && columnName === '备注') {
         field.columnIndex = colIndex
+        addImportLog(`精确映射: "${rawHeaders.value[colIndex]}" -> 备注`)
         break
       }
     }
@@ -1006,18 +1126,25 @@ const autoDetectFieldMappings = () => {
         columnName.includes('客户号') ||
         columnName.includes('编号') ||
         columnName.includes('id') ||
-        columnName.includes('证件号')
+        columnName.includes('证件号') ||
+        columnName.includes('账号') ||
+        columnName.includes('号码')
       )) {
         field.columnIndex = colIndex
+        addImportLog(`模糊映射: "${rawHeaders.value[colIndex]}" -> 客户号`)
         break
       }
       
       // 基金代码模糊匹配
       if (fieldId === 'fundCode' && (
         columnName.includes('代码') ||
-        columnName.includes('fund')
+        columnName.includes('fund') ||
+        columnName.includes('code') ||
+        columnName.includes('产品') ||
+        columnName.includes('基金')
       )) {
         field.columnIndex = colIndex
+        addImportLog(`模糊映射: "${rawHeaders.value[colIndex]}" -> 基金代码`)
         break
       }
       
@@ -1026,9 +1153,12 @@ const autoDetectFieldMappings = () => {
         columnName.includes('金额') ||
         columnName.includes('成本') ||
         columnName.includes('amount') ||
-        columnName.includes('price')
+        columnName.includes('price') ||
+        columnName.includes('价值') ||
+        columnName.includes('总金额')
       )) {
         field.columnIndex = colIndex
+        addImportLog(`模糊映射: "${rawHeaders.value[colIndex]}" -> 购买金额`)
         break
       }
       
@@ -1036,9 +1166,12 @@ const autoDetectFieldMappings = () => {
       if (fieldId === 'purchaseShares' && (
         columnName.includes('份额') ||
         columnName.includes('shares') ||
-        columnName.includes('quantity')
+        columnName.includes('quantity') ||
+        columnName.includes('数量') ||
+        columnName.includes('单位')
       )) {
         field.columnIndex = colIndex
+        addImportLog(`模糊映射: "${rawHeaders.value[colIndex]}" -> 购买份额`)
         break
       }
       
@@ -1046,12 +1179,15 @@ const autoDetectFieldMappings = () => {
       if (fieldId === 'purchaseDate' && (
         columnName.includes('日期') ||
         columnName.includes('date') ||
-        columnName.includes('时间')
+        columnName.includes('时间') ||
+        columnName.includes('day') ||
+        columnName.includes('购买时间')
       )) {
         // 如果还没有映射，或者当前列名包含"最早购买日期"且之前映射的不是"最早购买日期"
         if (field.columnIndex === null ||
             (columnName.includes('最早购买日期') && !rawHeaders.value[field.columnIndex].toLowerCase().includes('最早购买日期'))) {
           field.columnIndex = colIndex
+          addImportLog(`模糊映射: "${rawHeaders.value[colIndex]}" -> 购买日期`)
         }
         break
       }
@@ -1060,11 +1196,13 @@ const autoDetectFieldMappings = () => {
       if (fieldId === 'clientName' && (
         columnName.includes('姓名') ||
         columnName.includes('名字') ||
-        columnName.includes('客户')
+        columnName.includes('客户') ||
+        columnName.includes('name')
       )) {
         // 特别排除"综合客户经理"
-        if (!columnName.includes('综合客户经理')) {
+        if (!columnName.includes('综合客户经理') && !columnName.includes('经理')) {
           field.columnIndex = colIndex
+          addImportLog(`模糊映射: "${rawHeaders.value[colIndex]}" -> 客户姓名`)
           break
         }
       }
@@ -1072,59 +1210,96 @@ const autoDetectFieldMappings = () => {
       // 备注模糊匹配
       if (fieldId === 'remarks' && (
         columnName.includes('remark') ||
-        columnName.includes('comment')
+        columnName.includes('comment') ||
+        columnName.includes('说明') ||
+        columnName.includes('备注')
       )) {
         field.columnIndex = colIndex
+        addImportLog(`模糊映射: "${rawHeaders.value[colIndex]}" -> 备注`)
         break
       }
     }
   }
   
-  // 第三轮：智能数据格式检测
+  // 第三轮：智能数据格式检测（如果还有未映射的必填字段）
   const unmappedRequiredFields = fieldConfigs.value.filter(
     field => field.required && (field.columnIndex === null || field.columnIndex < 0)
   )
   
+  addImportLog(`第三轮智能映射: 还有 ${unmappedRequiredFields.length} 个必填字段未映射`)
+  
   if (unmappedRequiredFields.length > 0 && rawData.value.length > 0) {
-    const sampleRow = rawData.value[0]
+    // 检查多行样本数据以提高准确性
+    const sampleRows = rawData.value.slice(0, Math.min(5, rawData.value.length))
     
-    for (let colIndex = 0; colIndex < sampleRow.length; colIndex++) {
-      const cellValue = sampleRow[colIndex]?.toString() || ''
-      const cleanValue = cellValue.replace(/[^\d.]/g, '')
+    for (let colIndex = 0; colIndex < rawHeaders.value.length; colIndex++) {
+      // 收集该列的多行样本数据
+      const columnSamples = sampleRows.map(row => row[colIndex]?.toString() || '')
       
       for (const field of unmappedRequiredFields) {
         if (field.columnIndex !== null && field.columnIndex >= 0) continue
         
-        // 基金代码格式检测
-        if (field.id === 'fundCode' && /^\d{6}$/.test(cleanValue)) {
-          field.columnIndex = colIndex
-          break
-        }
+        const fieldId = field.id
+        let matchScore = 0
         
-        // 金额格式检测
-        if (field.id === 'purchaseAmount' && cleanValue && !isNaN(parseFloat(cleanValue))) {
-          const amount = parseFloat(cleanValue)
-          if (amount > 100 && amount < 100000000) {
-            field.columnIndex = colIndex
-            break
+        // 分析多行数据
+        for (const sample of columnSamples) {
+          if (!sample || sample.trim() === '') continue
+          
+          const cleanValue = sample.replace(/[^\d.]/g, '')
+          
+          // 基金代码格式检测（6位数字）
+          if (fieldId === 'fundCode') {
+            if (/^\d{6}$/.test(cleanValue)) {
+              matchScore += 3
+            } else if (/^\d+$/.test(cleanValue) && cleanValue.length >= 4 && cleanValue.length <= 8) {
+              matchScore += 1
+            }
+          }
+          
+          // 金额格式检测
+          if (fieldId === 'purchaseAmount') {
+            // 检查是否可能是金额（有小数点，数值较大）
+            if (/^\d+\.?\d*$/.test(cleanValue) && cleanValue !== '') {
+              const numValue = parseFloat(cleanValue)
+              if (numValue > 1000 && numValue < 1000000000) { // 合理金额范围
+                matchScore += 3
+              } else if (numValue > 0) {
+                matchScore += 1
+              }
+            }
+          }
+          
+          // 份额格式检测
+          if (fieldId === 'purchaseShares') {
+            if (/^\d+\.?\d*$/.test(cleanValue) && cleanValue !== '') {
+              const numValue = parseFloat(cleanValue)
+              if (numValue > 100 && numValue < 10000000) { // 合理份额范围
+                matchScore += 3
+              } else if (numValue > 0) {
+                matchScore += 1
+              }
+            }
+          }
+          
+          // 日期格式检测
+          if (fieldId === 'purchaseDate') {
+            if (
+              /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(sample) ||
+              /^\d{8}$/.test(sample.replace(/[^\d]/g, '')) ||
+              /^\d{4}年\d{1,2}月\d{1,2}日$/.test(sample)
+            ) {
+              matchScore += 3
+            } else if (sample.includes('-') || sample.includes('/')) {
+              matchScore += 1
+            }
           }
         }
         
-        // 份额格式检测
-        if (field.id === 'purchaseShares' && cleanValue && !isNaN(parseFloat(cleanValue))) {
-          const shares = parseFloat(cleanValue)
-          if (shares > 0) {
-            field.columnIndex = colIndex
-            break
-          }
-        }
-        
-        // 日期格式检测
-        if (field.id === 'purchaseDate' && (
-          /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(cellValue) ||
-          /^\d{8}$/.test(cellValue.replace(/[^\d]/g, ''))
-        )) {
+        // 如果匹配分数足够高，使用这个映射
+        if (matchScore >= sampleRows.length * 2) { // 至少每行2分
           field.columnIndex = colIndex
+          addImportLog(`智能映射: 列${colIndex + 1} (${rawHeaders.value[colIndex]}) -> ${field.label} (分数: ${matchScore})`)
           break
         }
       }
@@ -1138,7 +1313,50 @@ const autoDetectFieldMappings = () => {
   if (clientNameField && clientNameField.columnIndex === null &&
       clientIDField && clientIDField.columnIndex !== null && clientIDField.columnIndex >= 0) {
     clientNameField.columnIndex = clientIDField.columnIndex
+    addImportLog(`特殊处理: 客户姓名使用客户号列 (列${clientIDField.columnIndex + 1})`)
   }
+  
+  // 第四轮：如果还有未映射的必填字段，尝试根据数据特征自动分配
+  const stillUnmapped = fieldConfigs.value.filter(
+    field => field.required && (field.columnIndex === null || field.columnIndex < 0)
+  )
+  
+  if (stillUnmapped.length > 0 && rawData.value.length > 0) {
+    addImportLog(`第四轮兜底映射: 还有 ${stillUnmapped.length} 个必填字段未映射`)
+    
+    // 尝试为每个未映射字段分配一个未使用的列
+    const usedColumns = fieldConfigs.value
+      .filter(f => f.columnIndex !== null && f.columnIndex >= 0)
+      .map(f => f.columnIndex)
+    
+    const availableColumns = rawHeaders.value
+      .map((_, index) => index)
+      .filter(index => !usedColumns.includes(index))
+    
+    let columnIndex = 0
+    for (const field of stillUnmapped) {
+      if (columnIndex < availableColumns.length) {
+        field.columnIndex = availableColumns[columnIndex]
+        addImportLog(`兜底映射: ${field.label} -> 列${availableColumns[columnIndex] + 1}`)
+        columnIndex++
+      }
+    }
+  }
+  
+  // 记录映射结果
+  const mappedFields = fieldConfigs.value.filter(f => f.columnIndex !== null && f.columnIndex >= 0).length
+  const totalFields = fieldConfigs.value.length
+  
+  // 输出最终的映射关系
+  const mappingResult: Record<string, number> = {}
+  fieldConfigs.value.forEach(field => {
+    if (field.columnIndex !== null && field.columnIndex >= 0) {
+      mappingResult[field.id] = field.columnIndex
+    }
+  })
+  
+  addImportLog(`自动映射完成: ${mappedFields}/${totalFields} 个字段已映射`)
+  addImportLog(`最终映射关系: ${JSON.stringify(mappingResult)}`)
   
   generatePreviewData()
 }
@@ -1148,11 +1366,25 @@ const getSampleData = (columnIndex: number | null): string => {
     return ''
   }
   
-  const sample = rawData.value[0]?.[columnIndex]
-  return sample?.toString() || ''
+  // 尝试获取前3行的样本数据
+  const samples = []
+  for (let i = 0; i < Math.min(3, rawData.value.length); i++) {
+    const sample = rawData.value[i]?.[columnIndex]
+    if (sample !== undefined && sample !== null && sample !== '') {
+      samples.push(sample.toString())
+    }
+  }
+  
+  if (samples.length === 0) {
+    return '(无数据)'
+  }
+  
+  // 如果有多个样本，显示前2个
+  return samples.length > 1 ? `${samples[0]}...` : samples[0]
 }
 
 const onFieldMappingChange = (field: FieldConfig) => {
+  addImportLog(`字段映射更改: ${field.label} -> 列${field.columnIndex !== null ? field.columnIndex + 1 : '未选择'}`)
   generatePreviewData()
 }
 
@@ -1160,6 +1392,7 @@ const applySuggestion = (suggestion: AutoSuggestion) => {
   const field = fieldConfigs.value.find(f => f.id === suggestion.fieldId)
   if (field) {
     field.columnIndex = suggestion.columnIndex
+    addImportLog(`应用智能建议: ${suggestion.message}`)
     generatePreviewData()
   }
 }
@@ -1168,6 +1401,7 @@ const generatePreviewData = () => {
   previewData.value = []
   
   if (!allRequiredFieldsMapped.value || rawData.value.length === 0) {
+    addImportLog('无法生成预览：必要字段未完全映射或没有数据')
     return
   }
   
@@ -1181,7 +1415,8 @@ const generatePreviewData = () => {
       
       fieldConfigs.value.forEach(field => {
         if (field.columnIndex !== null && field.columnIndex >= 0 && row) {
-          rowData[field.id] = row[field.columnIndex]
+          const value = row[field.columnIndex]
+          rowData[field.id] = value !== undefined ? value : ''
         }
       })
       
@@ -1195,19 +1430,34 @@ const generatePreviewData = () => {
       previewData.value.push(storeHolding)
     } catch (error) {
       console.error(`第${i + 1}行数据转换失败:`, error)
+      addImportLog(`第${i + 1}行数据转换失败: ${error}`)
     }
+  }
+  
+  addImportLog(`数据预览生成: ${previewData.value.length} 条记录`)
+  if (previewData.value.length > 0) {
+    const sample = previewData.value[0]
+    addImportLog(`示例记录: ${sample.clientName} | ${sample.fundCode} | ${sample.purchaseAmount} | ${sample.purchaseShares} | ${sample.purchaseDate}`)
   }
 }
 
 const cleanAndTransformRowData = (rowData: any): any => {
   const cleaned: any = {}
   
-  // 客户号
-  const clientID = String(rowData.clientID || '').trim()
-  const cleanID = clientID.replace(/\D/g, '').slice(0, 12)
-  cleaned.clientID = cleanID.padStart(Math.min(12, cleanID.length), '0')
+  addImportLog(`原始行数据: ${JSON.stringify(rowData)}`)
   
-  // 客户姓名：如果没有找到列，使用客户号生成
+  // 客户号 - 确保是字符串并清理
+  let clientID = String(rowData.clientID || '').trim()
+  if (!clientID) {
+    // 如果没有客户号，尝试从客户姓名中提取
+    clientID = String(rowData.clientName || '').trim()
+  }
+  
+  // 清理客户号：移除非数字字符，保留足够长度
+  const cleanID = clientID.replace(/\D/g, '')
+  cleaned.clientID = cleanID || '000000000000'
+  
+  // 客户姓名：如果没有客户姓名，使用客户号
   cleaned.clientName = String(rowData.clientName || '').trim()
   if (!cleaned.clientName || cleaned.clientName === '未知客户') {
     if (cleaned.clientID && cleaned.clientID !== '000000000000') {
@@ -1217,41 +1467,44 @@ const cleanAndTransformRowData = (rowData: any): any => {
     }
   }
   
-  // 基金代码
+  // 基金代码 - 确保6位
   let fundCode = String(rowData.fundCode || '').trim()
-  fundCode = fundCode.replace(/\D/g, '')
+  fundCode = fundCode.replace(/\D/g, '') // 只保留数字
   
   if (fundCode.length === 0) {
     fundCode = '000000'
   } else if (fundCode.length > 6) {
     fundCode = fundCode.slice(0, 6)
+  } else if (fundCode.length < 6) {
+    fundCode = fundCode.padStart(6, '0')
   }
   
-  cleaned.fundCode = fundCode.padStart(6, '0')
+  cleaned.fundCode = fundCode
   
-  // 基金名称：使用基金代码
+  // 基金名称：如果没有提供，使用默认名称
   cleaned.fundName = `基金${cleaned.fundCode}`
   
-  // 购买金额
+  // 购买金额 - 处理各种格式
   let amount = rowData.purchaseAmount
   if (typeof amount === 'string') {
+    // 移除千位分隔符和货币符号
     amount = amount.replace(/[^\d.-]/g, '')
   }
   let parsedAmount = Math.abs(parseFloat(amount) || 0)
   cleaned.purchaseAmount = parseFloat(parsedAmount.toFixed(2))
   
-  // 购买份额
+  // 购买份额 - 处理各种格式
   let shares = rowData.purchaseShares
   if (typeof shares === 'string') {
     shares = shares.replace(/[^\d.-]/g, '')
   }
   let parsedShares = Math.abs(parseFloat(shares) || 0)
-  cleaned.purchaseShares = parseFloat(parsedShares.toFixed(2))
+  cleaned.purchaseShares = parseFloat(parsedShares.toFixed(4)) // 份额可以保留更多小数位
   
-  // 购买日期
+  // 购买日期 - 尝试多种格式
   cleaned.purchaseDate = parseDateValue(rowData.purchaseDate) || new Date()
   
-  // 净值计算
+  // 净值计算：如果购买份额大于0，计算净值
   cleaned.currentNav = cleaned.purchaseShares > 0 ?
     parseFloat((cleaned.purchaseAmount / cleaned.purchaseShares).toFixed(4)) : 1
   
@@ -1263,7 +1516,21 @@ const cleanAndTransformRowData = (rowData: any): any => {
   cleaned.isValid = true
   cleaned.isPinned = false
   
+  // 添加唯一ID - 使用更简单的方式
+  cleaned.id = crypto.randomUUID()
+  
+  addImportLog(`清洗后数据: ${cleaned.clientID} | ${cleaned.fundCode} | ${cleaned.purchaseAmount} | ${cleaned.purchaseShares} | ${cleaned.purchaseDate}`)
+  
   return cleaned
+}
+
+// 生成唯一ID的函数（备用）
+const generateUniqueId = (holding: any): string => {
+  const dateStr = holding.purchaseDate.toISOString().split('T')[0]
+  const amountStr = Math.round(holding.purchaseAmount * 100) // 精确到分
+  const sharesStr = Math.round(holding.purchaseShares * 10000) // 精确到万分
+  
+  return `${holding.clientID}-${holding.fundCode}-${amountStr}-${sharesStr}-${dateStr}`
 }
 
 const parseDateValue = (value: any): Date | null => {
@@ -1271,18 +1538,22 @@ const parseDateValue = (value: any): Date | null => {
   
   const str = String(value).trim()
   
+  addImportLog(`解析日期: "${str}"`)
+  
   // 尝试直接解析
   const date = new Date(str)
   if (!isNaN(date.getTime())) {
+    addImportLog(`直接解析成功: ${date.toISOString()}`)
     return date
   }
   
   // 尝试常见日期格式
   const patterns = [
-    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/,
-    /^(\d{4})(\d{2})(\d{2})$/,
-    /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/,
-    /^(\d{4})年(\d{1,2})月(\d{1,2})日$/
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/, // 2023-01-15, 2023/01/15
+    /^(\d{4})(\d{2})(\d{2})$/, // 20230115
+    /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/, // 15-01-2023, 15/01/2023
+    /^(\d{4})年(\d{1,2})月(\d{1,2})日$/, // 2023年1月15日
+    /^(\d{1,2})月(\d{1,2})日(\d{4})年$/, // 1月15日2023年
   ]
   
   for (const pattern of patterns) {
@@ -1306,41 +1577,50 @@ const parseDateValue = (value: any): Date | null => {
       
       const date = new Date(year, month, day)
       if (!isNaN(date.getTime())) {
+        addImportLog(`模式匹配成功: ${pattern} -> ${date.toISOString()}`)
         return date
       }
     }
   }
   
-  // 尝试Excel日期格式
+  // 尝试Excel日期格式（Excel的日期是从1899-12-30开始的序列号）
   const excelDateNum = parseFloat(str)
   if (!isNaN(excelDateNum) && excelDateNum > 0) {
-    const date = new Date((excelDateNum - 25569) * 86400 * 1000)
+    // Excel日期：1900年1月0日 = 0，但Excel错误地认为1900年是闰年
+    const excelEpoch = new Date(1899, 11, 30) // 1899-12-30
+    const date = new Date(excelEpoch.getTime() + excelDateNum * 86400 * 1000)
     if (!isNaN(date.getTime())) {
+      addImportLog(`Excel日期解析成功: ${excelDateNum} -> ${date.toISOString()}`)
       return date
     }
   }
   
+  addImportLog(`日期解析失败: ${str}`)
   return null
 }
 
 const nextStep = () => {
   if (currentStep.value < 3) {
     currentStep.value++
+    addImportLog(`进入步骤 ${currentStep.value}`)
   }
 }
 
 const prevStep = () => {
   if (currentStep.value > 1) {
     currentStep.value--
+    addImportLog(`返回步骤 ${currentStep.value}`)
   }
 }
 
 const createDeduplicationKey = (holding: any): string => {
   const dateStr = holding.purchaseDate.toISOString().split('T')[0]
-  const amountStr = holding.purchaseAmount.toFixed(2)
-  const sharesStr = holding.purchaseShares.toFixed(2)
+  const amount = Math.round(holding.purchaseAmount * 100) // 精确到分
+  const shares = Math.round(holding.purchaseShares * 10000) // 精确到万分
   
-  return `${holding.clientID}-${holding.fundCode}-${amountStr}-${sharesStr}-${dateStr}`
+  const key = `${holding.clientID}-${holding.fundCode}-${amount}-${shares}-${dateStr}`
+  addImportLog(`生成去重键: ${key}`)
+  return key
 }
 
 const startImport = async () => {
@@ -1352,6 +1632,9 @@ const startImport = async () => {
   isImporting.value = true
   progressPercentage.value = 0
   importResult.value = null
+  importLogs.value = [] // 清空之前的日志
+  
+  addImportLog('开始导入数据...')
   
   try {
     const result = {
@@ -1368,19 +1651,32 @@ const startImport = async () => {
       }
     })
     
+    addImportLog(`字段映射配置: ${JSON.stringify(fieldMap)}`)
+    
     // 获取现有持仓的去重键
     const existingHoldingsKeys = new Set<string>()
-    dataStore.holdings.forEach(holding => {
+    addImportLog(`检查现有持仓数据，共 ${dataStore.holdings.length} 条记录`)
+    
+    dataStore.holdings.forEach((holding, index) => {
       const key = createDeduplicationKey(holding)
       existingHoldingsKeys.add(key)
+      if (index < 5) {
+        addImportLog(`现有持仓 ${index + 1}: ${holding.clientName} - ${holding.fundCode} - ${holding.purchaseAmount} - 去重键: ${key}`)
+      }
     })
     
-    const totalRows = rawData.value.length
+    addImportLog(`现有持仓去重键数量: ${existingHoldingsKeys.size}`)
     
-    // 修复：一次性处理所有行，避免重复导入问题
+    const totalRows = rawData.value.length
+    addImportLog(`开始处理 ${totalRows} 行数据`)
+    
+    // 一次性处理所有行
+    const newHoldings: any[] = []
+    const seenKeys = new Set<string>() // 用于本次导入内的去重
+    
     for (let i = 0; i < totalRows; i++) {
       const row = rawData.value[i]
-      const lineNumber = i + 2
+      const lineNumber = i + 2 // Excel行号（从1开始）+ 头部行（1行）= 行号+2
       
       // 更新进度
       progressPercentage.value = Math.floor(((i + 1) / totalRows) * 100)
@@ -1391,8 +1687,12 @@ const startImport = async () => {
           const colIndex = fieldMap[fieldId]
           if (colIndex !== undefined && row && row[colIndex] !== undefined) {
             rowData[fieldId] = row[colIndex]
+          } else {
+            rowData[fieldId] = ''
           }
         })
+        
+        addImportLog(`处理第 ${lineNumber} 行: ${JSON.stringify(rowData)}`)
         
         const cleanedData = cleanAndTransformRowData(rowData)
         
@@ -1400,28 +1700,31 @@ const startImport = async () => {
         if (!validation.isValid) {
           result.failed++
           result.errors.push(...validation.errors)
+          addImportLog(`第 ${lineNumber} 行验证失败: ${validation.errors.map(e => e.message).join(', ')}`)
           continue
         }
         
         const duplicateKey = createDeduplicationKey(cleanedData)
         
-        // 检查是否已存在相同记录
-        if (existingHoldingsKeys.has(duplicateKey)) {
+        // 检查是否已存在相同记录（包括本次导入内）
+        if (existingHoldingsKeys.has(duplicateKey) || seenKeys.has(duplicateKey)) {
           result.skipped++
           result.errors.push({
             line: lineNumber,
             field: '重复记录',
-            message: '已存在相同的持仓记录（客户号-基金代码-金额-份额-日期组合），已跳过'
+            message: '已存在相同的持仓记录，已跳过'
           })
+          addImportLog(`第 ${lineNumber} 行重复，已跳过`)
           continue
         }
         
-        // 添加到现有集合中，避免本次导入内重复
-        existingHoldingsKeys.add(duplicateKey)
+        // 添加到去重集合中
+        seenKeys.add(duplicateKey)
         
-        const fundHoldingData = dataStore.convertHoldingToFundHolding(cleanedData)
-        dataStore.addHolding(fundHoldingData)
+        // 暂时保存到数组中，稍后批量添加
+        newHoldings.push(cleanedData)
         result.success++
+        addImportLog(`第 ${lineNumber} 行准备导入`)
         
       } catch (error: any) {
         result.failed++
@@ -1430,11 +1733,37 @@ const startImport = async () => {
           field: '系统错误',
           message: error.message || '未知错误'
         })
+        addImportLog(`第 ${lineNumber} 行处理异常: ${error.message}`)
       }
     }
     
+    // 批量添加持仓
+    addImportLog(`开始批量添加 ${newHoldings.length} 条持仓记录`)
+    
+    // 保存导入前的持仓数量
+    const holdingsBeforeImport = dataStore.holdings.length
+    
+    // 使用dataStore的批量添加方法
+    const batchResult = dataStore.batchAddHoldings(newHoldings)
+    
+    addImportLog(`批量添加完成: ${batchResult.success} 成功, ${batchResult.failed} 失败`)
+    addImportLog(`导入前持仓数量: ${holdingsBeforeImport}, 导入后持仓数量: ${dataStore.holdings.length}`)
+    
+    // 更新导入结果
+    result.success = batchResult.success
+    result.failed += batchResult.failed
+    batchResult.errors.forEach((errorMsg, index) => {
+      result.errors.push({
+        line: index + 2, // 估算行号
+        field: '批量添加',
+        message: errorMsg
+      })
+    })
+    
     importResult.value = result
     progressPercentage.value = 100
+    
+    addImportLog(`导入完成统计: 成功 ${result.success} 条，失败 ${result.failed} 条，跳过 ${result.skipped} 条`)
     
     if (result.success > 0) {
       showNotification(`成功导入 ${result.success} 条记录`, 'success')
@@ -1446,23 +1775,33 @@ const startImport = async () => {
     
   } catch (error) {
     console.error('导入过程出错:', error)
+    addImportLog(`导入过程异常: ${error}`)
     showNotification(`导入失败: ${error}`, 'error')
   } finally {
     isImporting.value = false
+    addImportLog('导入过程结束')
   }
 }
 
 const validateRowData = (data: any, lineNumber: number) => {
   const errors: Array<{line: number, field: string, message: string}> = []
   
+  // 客户号验证
   if (!data.clientID || data.clientID.trim() === '' || data.clientID === '000000000000') {
     errors.push({
       line: lineNumber,
       field: '客户号',
       message: '客户号不能为空或无效'
     })
+  } else if (data.clientID.length < 6) {
+    errors.push({
+      line: lineNumber,
+      field: '客户号',
+      message: '客户号太短，至少需要6位'
+    })
   }
   
+  // 基金代码验证
   if (!data.fundCode || !/^\d{6}$/.test(data.fundCode)) {
     errors.push({
       line: lineNumber,
@@ -1477,34 +1816,60 @@ const validateRowData = (data: any, lineNumber: number) => {
     })
   }
   
+  // 购买金额验证
   if (data.purchaseAmount <= 0) {
     errors.push({
       line: lineNumber,
       field: '购买金额',
       message: `购买金额必须大于0，当前值: ${data.purchaseAmount.toFixed(2)}`
     })
-  } else if (data.purchaseAmount > 100000000) {
+  } else if (data.purchaseAmount > 1000000000) { // 10亿
     errors.push({
       line: lineNumber,
       field: '购买金额',
       message: `购买金额过大: ${data.purchaseAmount.toFixed(2)}`
     })
+  } else if (isNaN(data.purchaseAmount)) {
+    errors.push({
+      line: lineNumber,
+      field: '购买金额',
+      message: '购买金额格式无效'
+    })
   }
   
+  // 购买份额验证
   if (data.purchaseShares <= 0) {
     errors.push({
       line: lineNumber,
       field: '购买份额',
-      message: `购买份额必须大于0，当前值: ${data.purchaseShares.toFixed(2)}`
+      message: `购买份额必须大于0，当前值: ${data.purchaseShares.toFixed(4)}`
+    })
+  } else if (isNaN(data.purchaseShares)) {
+    errors.push({
+      line: lineNumber,
+      field: '购买份额',
+      message: '购买份额格式无效'
     })
   }
   
+  // 购买日期验证
   if (!data.purchaseDate || isNaN(data.purchaseDate.getTime())) {
     errors.push({
       line: lineNumber,
       field: '购买日期',
       message: '购买日期格式无效'
     })
+  } else {
+    // 检查日期是否合理（不能是未来日期）
+    const today = new Date()
+    today.setHours(23, 59, 59, 999) // 今天的最后一刻
+    if (data.purchaseDate > today) {
+      errors.push({
+        line: lineNumber,
+        field: '购买日期',
+        message: '购买日期不能是未来日期'
+      })
+    }
   }
   
   return {
@@ -1557,6 +1922,7 @@ const importAnother = () => {
   previewData.value = []
   importResult.value = null
   fileFormatDetected.value = ''
+  importLogs.value = []
   fieldConfigs.value.forEach(field => field.columnIndex = null)
   
   const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
@@ -1565,6 +1931,59 @@ const importAnother = () => {
 </script>
 
 <style scoped>
+/* 原有的样式保持不变，只添加导入日志的样式 */
+
+.import-logs {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  border: 1px solid #e5e7eb;
+}
+
+.import-logs h3 {
+  color: #374151;
+  font-size: 16px;
+  margin: 0 0 15px 0;
+  font-weight: 600;
+}
+
+.logs-container {
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.log-item {
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.log-time {
+  color: #3b82f6;
+  font-weight: 500;
+  min-width: 70px;
+}
+
+.log-separator {
+  color: #9ca3af;
+}
+
+.log-message {
+  color: #4b5563;
+  flex: 1;
+  word-break: break-all;
+}
+
+/* 原有的其他样式保持不变 */
 .import-holding-view {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

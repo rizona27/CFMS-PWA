@@ -816,6 +816,13 @@ export const useDataStore = defineStore('data', () => {
         throw new Error('持仓数据无效')
       }
       
+      // 🔴 修复：检查是否已存在相同ID的持仓
+      const existingIndex = holdings.value.findIndex(h => h.id === newHolding.id)
+      if (existingIndex !== -1) {
+        console.warn('发现重复ID的持仓，生成新ID', newHolding.id)
+        newHolding.id = crypto.randomUUID()
+      }
+      
       holdings.value.push(newHolding)
       saveData()
       
@@ -1097,6 +1104,20 @@ export const useDataStore = defineStore('data', () => {
       }
     })
     
+    // 修复重复ID - 这是一个关键修复点
+    const idMap = new Map<string, number>()
+    holdings.value.forEach((holding, index) => {
+      if (holding.id) {
+        if (idMap.has(holding.id)) {
+          console.warn(`发现重复ID: ${holding.id}，为持仓重新生成ID`)
+          holding.id = crypto.randomUUID()
+          repairedCount++
+        } else {
+          idMap.set(holding.id, index)
+        }
+      }
+    })
+    
     // 修复无效日期
     holdings.value.forEach(holding => {
       if (!(holding.purchaseDate instanceof Date) || isNaN(holding.purchaseDate.getTime())) {
@@ -1115,6 +1136,53 @@ export const useDataStore = defineStore('data', () => {
     }
     
     return repairedCount
+  }
+
+  // 🔴 添加：批量添加持仓方法，防止ID冲突
+  const batchAddHoldings = (holdingsData: Partial<FundHolding>[]): { success: number; failed: number; errors: string[] } => {
+    const result = {
+      success: 0,
+      failed: 0,
+      errors: [] as string[]
+    }
+    
+    const existingIds = new Set(holdings.value.map(h => h.id))
+    const newHoldings: FundHolding[] = []
+    
+    holdingsData.forEach((holdingData, index) => {
+      try {
+        let newHolding = createFundHolding(holdingData)
+        
+        // 检查ID唯一性
+        if (existingIds.has(newHolding.id) || newHoldings.some(h => h.id === newHolding.id)) {
+          console.warn(`持仓 ${index} 存在重复ID ${newHolding.id}，重新生成`)
+          newHolding.id = crypto.randomUUID()
+        }
+        
+        if (!isValidHolding(newHolding)) {
+          throw new Error('持仓数据无效')
+        }
+        
+        existingIds.add(newHolding.id)
+        newHoldings.push(newHolding)
+        result.success++
+        
+      } catch (error: any) {
+        result.failed++
+        result.errors.push(`第${index + 1}条数据: ${error.message}`)
+        console.error(`批量添加持仓失败 (${index + 1}):`, error)
+      }
+    })
+    
+    if (newHoldings.length > 0) {
+      holdings.value.push(...newHoldings)
+      saveData()
+      
+      safeAddLog(`批量添加 ${newHoldings.length} 条持仓记录`, 'info')
+      showToastMessage(`成功添加 ${newHoldings.length} 条持仓记录`, 'success')
+    }
+    
+    return result
   }
 
   const init = () => {
@@ -1205,6 +1273,9 @@ export const useDataStore = defineStore('data', () => {
     
     // 🔴 新增数据一致性检查方法
     checkDataConsistency,
-    repairDataIssues
+    repairDataIssues,
+    
+    // 🔴 新增批量添加方法
+    batchAddHoldings
   }
 })
