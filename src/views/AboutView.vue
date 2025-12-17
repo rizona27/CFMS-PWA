@@ -45,6 +45,31 @@
     <div class="scrollable-content-section">
       <div class="content-scroll">
         <div class="content-wrapper">
+          <!-- 更新日志放在统计信息上方 -->
+          <div class="update-log-section">
+            <div class="auto-scroll-container">
+              <div
+                ref="scrollContentRef"
+                class="scroll-content"
+                :style="{ transform: `translateY(-${Math.round(scrollOffset)}px)` }"
+                @mouseenter="pauseScroll"
+                @mouseleave="resumeScroll"
+              >
+                <div v-for="(log, index) in scrollLogs" :key="index" class="log-item">
+                  <div class="log-header">
+                    <span class="log-version">{{ log.version }}</span>
+                  </div>
+                  <div class="log-content">
+                    <p class="log-description">{{ log.description }}</p>
+                  </div>
+                </div>
+              </div>
+              <div class="scroll-mask top-mask"></div>
+              <div class="scroll-mask bottom-mask"></div>
+            </div>
+          </div>
+          
+          <!-- 统计信息部分 -->
           <div class="stats-section">
             <!-- 基金缓存统计 -->
             <div class="stat-card">
@@ -66,9 +91,7 @@
                 <div class="stat-item">
                   <span class="stat-label">最后更新时间:</span>
                   <span class="stat-value">{{ fundCacheStats.lastUpdated ? formatDate(fundCacheStats.lastUpdated) : '加载中...' }}</span>
-                </div>
-                <div class="stat-refresh-info">
-                  <span class="refresh-label">每15分钟自动刷新</span>
+                  <span class="stat-refresh-info">每15分钟自动刷新</span>
                 </div>
               </div>
             </div>
@@ -107,10 +130,7 @@
                       <div v-for="(location, index) in userLoginStats.locations" :key="index" class="location-item-detail">
                         <div class="location-info">
                           <span class="location-name">{{ location.name }}</span>
-                          <div class="location-stats">
-                            <span class="location-count">{{ location.count }}次</span>
-                            <span class="location-users">({{ location.userCount }}人)</span>
-                          </div>
+                          <span class="location-count">{{ location.count }}次</span>
                         </div>
                         <div class="location-bar">
                           <div
@@ -132,7 +152,7 @@
             <div class="stat-card">
               <div class="stat-header">
                 <div class="stat-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org2000/svg">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                     <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -163,9 +183,6 @@
                           }"
                         ></div>
                       </div>
-                      <div class="period-users">
-                        <span class="users-count">{{ period.uniqueUsers }}人</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -173,30 +190,9 @@
             </div>
           </div>
           
+          <!-- 将分割线移到更新日志下方 -->
           <div class="divider decorative"></div>
           
-          <div class="update-log-section">
-            <div class="auto-scroll-container">
-              <div
-                ref="scrollContentRef"
-                class="scroll-content"
-                :style="{ transform: `translateY(-${Math.round(scrollOffset)}px)` }"
-                @mouseenter="pauseScroll"
-                @mouseleave="resumeScroll"
-              >
-                <div v-for="(log, index) in scrollLogs" :key="index" class="log-item">
-                  <div class="log-header">
-                    <span class="log-version">{{ log.version }}</span>
-                  </div>
-                  <div class="log-content">
-                    <p class="log-description">{{ log.description }}</p>
-                  </div>
-                </div>
-              </div>
-              <div class="scroll-mask top-mask"></div>
-              <div class="scroll-mask bottom-mask"></div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -716,20 +712,12 @@ onUnmounted(() => {
   padding: 0 16px 100px;
 }
 
-.section-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
-  text-align: left;
-}
-
-:root.dark .section-title {
-  color: #e5e7eb;
+.update-log-section {
+  margin-bottom: 24px;
 }
 
 .stats-section {
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .stat-card {
@@ -737,9 +725,10 @@ onUnmounted(() => {
   border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  padding: 20px;
+  padding: 16px;
   margin-bottom: 16px;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  min-height: 120px;
 }
 
 :root.dark .stat-card {
@@ -757,8 +746,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -767,8 +756,8 @@ onUnmounted(() => {
 }
 
 .stat-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -778,7 +767,7 @@ onUnmounted(() => {
 }
 
 .stat-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: #333;
   margin: 0;
@@ -791,15 +780,16 @@ onUnmounted(() => {
 .stat-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .stat-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 6px 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  min-height: 24px;
 }
 
 :root.dark .stat-item {
@@ -814,6 +804,7 @@ onUnmounted(() => {
   font-size: 14px;
   color: #666;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 :root.dark .stat-label {
@@ -821,9 +812,13 @@ onUnmounted(() => {
 }
 
 .stat-value {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #333;
+  white-space: nowrap;
+  text-align: right;
+  flex: 1;
+  margin-left: 8px;
 }
 
 :root.dark .stat-value {
@@ -831,17 +826,14 @@ onUnmounted(() => {
 }
 
 .stat-refresh-info {
-  margin-top: 8px;
-  text-align: right;
-}
-
-.refresh-label {
   font-size: 11px;
   color: #888;
   font-style: italic;
+  margin-left: 8px;
+  white-space: nowrap;
 }
 
-:root.dark .refresh-label {
+:root.dark .stat-refresh-info {
   color: #9ca3af;
 }
 
@@ -850,8 +842,9 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 20px;
+  padding: 16px;
   color: #666;
+  min-height: 80px;
 }
 
 :root.dark .loading-indicator {
@@ -872,10 +865,14 @@ onUnmounted(() => {
 }
 
 .error-message {
-  padding: 20px;
+  padding: 16px;
   color: #e74c3c;
   text-align: center;
   font-size: 14px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 :root.dark .error-message {
@@ -885,15 +882,15 @@ onUnmounted(() => {
 .login-summary {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .login-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 6px 0;
 }
 
 .login-label {
@@ -906,7 +903,7 @@ onUnmounted(() => {
 }
 
 .login-value {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #333;
 }
@@ -924,14 +921,14 @@ onUnmounted(() => {
 }
 
 .location-section {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .sub-title {
   font-size: 14px;
   font-weight: 600;
   color: #333;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 :root.dark .sub-title {
@@ -941,8 +938,8 @@ onUnmounted(() => {
 .location-list-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: 180px;
+  gap: 8px;
+  max-height: 150px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -951,7 +948,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 0;
+  padding: 6px 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -970,16 +967,13 @@ onUnmounted(() => {
   color: #333;
   font-weight: 500;
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 :root.dark .location-name {
   color: #e5e7eb;
-}
-
-.location-stats {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .location-count {
@@ -988,17 +982,6 @@ onUnmounted(() => {
   font-weight: 600;
   min-width: 50px;
   text-align: right;
-}
-
-.location-users {
-  font-size: 12px;
-  color: #666;
-  min-width: 40px;
-  text-align: right;
-}
-
-:root.dark .location-users {
-  color: #9ca3af;
 }
 
 .location-bar {
@@ -1015,7 +998,7 @@ onUnmounted(() => {
 .time-periods {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .time-period {
@@ -1067,31 +1050,13 @@ onUnmounted(() => {
   transition: width 0.5s ease;
 }
 
-.period-users {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.users-count {
-  font-size: 12px;
-  color: #666;
-}
-
-:root.dark .users-count {
-  color: #9ca3af;
-}
-
-.update-log-section {
-  margin-top: 24px;
-}
-
 .auto-scroll-container {
   position: relative;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  height: 200px;
+  height: 180px;
   overflow: hidden;
 }
 
@@ -1106,7 +1071,7 @@ onUnmounted(() => {
 }
 
 .log-item {
-  padding: 16px;
+  padding: 14px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -1121,11 +1086,11 @@ onUnmounted(() => {
 .log-header {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .log-version {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #14B8A6;
   line-height: 1.2;
@@ -1142,9 +1107,9 @@ onUnmounted(() => {
 }
 
 .log-description {
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
-  line-height: 1.5;
+  line-height: 1.4;
   white-space: pre-line;
   margin: 0;
 }
@@ -1157,7 +1122,7 @@ onUnmounted(() => {
   position: absolute;
   left: 0;
   right: 0;
-  height: 40px;
+  height: 30px;
   pointer-events: none;
   z-index: 2;
 }
@@ -1185,7 +1150,7 @@ onUnmounted(() => {
 .divider {
   height: 1px;
   background: rgba(0, 0, 0, 0.1);
-  margin: 24px 0;
+  margin: 20px 0;
 }
 
 :root.dark .divider {
@@ -1195,7 +1160,7 @@ onUnmounted(() => {
 .divider.decorative {
   height: 2px;
   background: linear-gradient(90deg, transparent, #14B8A6, transparent);
-  margin: 32px 0;
+  margin: 24px 0;
   opacity: 0.5;
 }
 
@@ -1229,40 +1194,41 @@ onUnmounted(() => {
   }
   
   .stat-card {
-    padding: 16px;
+    padding: 14px;
+    min-height: 110px;
   }
   
   .stat-icon {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
   }
   
   .stat-title {
-    font-size: 16px;
-  }
-  
-  .location-list-content {
-    max-height: 150px;
-  }
-  
-  .auto-scroll-container {
-    height: 180px;
-  }
-  
-  .log-item {
-    padding: 14px;
-  }
-  
-  .log-version {
     font-size: 15px;
   }
   
+  .location-list-content {
+    max-height: 120px;
+  }
+  
+  .auto-scroll-container {
+    height: 160px;
+  }
+  
+  .log-item {
+    padding: 12px;
+  }
+  
+  .log-version {
+    font-size: 14px;
+  }
+  
   .log-description {
-    font-size: 13px;
+    font-size: 12px;
   }
   
   .scroll-mask {
-    height: 30px;
+    height: 25px;
   }
 }
 
@@ -1298,21 +1264,23 @@ onUnmounted(() => {
   }
   
   .stat-card {
-    padding: 14px;
+    padding: 12px;
+    min-height: 100px;
   }
   
   .stat-header {
-    gap: 10px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
   }
   
   .stat-icon {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
   }
   
   .stat-title {
-    font-size: 15px;
+    font-size: 14px;
   }
   
   .stat-label {
@@ -1320,27 +1288,31 @@ onUnmounted(() => {
   }
   
   .stat-value {
-    font-size: 14px;
+    font-size: 13px;
+  }
+  
+  .stat-refresh-info {
+    font-size: 10px;
   }
   
   .location-list-content {
-    max-height: 130px;
+    max-height: 100px;
   }
   
   .auto-scroll-container {
-    height: 160px;
+    height: 140px;
   }
   
   .log-item {
-    padding: 12px;
+    padding: 10px;
   }
   
   .log-version {
-    font-size: 14px;
+    font-size: 13px;
   }
   
   .log-description {
-    font-size: 12px;
+    font-size: 11px;
   }
 }
 
@@ -1361,7 +1333,7 @@ onUnmounted(() => {
   }
   
   .auto-scroll-container {
-    height: 140px;
+    height: 120px;
   }
 }
 
@@ -1376,6 +1348,11 @@ onUnmounted(() => {
   
   .content-wrapper {
     padding: 0 16px 60px;
+  }
+  
+  .stat-card {
+    min-height: 90px;
+    padding: 10px;
   }
 }
 
@@ -1413,7 +1390,7 @@ onUnmounted(() => {
   }
   
   .auto-scroll-container {
-    max-height: 200px;
+    max-height: 180px;
     overflow: hidden;
   }
 }
