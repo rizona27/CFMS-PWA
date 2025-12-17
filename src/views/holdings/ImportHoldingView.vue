@@ -72,8 +72,6 @@
       <!-- 步骤2: 配置列映射 -->
       <div v-if="currentStep === 2" class="step-content">
         <div class="mapping-section">
-          <!-- 去掉了标题和描述 -->
-          
           <!-- 文件原始数据预览 -->
           <div class="original-preview">
             <h3>原始数据预览（前5行）</h3>
@@ -237,8 +235,6 @@
       <!-- 步骤3: 预览和导入 -->
       <div v-if="currentStep === 3" class="step-content">
         <div class="preview-section">
-          <!-- 去掉了"预览并导入"标题 -->
-          
           <!-- 转换后数据预览 -->
           <div class="converted-preview">
             <h3>转换后数据预览（前5条）</h3>
@@ -507,10 +503,10 @@ const autoSuggestions = computed(() => {
       
       // 客户号映射逻辑
       if (fieldId === 'clientID' && (
-        columnName.includes('客户号') || 
+        columnName.includes('客户号') ||
         columnName.includes('核心客户号') ||
-        columnName.includes('编号') || 
-        columnName.includes('id') || 
+        columnName.includes('编号') ||
+        columnName.includes('id') ||
         columnName.includes('证件号') ||
         columnName.includes('客户编号')
       )) {
@@ -524,9 +520,9 @@ const autoSuggestions = computed(() => {
       
       // 基金代码映射逻辑
       if (fieldId === 'fundCode' && (
-        columnName.includes('代码') || 
-        columnName.includes('fund') || 
-        columnName.includes('基金代码') || 
+        columnName.includes('代码') ||
+        columnName.includes('fund') ||
+        columnName.includes('基金代码') ||
         columnName.includes('产品代码') ||
         columnName.includes('代码')
       )) {
@@ -540,9 +536,9 @@ const autoSuggestions = computed(() => {
       
       // 购买金额映射逻辑
       if (fieldId === 'purchaseAmount' && (
-        columnName.includes('金额') || 
-        columnName.includes('成本') || 
-        columnName.includes('amount') || 
+        columnName.includes('金额') ||
+        columnName.includes('成本') ||
+        columnName.includes('amount') ||
         columnName.includes('price') ||
         columnName.includes('持仓成本') ||
         columnName.includes('购买金额')
@@ -557,8 +553,8 @@ const autoSuggestions = computed(() => {
       
       // 购买份额映射逻辑
       if (fieldId === 'purchaseShares' && (
-        columnName.includes('份额') || 
-        columnName.includes('shares') || 
+        columnName.includes('份额') ||
+        columnName.includes('shares') ||
         columnName.includes('quantity') ||
         columnName.includes('当前份额')
       )) {
@@ -570,20 +566,24 @@ const autoSuggestions = computed(() => {
         break
       }
       
-      // 购买日期映射逻辑
-      if (fieldId === 'purchaseDate' && (
-        columnName.includes('日期') || 
-        columnName.includes('date') || 
-        columnName.includes('时间') ||
-        columnName.includes('购买日期') ||
-        columnName.includes('最早购买日期')
-      )) {
-        suggestions.push({
-          fieldId: fieldId,
-          columnIndex: colIndex,
-          message: `将"${rawHeaders.value[colIndex]}"映射为"${field.label}"`
-        })
-        break
+      // 购买日期映射逻辑 - 优先映射最早购买日期
+      if (fieldId === 'purchaseDate') {
+        if (columnName.includes('最早购买日期')) {
+          suggestions.push({
+            fieldId: fieldId,
+            columnIndex: colIndex,
+            message: `将"${rawHeaders.value[colIndex]}"映射为"${field.label}"`
+          })
+          break
+        }
+        if (columnName.includes('购买日期') || columnName.includes('date') || columnName.includes('时间')) {
+          suggestions.push({
+            fieldId: fieldId,
+            columnIndex: colIndex,
+            message: `将"${rawHeaders.value[colIndex]}"映射为"${field.label}"`
+          })
+          break
+        }
       }
       
       // 智能检测数据格式
@@ -923,19 +923,86 @@ const parseCSVLine = (line: string, delimiter: string): string[] => {
 const autoDetectFieldMappings = () => {
   fieldConfigs.value.forEach(field => field.columnIndex = null)
   
+  // 第一轮：精确匹配
   for (let colIndex = 0; colIndex < rawHeaders.value.length; colIndex++) {
     const columnName = rawHeaders.value[colIndex].toLowerCase()
     
     for (const field of fieldConfigs.value) {
       if (field.columnIndex !== null && field.columnIndex >= 0) continue
       
-      const fieldName = field.label.toLowerCase()
       const fieldId = field.id
       
-      // 客户号映射
+      // 客户号映射 - 优先精确匹配
+      if (fieldId === 'clientID') {
+        if (columnName === '客户号' || columnName === '核心客户号' || columnName === '客户编号') {
+          field.columnIndex = colIndex
+          break
+        }
+      }
+      
+      // 基金代码映射 - 优先精确匹配
+      if (fieldId === 'fundCode') {
+        if (columnName === '基金代码' || columnName === '代码') {
+          field.columnIndex = colIndex
+          break
+        }
+      }
+      
+      // 购买金额映射 - 优先精确匹配
+      if (fieldId === 'purchaseAmount') {
+        if (columnName === '购买金额' || columnName === '持仓成本(元)') {
+          field.columnIndex = colIndex
+          break
+        }
+      }
+      
+      // 购买份额映射 - 优先精确匹配
+      if (fieldId === 'purchaseShares') {
+        if (columnName === '购买份额' || columnName === '当前份额') {
+          field.columnIndex = colIndex
+          break
+        }
+      }
+      
+      // 购买日期映射 - 优先映射最早购买日期
+      if (fieldId === 'purchaseDate') {
+        if (columnName.includes('最早购买日期')) {
+          field.columnIndex = colIndex
+          break
+        }
+        if (columnName === '购买日期') {
+          field.columnIndex = colIndex
+          break
+        }
+      }
+      
+      // 客户姓名映射 - 避免映射到综合客户经理
+      if (fieldId === 'clientName') {
+        if ((columnName === '客户姓名' || columnName === '姓名') && !columnName.includes('综合客户经理')) {
+          field.columnIndex = colIndex
+          break
+        }
+      }
+      
+      // 备注映射
+      if (fieldId === 'remarks' && columnName === '备注') {
+        field.columnIndex = colIndex
+        break
+      }
+    }
+  }
+  
+  // 第二轮：模糊匹配（对于还未映射的字段）
+  for (let colIndex = 0; colIndex < rawHeaders.value.length; colIndex++) {
+    const columnName = rawHeaders.value[colIndex].toLowerCase()
+    
+    for (const field of fieldConfigs.value) {
+      if (field.columnIndex !== null && field.columnIndex >= 0) continue
+      
+      const fieldId = field.id
+      
+      // 客户号模糊匹配
       if (fieldId === 'clientID' && (
-        columnName === '客户号' ||
-        columnName === '核心客户号' ||
         columnName.includes('客户号') ||
         columnName.includes('编号') ||
         columnName.includes('id') ||
@@ -945,21 +1012,17 @@ const autoDetectFieldMappings = () => {
         break
       }
       
-      // 基金代码映射
+      // 基金代码模糊匹配
       if (fieldId === 'fundCode' && (
-        columnName === '基金代码' ||
         columnName.includes('代码') ||
-        columnName.includes('fund') ||
-        columnName.includes('基金代码')
+        columnName.includes('fund')
       )) {
         field.columnIndex = colIndex
         break
       }
       
-      // 购买金额映射
+      // 购买金额模糊匹配
       if (fieldId === 'purchaseAmount' && (
-        columnName === '购买金额' ||
-        columnName === '持仓成本(元)' ||
         columnName.includes('金额') ||
         columnName.includes('成本') ||
         columnName.includes('amount') ||
@@ -969,10 +1032,8 @@ const autoDetectFieldMappings = () => {
         break
       }
       
-      // 购买份额映射
+      // 购买份额模糊匹配
       if (fieldId === 'purchaseShares' && (
-        columnName === '购买份额' ||
-        columnName === '当前份额' ||
         columnName.includes('份额') ||
         columnName.includes('shares') ||
         columnName.includes('quantity')
@@ -981,33 +1042,35 @@ const autoDetectFieldMappings = () => {
         break
       }
       
-      // 购买日期映射
+      // 购买日期模糊匹配
       if (fieldId === 'purchaseDate' && (
-        columnName === '购买日期' ||
-        columnName === '最早购买日期' ||
         columnName.includes('日期') ||
         columnName.includes('date') ||
         columnName.includes('时间')
       )) {
-        field.columnIndex = colIndex
+        // 如果还没有映射，或者当前列名包含"最早购买日期"且之前映射的不是"最早购买日期"
+        if (field.columnIndex === null ||
+            (columnName.includes('最早购买日期') && !rawHeaders.value[field.columnIndex].toLowerCase().includes('最早购买日期'))) {
+          field.columnIndex = colIndex
+        }
         break
       }
       
-      // 客户姓名映射（可选）
+      // 客户姓名模糊匹配 - 避免综合客户经理
       if (fieldId === 'clientName' && (
-        columnName === '客户姓名' ||
-        columnName === '姓名' ||
         columnName.includes('姓名') ||
         columnName.includes('名字') ||
         columnName.includes('客户')
       )) {
-        field.columnIndex = colIndex
-        break
+        // 特别排除"综合客户经理"
+        if (!columnName.includes('综合客户经理')) {
+          field.columnIndex = colIndex
+          break
+        }
       }
       
-      // 备注映射（可选）
+      // 备注模糊匹配
       if (fieldId === 'remarks' && (
-        columnName === '备注' ||
         columnName.includes('remark') ||
         columnName.includes('comment')
       )) {
@@ -1017,7 +1080,7 @@ const autoDetectFieldMappings = () => {
     }
   }
   
-  // 智能数据格式检测
+  // 第三轮：智能数据格式检测
   const unmappedRequiredFields = fieldConfigs.value.filter(
     field => field.required && (field.columnIndex === null || field.columnIndex < 0)
   )
@@ -1055,6 +1118,15 @@ const autoDetectFieldMappings = () => {
             break
           }
         }
+        
+        // 日期格式检测
+        if (field.id === 'purchaseDate' && (
+          /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(cellValue) ||
+          /^\d{8}$/.test(cellValue.replace(/[^\d]/g, ''))
+        )) {
+          field.columnIndex = colIndex
+          break
+        }
       }
     }
   }
@@ -1063,7 +1135,7 @@ const autoDetectFieldMappings = () => {
   const clientNameField = fieldConfigs.value.find(f => f.id === 'clientName')
   const clientIDField = fieldConfigs.value.find(f => f.id === 'clientID')
   
-  if (clientNameField && clientNameField.columnIndex === null && 
+  if (clientNameField && clientNameField.columnIndex === null &&
       clientIDField && clientIDField.columnIndex !== null && clientIDField.columnIndex >= 0) {
     clientNameField.columnIndex = clientIDField.columnIndex
   }
@@ -1130,25 +1202,20 @@ const generatePreviewData = () => {
 const cleanAndTransformRowData = (rowData: any): any => {
   const cleaned: any = {}
   
-  // 客户姓名：如果没有找到列，使用客户号生成
-  cleaned.clientName = String(rowData.clientName || '').trim()
-  if (!cleaned.clientName || cleaned.clientName === '未知客户') {
-    if (rowData.clientID) {
-      const clientID = String(rowData.clientID).trim()
-      if (clientID.length > 0) {
-        cleaned.clientName = `客户${clientID.slice(-6)}`
-      } else {
-        cleaned.clientName = '未知客户'
-      }
-    } else {
-      cleaned.clientName = '未知客户'
-    }
-  }
-  
   // 客户号
   const clientID = String(rowData.clientID || '').trim()
   const cleanID = clientID.replace(/\D/g, '').slice(0, 12)
   cleaned.clientID = cleanID.padStart(Math.min(12, cleanID.length), '0')
+  
+  // 客户姓名：如果没有找到列，使用客户号生成
+  cleaned.clientName = String(rowData.clientName || '').trim()
+  if (!cleaned.clientName || cleaned.clientName === '未知客户') {
+    if (cleaned.clientID && cleaned.clientID !== '000000000000') {
+      cleaned.clientName = `客户${cleaned.clientID.slice(-6)}`
+    } else {
+      cleaned.clientName = '未知客户'
+    }
+  }
   
   // 基金代码
   let fundCode = String(rowData.fundCode || '').trim()
@@ -1162,7 +1229,7 @@ const cleanAndTransformRowData = (rowData: any): any => {
   
   cleaned.fundCode = fundCode.padStart(6, '0')
   
-  // 基金名称：不需要，直接使用基金代码
+  // 基金名称：使用基金代码
   cleaned.fundName = `基金${cleaned.fundCode}`
   
   // 购买金额
@@ -1273,7 +1340,7 @@ const createDeduplicationKey = (holding: any): string => {
   const amountStr = holding.purchaseAmount.toFixed(2)
   const sharesStr = holding.purchaseShares.toFixed(2)
   
-  return `${holding.clientName}-${holding.fundCode}-${amountStr}-${sharesStr}-${dateStr}-${holding.clientID}-${holding.remarks}`
+  return `${holding.clientID}-${holding.fundCode}-${amountStr}-${sharesStr}-${dateStr}`
 }
 
 const startImport = async () => {
@@ -1301,21 +1368,21 @@ const startImport = async () => {
       }
     })
     
+    // 获取现有持仓的去重键
     const existingHoldingsKeys = new Set<string>()
     dataStore.holdings.forEach(holding => {
       const key = createDeduplicationKey(holding)
       existingHoldingsKeys.add(key)
     })
     
-    const duplicateKeys = new Set<string>()
-    
     const totalRows = rawData.value.length
     
-    // 修复：一次导入所有数据
+    // 修复：一次性处理所有行，避免重复导入问题
     for (let i = 0; i < totalRows; i++) {
       const row = rawData.value[i]
       const lineNumber = i + 2
       
+      // 更新进度
       progressPercentage.value = Math.floor(((i + 1) / totalRows) * 100)
       
       try {
@@ -1338,17 +1405,18 @@ const startImport = async () => {
         
         const duplicateKey = createDeduplicationKey(cleanedData)
         
-        if (existingHoldingsKeys.has(duplicateKey) || duplicateKeys.has(duplicateKey)) {
+        // 检查是否已存在相同记录
+        if (existingHoldingsKeys.has(duplicateKey)) {
           result.skipped++
           result.errors.push({
             line: lineNumber,
             field: '重复记录',
-            message: '已存在相同的持仓记录，已跳过'
+            message: '已存在相同的持仓记录（客户号-基金代码-金额-份额-日期组合），已跳过'
           })
           continue
         }
         
-        duplicateKeys.add(duplicateKey)
+        // 添加到现有集合中，避免本次导入内重复
         existingHoldingsKeys.add(duplicateKey)
         
         const fundHoldingData = dataStore.convertHoldingToFundHolding(cleanedData)
@@ -1387,19 +1455,11 @@ const startImport = async () => {
 const validateRowData = (data: any, lineNumber: number) => {
   const errors: Array<{line: number, field: string, message: string}> = []
   
-  if (!data.clientName || data.clientName.trim() === '' || data.clientName === '未知客户') {
-    errors.push({
-      line: lineNumber,
-      field: '客户姓名',
-      message: '客户姓名不能为空或未知'
-    })
-  }
-  
-  if (!data.clientID || data.clientID.trim() === '') {
+  if (!data.clientID || data.clientID.trim() === '' || data.clientID === '000000000000') {
     errors.push({
       line: lineNumber,
       field: '客户号',
-      message: '客户号不能为空'
+      message: '客户号不能为空或无效'
     })
   }
   
