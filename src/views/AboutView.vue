@@ -1,6 +1,5 @@
 <template>
   <div class="about-view">
-    <!-- 使用统一的 NavBar 组件 -->
     <NavBar title="关于" backText="返回" :shadow="false" />
     
     <div class="fixed-top-section">
@@ -46,7 +45,6 @@
     <div class="scrollable-content-section">
       <div class="content-scroll">
         <div class="content-wrapper">
-          <!-- 去掉系统统计标题，直接显示统计卡片 -->
           <div class="stats-section">
             <!-- 基金缓存统计 -->
             <div class="stat-card">
@@ -69,10 +67,13 @@
                   <span class="stat-label">最后更新时间:</span>
                   <span class="stat-value">{{ fundCacheStats.lastUpdated ? formatDate(fundCacheStats.lastUpdated) : '加载中...' }}</span>
                 </div>
+                <div class="stat-refresh-info">
+                  <span class="refresh-label">每15分钟自动刷新</span>
+                </div>
               </div>
             </div>
             
-            <!-- 用户分布统计 -->
+            <!-- 用户登录统计 -->
             <div class="stat-card">
               <div class="stat-header">
                 <div class="stat-icon">
@@ -82,30 +83,44 @@
                     <path d="M4.93 4.93l14.14 14.14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                   </svg>
                 </div>
-                <h4 class="stat-title">用户分布</h4>
+                <h4 class="stat-title">用户登录统计</h4>
               </div>
               <div class="stat-content">
-                <div v-if="userLocationStats.loading" class="loading-indicator">
+                <div v-if="userLoginStats.loading" class="loading-indicator">
                   <div class="loading-spinner"></div>
-                  <span>正在分析用户数据...</span>
+                  <span>正在加载登录数据...</span>
                 </div>
-                <div v-else-if="userLocationStats.error" class="error-message">
-                  {{ userLocationStats.error }}
+                <div v-else-if="userLoginStats.error" class="error-message">
+                  {{ userLoginStats.error }}
                 </div>
                 <div v-else>
-                  <div class="location-summary">
-                    <div class="location-item">
-                      <span class="location-label">累计用户:</span>
-                      <span class="location-value">{{ userLocationStats.totalCount || 0 }} 人</span>
+                  <div class="login-summary">
+                    <div class="login-item">
+                      <span class="login-label">累计登录次数:</span>
+                      <span class="login-value">{{ userLoginStats.totalLogins || 0 }} 次</span>
                     </div>
                   </div>
                   
-                  <div v-if="userLocationStats.locations && userLocationStats.locations.length > 0" class="location-list">
-                    <div class="sub-title">用户地域分布:</div>
+                  <div v-if="userLoginStats.locations && userLoginStats.locations.length > 0" class="location-section">
+                    <div class="sub-title">登录地域分布:</div>
                     <div class="location-list-content">
-                      <div v-for="(location, index) in userLocationStats.locations" :key="index" class="location-item-detail">
-                        <span class="location-name">{{ location.name }}</span>
-                        <span class="location-count">{{ location.count }}人</span>
+                      <div v-for="(location, index) in userLoginStats.locations" :key="index" class="location-item-detail">
+                        <div class="location-info">
+                          <span class="location-name">{{ location.name }}</span>
+                          <div class="location-stats">
+                            <span class="location-count">{{ location.count }}次</span>
+                            <span class="location-users">({{ location.userCount }}人)</span>
+                          </div>
+                        </div>
+                        <div class="location-bar">
+                          <div
+                            class="bar-fill"
+                            :style="{
+                              width: `${getLocationPercentage(location.count, userLoginStats.totalLogins)}%`,
+                              backgroundColor: getLocationColor(index)
+                            }"
+                          ></div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -113,21 +128,21 @@
               </div>
             </div>
             
-            <!-- 用户登录时间段 -->
+            <!-- 登录时段统计 -->
             <div class="stat-card">
               <div class="stat-header">
                 <div class="stat-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                     <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </div>
-                <h4 class="stat-title">用户登录时间段</h4>
+                <h4 class="stat-title">登录时段统计</h4>
               </div>
               <div class="stat-content">
                 <div v-if="loginTimeStats.loading" class="loading-indicator">
                   <div class="loading-spinner"></div>
-                  <span>正在分析登录数据...</span>
+                  <span>正在分析登录时段...</span>
                 </div>
                 <div v-else-if="loginTimeStats.error" class="error-message">
                   {{ loginTimeStats.error }}
@@ -137,7 +152,7 @@
                     <div class="time-period" v-for="(period, index) in loginTimeStats.periods" :key="index">
                       <div class="period-info">
                         <span class="period-name">{{ period.name }}</span>
-                        <span class="period-count">{{ period.count }}次</span>
+                        <span class="period-count">{{ period.count }}次({{ period.percentage }}%)</span>
                       </div>
                       <div class="period-bar">
                         <div
@@ -147,6 +162,9 @@
                             backgroundColor: getPeriodColor(index)
                           }"
                         ></div>
+                      </div>
+                      <div class="period-users">
+                        <span class="users-count">{{ period.uniqueUsers }}人</span>
                       </div>
                     </div>
                   </div>
@@ -158,7 +176,6 @@
           <div class="divider decorative"></div>
           
           <div class="update-log-section">
-            <h3 class="section-title">更新日志</h3>
             <div class="auto-scroll-container">
               <div
                 ref="scrollContentRef"
@@ -221,25 +238,23 @@ const fundCacheStats = ref({
   error: ''
 })
 
-// 用户地域分布统计
-const userLocationStats = ref({
-  totalCount: 0,
-  locations: [] as Array<{name: string, count: number}>,
+// 用户登录统计
+const userLoginStats = ref({
+  totalLogins: 0,
+  locations: [] as Array<{name: string, count: number, userCount: number}>,
   loading: false,
   error: ''
 })
 
-// 用户登录时间段
+// 登录时段统计
 const loginTimeStats = ref({
-  periods: [
-    { name: '凌晨(0-6)', count: 0, percentage: 0 },
-    { name: '上午(6-12)', count: 0, percentage: 0 },
-    { name: '下午(12-18)', count: 0, percentage: 0 },
-    { name: '晚上(18-24)', count: 0, percentage: 0 }
-  ],
+  periods: [] as Array<{name: string, count: number, uniqueUsers: number, percentage: number}>,
   loading: false,
   error: ''
 })
+
+// 定时器引用
+let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
 // 格式化日期
 const formatDate = (dateString: string) => {
@@ -251,7 +266,8 @@ const formatDate = (dateString: string) => {
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      second: '2-digit'
     })
   } catch (e) {
     return dateString
@@ -264,6 +280,18 @@ const getPeriodColor = (index: number) => {
   return colors[index % colors.length]
 }
 
+// 获取地域颜色
+const getLocationColor = (index: number) => {
+  const colors = ['#3498DB', '#2ECC71', '#F39C12', '#E74C3C', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E']
+  return colors[index % colors.length]
+}
+
+// 计算地域百分比
+const getLocationPercentage = (locationCount: number, totalCount: number) => {
+  if (!totalCount) return 0
+  return Math.round((locationCount / totalCount) * 100)
+}
+
 // 获取基金缓存统计
 const fetchFundCacheStats = async () => {
   fundCacheStats.value.loading = true
@@ -272,7 +300,6 @@ const fetchFundCacheStats = async () => {
       ? 'https://cfms.crnas.uk/api'
       : '/api'
     
-    // 从后端获取基金缓存统计
     const response = await fetch(`${baseURL}/stats/fund-cache`, {
       method: 'GET',
       headers: {
@@ -304,16 +331,15 @@ const fetchFundCacheStats = async () => {
   }
 }
 
-// 获取用户分布统计
-const fetchUserLocationStats = async () => {
-  userLocationStats.value.loading = true
+// 获取用户登录统计
+const fetchUserLoginStats = async () => {
+  userLoginStats.value.loading = true
   try {
     const baseURL = import.meta.env.PROD
       ? 'https://cfms.crnas.uk/api'
       : '/api'
     
-    // 从后端获取用户分布统计
-    const response = await fetch(`${baseURL}/stats/user-distribution`, {
+    const response = await fetch(`${baseURL}/stats/login-stats`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
@@ -323,27 +349,27 @@ const fetchUserLocationStats = async () => {
     if (response.ok) {
       const data = await response.json()
       if (data.success) {
-        userLocationStats.value = {
-          totalCount: data.totalCount || 0,
-          locations: data.locations || [],
+        userLoginStats.value = {
+          totalLogins: data.stats.totalLogins || 0,
+          locations: data.stats.locations || [],
           loading: false,
           error: ''
         }
       } else {
-        userLocationStats.value.error = data.error || '获取失败'
-        userLocationStats.value.loading = false
+        userLoginStats.value.error = data.error || '获取失败'
+        userLoginStats.value.loading = false
       }
     } else {
-      userLocationStats.value.error = '网络请求失败'
-      userLocationStats.value.loading = false
+      userLoginStats.value.error = '网络请求失败'
+      userLoginStats.value.loading = false
     }
   } catch (error) {
-    userLocationStats.value.error = '获取用户分布统计失败'
-    userLocationStats.value.loading = false
+    userLoginStats.value.error = '获取用户登录统计失败'
+    userLoginStats.value.loading = false
   }
 }
 
-// 获取用户登录时间段
+// 获取登录时段统计
 const fetchLoginTimeStats = async () => {
   loginTimeStats.value.loading = true
   try {
@@ -351,8 +377,7 @@ const fetchLoginTimeStats = async () => {
       ? 'https://cfms.crnas.uk/api'
       : '/api'
     
-    // 从后端获取登录时间段统计
-    const response = await fetch(`${baseURL}/stats/login-time-distribution`, {
+    const response = await fetch(`${baseURL}/stats/login-time-stats`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
@@ -376,7 +401,7 @@ const fetchLoginTimeStats = async () => {
       loginTimeStats.value.loading = false
     }
   } catch (error) {
-    loginTimeStats.value.error = '获取登录时间段统计失败'
+    loginTimeStats.value.error = '获取登录时段统计失败'
     loginTimeStats.value.loading = false
   }
 }
@@ -384,8 +409,25 @@ const fetchLoginTimeStats = async () => {
 // 初始化统计
 const initStats = () => {
   fetchFundCacheStats()
-  fetchUserLocationStats()
+  fetchUserLoginStats()
   fetchLoginTimeStats()
+}
+
+// 启动定时刷新基金缓存统计
+const startAutoRefresh = () => {
+  // 先清除已存在的定时器
+  if (refreshTimer) {
+    clearTimeout(refreshTimer)
+  }
+  
+  // 每15分钟刷新一次基金缓存统计
+  refreshTimer = setTimeout(() => {
+    console.log('自动刷新基金缓存统计...')
+    fetchFundCacheStats()
+    
+    // 重新设置定时器
+    startAutoRefresh()
+  }, 15 * 60 * 1000) // 15分钟
 }
 
 const calculateSingleSetHeight = () => {
@@ -451,11 +493,21 @@ onMounted(async () => {
   
   // 初始化统计数据
   initStats()
+  
+  // 启动自动刷新
+  startAutoRefresh()
 })
 
 onUnmounted(() => {
+  // 清除动画
   if (animationId) {
     cancelAnimationFrame(animationId)
+  }
+  
+  // 清除定时器
+  if (refreshTimer) {
+    clearTimeout(refreshTimer)
+    refreshTimer = null
   }
 })
 </script>
@@ -676,7 +728,6 @@ onUnmounted(() => {
   color: #e5e7eb;
 }
 
-/* 统计卡片样式 */
 .stats-section {
   margin-bottom: 24px;
 }
@@ -779,7 +830,21 @@ onUnmounted(() => {
   color: #e5e7eb;
 }
 
-/* 加载指示器 */
+.stat-refresh-info {
+  margin-top: 8px;
+  text-align: right;
+}
+
+.refresh-label {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+}
+
+:root.dark .refresh-label {
+  color: #9ca3af;
+}
+
 .loading-indicator {
   display: flex;
   align-items: center;
@@ -817,45 +882,56 @@ onUnmounted(() => {
   color: #ef5350;
 }
 
-/* 用户分布样式调整 */
-.location-summary {
+.login-summary {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-bottom: 16px;
 }
 
-.location-item {
+.login-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
 }
 
-.location-label {
+.login-label {
   font-size: 14px;
   color: #666;
 }
 
-:root.dark .location-label {
+:root.dark .login-label {
   color: #9ca3af;
 }
 
-.location-value {
+.login-value {
   font-size: 15px;
   font-weight: 600;
   color: #333;
 }
 
-:root.dark .location-value {
+.login-value.highlight {
+  color: #14B8A6;
+}
+
+:root.dark .login-value {
   color: #e5e7eb;
+}
+
+:root.dark .login-value.highlight {
+  color: #2DD4BF;
+}
+
+.location-section {
+  margin-top: 12px;
 }
 
 .sub-title {
   font-size: 14px;
   font-weight: 600;
   color: #333;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 :root.dark .sub-title {
@@ -865,17 +941,17 @@ onUnmounted(() => {
 .location-list-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 150px;
+  gap: 10px;
+  max-height: 180px;
   overflow-y: auto;
   padding-right: 4px;
 }
 
 .location-item-detail {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -883,27 +959,63 @@ onUnmounted(() => {
   border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
+.location-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .location-name {
   font-size: 13px;
   color: #333;
   font-weight: 500;
+  flex: 1;
 }
 
 :root.dark .location-name {
   color: #e5e7eb;
 }
 
+.location-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .location-count {
   font-size: 13px;
   color: #14B8A6;
   font-weight: 600;
+  min-width: 50px;
+  text-align: right;
 }
 
-/* 时间偏好样式 */
+.location-users {
+  font-size: 12px;
+  color: #666;
+  min-width: 40px;
+  text-align: right;
+}
+
+:root.dark .location-users {
+  color: #9ca3af;
+}
+
+.location-bar {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+:root.dark .location-bar {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .time-periods {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .time-period {
@@ -931,6 +1043,7 @@ onUnmounted(() => {
 .period-count {
   font-size: 13px;
   color: #666;
+  font-weight: 500;
 }
 
 :root.dark .period-count {
@@ -954,7 +1067,20 @@ onUnmounted(() => {
   transition: width 0.5s ease;
 }
 
-/* 更新日志样式 */
+.period-users {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.users-count {
+  font-size: 12px;
+  color: #666;
+}
+
+:root.dark .users-count {
+  color: #9ca3af;
+}
+
 .update-log-section {
   margin-top: 24px;
 }
@@ -1073,7 +1199,6 @@ onUnmounted(() => {
   opacity: 0.5;
 }
 
-/* 移动端样式覆盖 */
 @media (max-width: 768px) {
   .top-container {
     padding: 0 12px;
@@ -1117,7 +1242,7 @@ onUnmounted(() => {
   }
   
   .location-list-content {
-    max-height: 120px;
+    max-height: 150px;
   }
   
   .auto-scroll-container {
@@ -1199,7 +1324,7 @@ onUnmounted(() => {
   }
   
   .location-list-content {
-    max-height: 100px;
+    max-height: 130px;
   }
   
   .auto-scroll-container {
@@ -1254,7 +1379,6 @@ onUnmounted(() => {
   }
 }
 
-/* 触摸设备优化 */
 @media (hover: none) and (pointer: coarse) {
   .stat-card:active {
     transform: scale(0.98);
