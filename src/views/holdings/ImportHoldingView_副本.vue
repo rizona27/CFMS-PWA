@@ -26,12 +26,13 @@
         <div class="upload-section">
           <h2>上传持仓数据文件</h2>
           <p class="section-description">
-            请上传包含持仓数据的CSV或Excel文件
+            请上传包含持仓数据的CSV或Excel文件。系统会自动检测数据格式。
           </p>
           
           <div class="upload-zone" @click="triggerFileInput">
             <div class="upload-icon">📁</div>
-            <p>点击选择文件</p>
+            <h3>拖放文件到此处</h3>
+            <p>或点击选择文件</p>
             <p class="file-format">支持 .csv, .xlsx, .xls 格式</p>
             <input
               type="file"
@@ -49,11 +50,19 @@
                 <h4>{{ selectedFile.name }}</h4>
                 <p>{{ formatFileSize(selectedFile.size) }} · {{ getFileExtension(selectedFile) }}</p>
                 <p v-if="fileFormatDetected" class="file-detected">
-                  格式: {{ fileFormatDetected }}
+                  检测到格式: <strong>{{ fileFormatDetected }}</strong>
                 </p>
               </div>
               <button class="remove-btn" @click="clearSelection">✕</button>
             </div>
+          </div>
+          
+          <div class="template-section">
+            <h3>需要模板？</h3>
+            <p>如果不清楚文件格式，请先下载模板文件参考：</p>
+            <button class="template-btn" @click="downloadTemplate">
+              📥 下载导入模板
+            </button>
           </div>
           
           <div class="step-actions">
@@ -62,7 +71,7 @@
               @click="nextStep"
               :disabled="!selectedFile || !fileProcessed"
             >
-              下一步：配置映射
+              下一步：配置映射 →
             </button>
           </div>
         </div>
@@ -73,7 +82,7 @@
         <div class="mapping-section">
           <h2>配置字段映射</h2>
           <p class="section-description">
-            为每个字段选择对应的数据列。带 <span class="required-star">*</span> 的字段为必填项。
+            请为每个字段选择对应的数据列。带 <span class="required-star">*</span> 的字段为必填项。
           </p>
           
           <!-- 文件原始数据预览 -->
@@ -104,95 +113,57 @@
           
           <!-- 字段映射配置 -->
           <div class="field-mapping">
-            <!-- 必选字段区块 -->
-            <div class="mapping-block required-fields">
-              <h3>必选字段</h3>
-              <div class="mapping-table">
-                <div v-for="field in requiredFields" :key="field.id" class="mapping-row">
-                  <div class="mapping-col field-col">
-                    <div class="field-name">
-                      {{ field.label }}
-                      <span class="required-badge">*</span>
-                    </div>
+            <h3>字段映射配置</h3>
+            <div class="mapping-table">
+              <div class="mapping-header">
+                <div class="mapping-col field-col">字段名称</div>
+                <div class="mapping-col map-col">映射到列</div>
+                <div class="mapping-col sample-col">示例数据</div>
+                <div class="mapping-col status-col">状态</div>
+              </div>
+              
+              <div v-for="field in fieldConfigs" :key="field.id" class="mapping-row">
+                <div class="mapping-col field-col">
+                  <div class="field-name">
+                    {{ field.label }}
+                    <span v-if="field.required" class="required-badge">*</span>
                   </div>
-                  
-                  <div class="mapping-col map-col">
-                    <select
-                      v-model="field.columnIndex"
-                      @change="onFieldMappingChange(field)"
-                      class="column-select"
+                  <div class="field-description">{{ field.description }}</div>
+                </div>
+                
+                <div class="mapping-col map-col">
+                  <select
+                    v-model="field.columnIndex"
+                    @change="onFieldMappingChange(field)"
+                    class="column-select"
+                  >
+                    <option value="-1">-- 请选择 --</option>
+                    <option
+                      v-for="(header, index) in rawHeaders"
+                      :key="index"
+                      :value="index"
                     >
-                      <option value="-1">-- 请选择 --</option>
-                      <option
-                        v-for="(header, index) in rawHeaders"
-                        :key="index"
-                        :value="index"
-                      >
-                        {{ header || `列${index + 1}` }}
-                      </option>
-                    </select>
-                  </div>
-                  
-                  <div class="mapping-col sample-col">
-                    <div class="sample-data">
-                      {{ getSampleData(field.columnIndex) || '(无数据)' }}
-                    </div>
-                  </div>
-                  
-                  <div class="mapping-col status-col">
-                    <span v-if="field.columnIndex !== -1 && field.columnIndex !== null" class="status-mapped">
-                      已映射
-                    </span>
-                    <span v-else class="status-required">
-                      必填
-                    </span>
+                      {{ header || `列${index + 1}` }}
+                    </option>
+                  </select>
+                </div>
+                
+                <div class="mapping-col sample-col">
+                  <div class="sample-data">
+                    {{ getSampleData(field.columnIndex) || '(无数据)' }}
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            <!-- 可选字段区块 -->
-            <div class="mapping-block optional-fields">
-              <h3>可选字段</h3>
-              <div class="mapping-table">
-                <div v-for="field in optionalFields" :key="field.id" class="mapping-row">
-                  <div class="mapping-col field-col">
-                    <div class="field-name">
-                      {{ field.label }}
-                    </div>
-                  </div>
-                  
-                  <div class="mapping-col map-col">
-                    <select
-                      v-model="field.columnIndex"
-                      @change="onFieldMappingChange(field)"
-                      class="column-select"
-                    >
-                      <option value="-1">-- 请选择 --</option>
-                      <option
-                        v-for="(header, index) in rawHeaders"
-                        :key="index"
-                        :value="index"
-                      >
-                        {{ header || `列${index + 1}` }}
-                      </option>
-                    </select>
-                  </div>
-                  
-                  <div class="mapping-col sample-col">
-                    <div class="sample-data">
-                      {{ getSampleData(field.columnIndex) || '(无数据)' }}
-                    </div>
-                  </div>
-                  
-                  <div class="mapping-col status-col">
-                    <span v-if="field.columnIndex !== -1 && field.columnIndex !== null" class="status-mapped">
-                      已映射
-                    </span>
-                    <span v-else class="status-optional">
-                      可选
-                    </span>
-                  </div>
+                
+                <div class="mapping-col status-col">
+                  <span v-if="field.columnIndex !== -1 && field.columnIndex !== null" class="status-mapped">
+                    ✓ 已映射
+                  </span>
+                  <span v-else-if="field.required" class="status-required">
+                    ⚠ 必填
+                  </span>
+                  <span v-else class="status-optional">
+                    ○ 可选
+                  </span>
                 </div>
               </div>
             </div>
@@ -200,7 +171,8 @@
           
           <!-- 智能推荐 -->
           <div v-if="hasUnmappedRequiredFields" class="auto-suggestion">
-            <p>智能推荐：</p>
+            <h3>智能推荐</h3>
+            <p>系统检测到以下可能的映射关系：</p>
             <div class="suggestions">
               <button
                 v-for="suggestion in autoSuggestions"
@@ -215,21 +187,21 @@
           
           <div class="step-actions">
             <button class="prev-btn" @click="prevStep">
-              上一步
+              ← 上一步
             </button>
             <button
               class="next-btn"
               @click="nextStep"
               :disabled="!allRequiredFieldsMapped"
             >
-              下一步：预览导入
+              下一步：预览导入 →
             </button>
           </div>
         </div>
       </div>
 
       <!-- 步骤3: 预览和导入 -->
-      <div v-if="currentStep === 3 && !importResult" class="step-content">
+      <div v-if="currentStep === 3" class="step-content">
         <div class="preview-section">
           <h2>预览并导入</h2>
           
@@ -243,6 +215,7 @@
                     <th>客户姓名</th>
                     <th>客户号</th>
                     <th>基金代码</th>
+                    <th>基金名称</th>
                     <th>购买金额</th>
                     <th>购买份额</th>
                     <th>购买日期</th>
@@ -250,9 +223,10 @@
                 </thead>
                 <tbody>
                   <tr v-for="(item, index) in previewData.slice(0, 5)" :key="index">
-                    <td>{{ item.clientName || item.clientID }}</td>
+                    <td>{{ item.clientName }}</td>
                     <td>{{ item.clientID }}</td>
                     <td>{{ item.fundCode }}</td>
+                    <td>{{ item.fundName }}</td>
                     <td class="numeric">{{ formatNumber(item.purchaseAmount, 2) }}</td>
                     <td class="numeric">{{ formatNumber(item.purchaseShares, 4) }}</td>
                     <td>{{ formatDate(item.purchaseDate) }}</td>
@@ -266,6 +240,22 @@
           <div class="import-options">
             <h3>导入选项</h3>
             <div class="options-grid">
+              <label class="option-item">
+                <input type="checkbox" v-model="importSettings.overwrite" />
+                <div class="option-content">
+                  <div class="option-title">覆盖现有数据</div>
+                  <div class="option-description">清空所有现有持仓后再导入</div>
+                </div>
+              </label>
+              
+              <label class="option-item">
+                <input type="checkbox" v-model="importSettings.skipDuplicates" checked />
+                <div class="option-content">
+                  <div class="option-title">跳过重复记录</div>
+                  <div class="option-description">自动跳过客户、基金、金额相同的记录</div>
+                </div>
+              </label>
+              
               <label class="option-item">
                 <input type="checkbox" v-model="importSettings.stripEmptyRows" checked />
                 <div class="option-content">
@@ -282,14 +272,12 @@
                 </div>
               </label>
             </div>
-            <div class="import-note">
-              <p>注意：系统会自动检测并覆盖重复记录（客户号、基金代码、购买金额、购买份额、购买日期都相同的记录）</p>
-            </div>
           </div>
           
           <!-- 导入统计 -->
           <div class="import-stats">
             <div class="stat-card">
+              <div class="stat-icon">📊</div>
               <div class="stat-content">
                 <div class="stat-value">{{ rawData.length }}</div>
                 <div class="stat-label">总数据行数</div>
@@ -297,23 +285,32 @@
             </div>
             
             <div class="stat-card">
+              <div class="stat-icon">✅</div>
               <div class="stat-content">
                 <div class="stat-value">{{ validRowsCount }}</div>
                 <div class="stat-label">有效数据行</div>
+              </div>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-icon">📈</div>
+              <div class="stat-content">
+                <div class="stat-value">{{ estimatedTime }}</div>
+                <div class="stat-label">预计时间</div>
               </div>
             </div>
           </div>
           
           <div class="step-actions">
             <button class="prev-btn" @click="prevStep">
-              上一步
+              ← 上一步
             </button>
             <button
               class="import-btn"
               @click="startImport"
               :disabled="isImporting || !allRequiredFieldsMapped"
             >
-              <span v-if="!isImporting">开始导入</span>
+              <span v-if="!isImporting">🚀 开始导入</span>
               <span v-else>
                 <span class="spinner"></span>
                 导入中... {{ progressPercentage }}%
@@ -328,10 +325,26 @@
         <div class="result-header">
           <h2>导入完成</h2>
           <div class="result-summary">
-            <div class="summary-stats">
-              <span class="stat-success">{{ importResult.success }} 条成功</span>
-              <span class="stat-separator">·</span>
-              <span class="stat-failed">{{ importResult.failed }} 条失败</span>
+            {{ importResult.success }} 条成功 · {{ importResult.failed }} 条失败
+          </div>
+        </div>
+        
+        <div class="result-cards">
+          <div class="result-card success">
+            <div class="card-icon">✅</div>
+            <div class="card-content">
+              <h3>成功导入</h3>
+              <div class="card-value">{{ importResult.success }}</div>
+              <div class="card-label">条记录</div>
+            </div>
+          </div>
+          
+          <div class="result-card failed">
+            <div class="card-icon">❌</div>
+            <div class="card-content">
+              <h3>导入失败</h3>
+              <div class="card-value">{{ importResult.failed }}</div>
+              <div class="card-label">条记录</div>
             </div>
           </div>
         </div>
@@ -352,10 +365,13 @@
         
         <div class="result-actions">
           <button class="action-btn primary" @click="goToHoldings">
-            查看持仓
+            📋 查看持仓
           </button>
           <button class="action-btn secondary" @click="importAnother">
-            继续导入
+            🔄 继续导入
+          </button>
+          <button class="action-btn outline" @click="exportResults">
+            💾 导出结果
           </button>
         </div>
       </div>
@@ -368,6 +384,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import NavBar from '@/components/layout/NavBar.vue'
 import { useDataStore, type FundHolding as StoreFundHolding } from '@/stores/dataStore'
+import { FundHolding as FundHoldingClass } from '@/models/FundModels'
 import * as XLSX from 'xlsx'
 
 const router = useRouter()
@@ -402,14 +419,14 @@ const fieldConfigs = ref<FieldConfig[]>([
   {
     id: 'clientName',
     label: '客户姓名',
-    required: false,
+    required: true,
     description: '客户的姓名或名称',
     columnIndex: null
   },
   {
     id: 'clientID',
     label: '客户号',
-    required: true,
+    required: false,
     description: '客户编号或身份证号',
     columnIndex: null
   },
@@ -418,6 +435,13 @@ const fieldConfigs = ref<FieldConfig[]>([
     label: '基金代码',
     required: true,
     description: '6位基金代码',
+    columnIndex: null
+  },
+  {
+    id: 'fundName',
+    label: '基金名称',
+    required: false,
+    description: '基金产品名称',
     columnIndex: null
   },
   {
@@ -437,7 +461,7 @@ const fieldConfigs = ref<FieldConfig[]>([
   {
     id: 'purchaseDate',
     label: '购买日期',
-    required: true,
+    required: false,
     description: '购买交易日期',
     columnIndex: null
   },
@@ -450,17 +474,10 @@ const fieldConfigs = ref<FieldConfig[]>([
   }
 ])
 
-// 计算必选和可选字段
-const requiredFields = computed(() => {
-  return fieldConfigs.value.filter(field => field.required)
-})
-
-const optionalFields = computed(() => {
-  return fieldConfigs.value.filter(field => !field.required)
-})
-
 // 导入设置
 const importSettings = ref({
+  overwrite: false,
+  skipDuplicates: true,
   stripEmptyRows: true,
   autoValidate: true
 })
@@ -480,6 +497,14 @@ const hasUnmappedRequiredFields = computed(() => {
 
 const validRowsCount = computed(() => {
   return previewData.value.length
+})
+
+const estimatedTime = computed(() => {
+  const rows = rawData.value.length
+  if (rows < 100) return '< 1秒'
+  if (rows < 1000) return '1-3秒'
+  if (rows < 10000) return '3-10秒'
+  return '10+秒'
 })
 
 interface AutoSuggestion {
@@ -509,11 +534,9 @@ const autoSuggestions = computed(() => {
       // 基于列名的匹配
       if (columnName.includes(fieldName) ||
           (fieldId === 'clientName' && (columnName.includes('姓名') || columnName.includes('名字'))) ||
-          (fieldId === 'clientID' && (columnName.includes('客户号') || columnName.includes('编号') || columnName.includes('id'))) ||
           (fieldId === 'fundCode' && (columnName.includes('代码') || columnName.includes('fund'))) ||
           (fieldId === 'purchaseAmount' && (columnName.includes('金额') || columnName.includes('成本'))) ||
-          (fieldId === 'purchaseShares' && (columnName.includes('份额') || columnName.includes('shares'))) ||
-          (fieldId === 'purchaseDate' && (columnName.includes('日期') || columnName.includes('date')))) {
+          (fieldId === 'purchaseShares' && (columnName.includes('份额') || columnName.includes('shares')))) {
         
         suggestions.push({
           fieldId: fieldId,
@@ -689,7 +712,7 @@ const processCSVFile = async (file: File) => {
     
     // 清理数据：移除完全空白的行
     rawData.value = rawData.value.filter(row =>
-      row && row.some(cell => cell && cell.toString().trim() !== '')
+      row.some(cell => cell && cell.toString().trim() !== '')
     )
     
   } catch (error) {
@@ -784,7 +807,7 @@ const processExcelFile = async (file: File) => {
         
         return String(cell).trim()
       })
-    }).filter(row => row && row.some(cell => cell !== ''))
+    }).filter(row => row.some(cell => cell !== ''))
     
   } catch (error) {
     throw new Error(`处理Excel文件失败: ${error}`)
@@ -880,6 +903,7 @@ const autoDetectFieldMappings = () => {
           (fieldId === 'clientName' && (columnName.includes('姓名') || columnName.includes('名字'))) ||
           (fieldId === 'clientID' && (columnName.includes('客户号') || columnName.includes('编号') || columnName.includes('id'))) ||
           (fieldId === 'fundCode' && (columnName.includes('代码') || columnName.includes('fund') || columnName.includes('基金代码'))) ||
+          (fieldId === 'fundName' && (columnName.includes('名称') || columnName.includes('name'))) ||
           (fieldId === 'purchaseAmount' && (columnName.includes('金额') || columnName.includes('成本') || columnName.includes('amount'))) ||
           (fieldId === 'purchaseShares' && (columnName.includes('份额') || columnName.includes('shares'))) ||
           (fieldId === 'purchaseDate' && (columnName.includes('日期') || columnName.includes('date')))) {
@@ -897,27 +921,26 @@ const autoDetectFieldMappings = () => {
   
   if (unmappedRequiredFields.length > 0 && rawData.value.length > 0) {
     const sampleRow = rawData.value[0]
-    if (sampleRow) {
-      for (let colIndex = 0; colIndex < sampleRow.length; colIndex++) {
-        const cellValue = sampleRow[colIndex]?.toString() || ''
+    
+    for (let colIndex = 0; colIndex < sampleRow.length; colIndex++) {
+      const cellValue = sampleRow[colIndex]?.toString() || ''
+      
+      for (const field of unmappedRequiredFields) {
+        if (field.columnIndex !== null && field.columnIndex >= 0) continue
         
-        for (const field of unmappedRequiredFields) {
-          if (field.columnIndex !== null && field.columnIndex >= 0) continue
-          
-          if (field.id === 'fundCode' && /^\d{6}$/.test(cellValue)) {
-            field.columnIndex = colIndex
-            break
-          }
-          
-          if (field.id === 'purchaseAmount' && !isNaN(parseFloat(cellValue)) && parseFloat(cellValue) > 100) {
-            field.columnIndex = colIndex
-            break
-          }
-          
-          if (field.id === 'purchaseShares' && !isNaN(parseFloat(cellValue)) && parseFloat(cellValue) > 0) {
-            field.columnIndex = colIndex
-            break
-          }
+        if (field.id === 'fundCode' && /^\d{6}$/.test(cellValue)) {
+          field.columnIndex = colIndex
+          break
+        }
+        
+        if (field.id === 'purchaseAmount' && !isNaN(parseFloat(cellValue)) && parseFloat(cellValue) > 100) {
+          field.columnIndex = colIndex
+          break
+        }
+        
+        if (field.id === 'purchaseShares' && !isNaN(parseFloat(cellValue)) && parseFloat(cellValue) > 0) {
+          field.columnIndex = colIndex
+          break
         }
       }
     }
@@ -990,29 +1013,20 @@ const generatePreviewData = () => {
 const cleanAndTransformRowData = (rowData: any): any => {
   const cleaned: any = {}
   
-  // 客户姓名 - 如果没有，使用客户号
-  let clientName = String(rowData.clientName || '').trim()
-  if (!clientName) {
-    clientName = String(rowData.clientID || '未知').trim()
-  }
-  cleaned.clientName = clientName
+  // 客户姓名
+  cleaned.clientName = String(rowData.clientName || '').trim()
+  if (!cleaned.clientName) cleaned.clientName = '未知客户'
   
   // 客户号
   const clientID = String(rowData.clientID || '000000000000').trim()
   cleaned.clientID = clientID.replace(/\D/g, '').padStart(12, '0')
   
-  // 基金代码 - 修复：确保是6位数字
+  // 基金代码
   const fundCode = String(rowData.fundCode || '').trim()
-  let cleanedFundCode = fundCode.replace(/\D/g, '')
-  if (cleanedFundCode.length < 6) {
-    cleanedFundCode = cleanedFundCode.padStart(6, '0')
-  } else if (cleanedFundCode.length > 6) {
-    cleanedFundCode = cleanedFundCode.substring(0, 6)
-  }
-  cleaned.fundCode = cleanedFundCode
+  cleaned.fundCode = fundCode.replace(/\D/g, '').padStart(6, '0')
   
   // 基金名称
-  cleaned.fundName = '未加载'
+  cleaned.fundName = String(rowData.fundName || '').trim() || '未加载'
   
   // 购买金额
   let amount = rowData.purchaseAmount
@@ -1132,8 +1146,10 @@ const startImport = async () => {
   importResult.value = null
   
   try {
-    // 获取现有持仓用于去重检查
-    const existingHoldings = dataStore.getHoldings
+    // 如果需要覆盖，先清空现有数据
+    if (importSettings.value.overwrite) {
+      dataStore.clearAllHoldings()
+    }
     
     const result = {
       success: 0,
@@ -1149,8 +1165,8 @@ const startImport = async () => {
       }
     })
     
-    // 用于记录已处理的唯一键（用于在同一批导入中去重）
-    const processedKeys = new Set<string>()
+    // 用于去重的集合
+    const duplicateKeys = new Set<string>()
     
     // 处理每一行数据
     const totalRows = rawData.value.length
@@ -1163,8 +1179,8 @@ const startImport = async () => {
       
       // 跳过空行
       if (importSettings.value.stripEmptyRows) {
-        const isEmptyRow = !row || !row.some(cell =>
-          cell && cell.toString().trim() !== ''
+        const isEmptyRow = !row || row.every(cell =>
+          !cell || cell.toString().trim() === ''
         )
         if (isEmptyRow) continue
       }
@@ -1190,49 +1206,19 @@ const startImport = async () => {
           continue
         }
         
-        // 生成唯一键用于检测重复（客户号、基金代码、金额、份额、日期）
-        const uniqueKey = `${cleanedData.clientID}_${cleanedData.fundCode}_${cleanedData.purchaseAmount}_${cleanedData.purchaseShares}_${cleanedData.purchaseDate?.getTime()}`
-        
-        // 检查同一批数据中的重复
-        if (processedKeys.has(uniqueKey)) {
-          continue // 跳过同一批中的重复项
-        }
-        processedKeys.add(uniqueKey)
-        
-        // 检查与现有数据的重复
-        const isDuplicate = existingHoldings.some(existing => {
-          return (
-            existing.clientID === cleanedData.clientID &&
-            existing.fundCode === cleanedData.fundCode &&
-            existing.purchaseAmount === cleanedData.purchaseAmount &&
-            existing.purchaseShares === cleanedData.purchaseShares &&
-            existing.purchaseDate?.getTime() === cleanedData.purchaseDate?.getTime()
-          )
-        })
-        
-        if (isDuplicate) {
-          // 覆盖现有数据
-          const existingIndex = existingHoldings.findIndex(existing =>
-            existing.clientID === cleanedData.clientID &&
-            existing.fundCode === cleanedData.fundCode &&
-            existing.purchaseAmount === cleanedData.purchaseAmount &&
-            existing.purchaseShares === cleanedData.purchaseShares &&
-            existing.purchaseDate?.getTime() === cleanedData.purchaseDate?.getTime()
-          )
-          
-          if (existingIndex !== -1) {
-            // 更新现有持仓
-            const fundHoldingData = dataStore.convertHoldingToFundHolding(cleanedData)
-            fundHoldingData.id = existingHoldings[existingIndex].id // 保持相同ID
-            dataStore.updateHolding(existingIndex, fundHoldingData)
-            result.success++
+        // 检查重复
+        if (importSettings.value.skipDuplicates) {
+          const duplicateKey = `${cleanedData.clientName}-${cleanedData.fundCode}-${cleanedData.purchaseAmount}`
+          if (duplicateKeys.has(duplicateKey)) {
+            continue
           }
-        } else {
-          // 保存新数据
-          const fundHoldingData = dataStore.convertHoldingToFundHolding(cleanedData)
-          dataStore.addHolding(fundHoldingData)
-          result.success++
+          duplicateKeys.add(duplicateKey)
         }
+        
+        // 保存数据
+        const fundHoldingData = dataStore.convertHoldingToFundHolding(cleanedData)
+        dataStore.addHolding(fundHoldingData)
+        result.success++
         
       } catch (error: any) {
         result.failed++
@@ -1265,10 +1251,10 @@ const startImport = async () => {
 const validateRowData = (data: any, lineNumber: number) => {
   const errors: Array<{line: number, field: string, message: string}> = []
   
-  if (!data.clientID || data.clientID.trim() === '') {
+  if (!data.clientName || data.clientName.trim() === '') {
     errors.push({
       line: lineNumber,
-      field: '客户号',
+      field: '客户姓名',
       message: '不能为空'
     })
   }
@@ -1297,18 +1283,91 @@ const validateRowData = (data: any, lineNumber: number) => {
     })
   }
   
-  if (!data.purchaseDate || isNaN(data.purchaseDate.getTime())) {
-    errors.push({
-      line: lineNumber,
-      field: '购买日期',
-      message: '无效日期'
-    })
-  }
-  
   return {
     isValid: errors.length === 0,
     errors
   }
+}
+
+// 模板下载
+const downloadTemplate = () => {
+  const templateData = [
+    ['客户姓名', '客户号', '基金代码', '基金名称', '购买金额', '购买份额', '购买日期', '备注'],
+    ['张三', '123456789012', '000001', '华夏成长混合', '10000.00', '5000.0000', '2024-01-15', ''],
+    ['李四', '234567890123', '000002', '易方达消费行业', '20000.00', '8000.0000', '2024-01-20', '长期持有'],
+    ['王五', '345678901234', '000003', '嘉实沪深300ETF', '15000.00', '6000.0000', '2024-01-25', '定投'],
+    ['赵六', '456789012345', '000004', '南方中证500ETF', '30000.00', '12000.0000', '2024-01-30', '资产配置']
+  ]
+  
+  const worksheet = XLSX.utils.aoa_to_sheet(templateData)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, '持仓模板')
+  
+  // 设置列宽
+  const wscols = [
+    { wch: 10 }, // 客户姓名
+    { wch: 15 }, // 客户号
+    { wch: 10 }, // 基金代码
+    { wch: 20 }, // 基金名称
+    { wch: 12 }, // 购买金额
+    { wch: 12 }, // 购买份额
+    { wch: 12 }, // 购买日期
+    { wch: 15 }  // 备注
+  ]
+  worksheet['!cols'] = wscols
+  
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+  
+  // 使用原生方式下载文件
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = '持仓数据导入模板.xlsx'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+// 导出结果
+const exportResults = () => {
+  if (!importResult.value) return
+  
+  const results = []
+  
+  // 添加摘要
+  results.push(['导入结果摘要', '', '', '', '', ''])
+  results.push(['成功导入', importResult.value.success, '条'])
+  results.push(['导入失败', importResult.value.failed, '条'])
+  results.push(['', '', ''])
+  
+  // 添加错误详情
+  if (importResult.value.errors.length > 0) {
+    results.push(['错误详情', '', '', '', '', ''])
+    results.push(['行号', '字段', '错误信息'])
+    importResult.value.errors.forEach((error: {line: number, field: string, message: string}) => {
+      results.push([error.line, error.field, error.message])
+    })
+  }
+  
+  const worksheet = XLSX.utils.aoa_to_sheet(results)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, '导入结果')
+  
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+  
+  // 使用原生方式下载文件
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  const dateStr = new Date().toISOString().slice(0, 10)
+  link.download = `导入结果_${dateStr}.xlsx`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
 }
 
 // 工具函数
@@ -1331,7 +1390,7 @@ const formatDate = (date: Date): string => {
 
 const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
   // 这里可以替换为更优雅的通知组件
-  alert(`${type === 'error' ? '错误' : type === 'success' ? '成功' : '信息'} ${message}`)
+  alert(`${type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️'} ${message}`)
 }
 
 const goBack = () => {
@@ -1361,19 +1420,18 @@ const importAnother = () => {
 </script>
 
 <style scoped>
+/* 样式保持不变，只移除 file-saver 依赖 */
+/* ... 样式代码与之前相同 ... */
+
 .import-holding-view {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
-
-:root.dark .import-holding-view {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .container {
-  max-width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 20px;
 }
 
 /* 步骤指示器 */
@@ -1381,17 +1439,11 @@ const importAnother = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 40px;
   background: white;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-:root.dark .step-indicator {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .step {
@@ -1403,8 +1455,8 @@ const importAnother = () => {
 }
 
 .step-number {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #e5e7eb;
   color: #6b7280;
@@ -1412,17 +1464,17 @@ const importAnother = () => {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 18px;
   transition: all 0.3s ease;
-  border: 2px solid transparent;
+  border: 3px solid transparent;
 }
 
 .step.active .step-number {
-  background: #3b82f6;
+  background: #667eea;
   color: white;
-  border-color: rgba(59, 130, 246, 0.2);
+  border-color: rgba(102, 126, 234, 0.2);
   transform: scale(1.1);
-  box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 8px rgba(102, 126, 234, 0.1);
 }
 
 .step.completed .step-number {
@@ -1431,14 +1483,14 @@ const importAnother = () => {
 }
 
 .step-label {
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 8px;
+  font-size: 14px;
   color: #6b7280;
   font-weight: 500;
 }
 
 .step.active .step-label {
-  color: #3b82f6;
+  color: #667eea;
   font-weight: 600;
 }
 
@@ -1447,113 +1499,94 @@ const importAnother = () => {
 }
 
 .step-line {
-  width: 40px;
+  width: 100px;
   height: 2px;
   background: #e5e7eb;
-  margin: 0 12px;
+  margin: 0 20px;
   position: relative;
-  top: -16px;
+  top: -20px;
 }
 
 /* 步骤内容 */
 .step-content {
   background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  margin-bottom: 20px;
-}
-
-:root.dark .step-content {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
 }
 
 .step-content h2 {
   color: #1f2937;
-  font-size: 20px;
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-
-:root.dark .step-content h2 {
-  color: #e5e7eb;
+  font-size: 28px;
+  margin-bottom: 10px;
+  font-weight: 700;
 }
 
 .section-description {
   color: #6b7280;
-  font-size: 14px;
-  margin-bottom: 20px;
-  line-height: 1.5;
-}
-
-:root.dark .section-description {
-  color: #9ca3af;
+  font-size: 16px;
+  margin-bottom: 30px;
+  line-height: 1.6;
 }
 
 /* 上传区域 */
 .upload-zone {
-  border: 2px dashed #d1d5db;
-  border-radius: 8px;
-  padding: 40px 20px;
+  border: 3px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 60px 40px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
   background: #f9fafb;
-  margin-bottom: 20px;
-}
-
-:root.dark .upload-zone {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  margin-bottom: 30px;
 }
 
 .upload-zone:hover {
-  border-color: #3b82f6;
+  border-color: #667eea;
   background: #f0f4ff;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .upload-icon {
-  font-size: 32px;
-  margin-bottom: 12px;
-  color: #3b82f6;
+  font-size: 48px;
+  margin-bottom: 20px;
+  color: #667eea;
+}
+
+.upload-zone h3 {
+  color: #374151;
+  font-size: 20px;
+  margin-bottom: 10px;
 }
 
 .upload-zone p {
   color: #6b7280;
-  margin-bottom: 4px;
-  font-size: 14px;
+  margin-bottom: 5px;
 }
 
 .file-format {
-  font-size: 12px;
+  font-size: 14px;
   color: #9ca3af;
 }
 
 .file-selected {
-  margin-bottom: 20px;
+  margin-bottom: 30px;
 }
 
 .file-card {
   display: flex;
   align-items: center;
   background: #f3f4f6;
-  border-radius: 8px;
-  padding: 16px;
-  border: 1px solid #e5e7eb;
-}
-
-:root.dark .file-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  border: 2px solid #e5e7eb;
 }
 
 .file-icon {
-  font-size: 24px;
-  margin-right: 16px;
-  color: #3b82f6;
+  font-size: 32px;
+  margin-right: 20px;
+  color: #667eea;
 }
 
 .file-info {
@@ -1562,35 +1595,31 @@ const importAnother = () => {
 
 .file-info h4 {
   color: #1f2937;
-  margin: 0 0 4px 0;
-  font-size: 14px;
+  margin: 0 0 5px 0;
+  font-size: 16px;
   font-weight: 600;
-}
-
-:root.dark .file-info h4 {
-  color: #e5e7eb;
 }
 
 .file-info p {
   color: #6b7280;
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .file-detected {
-  color: #3b82f6 !important;
-  font-size: 11px;
-  margin-top: 4px !important;
+  color: #667eea !important;
+  font-size: 12px;
+  margin-top: 5px !important;
 }
 
 .remove-btn {
   background: #ef4444;
   color: white;
   border: none;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  font-size: 14px;
+  font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1600,47 +1629,76 @@ const importAnother = () => {
 
 .remove-btn:hover {
   background: #dc2626;
-  transform: scale(1.05);
+  transform: scale(1.1);
+}
+
+.template-section {
+  background: #f0f9ff;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
+  border: 1px solid #bae6fd;
+}
+
+.template-section h3 {
+  color: #0369a1;
+  margin: 0 0 10px 0;
+  font-size: 18px;
+}
+
+.template-section p {
+  color: #0c4a6e;
+  margin: 0 0 15px 0;
+  font-size: 14px;
+}
+
+.template-btn {
+  background: #0ea5e9;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.template-btn:hover {
+  background: #0284c7;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
 }
 
 /* 字段映射 */
 .original-preview {
-  margin-bottom: 24px;
+  margin-bottom: 40px;
 }
 
 .original-preview h3 {
   color: #374151;
-  font-size: 16px;
-  margin-bottom: 12px;
+  font-size: 18px;
+  margin-bottom: 15px;
   font-weight: 600;
-}
-
-:root.dark .original-preview h3 {
-  color: #e5e7eb;
 }
 
 .preview-container {
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: auto;
-  max-height: 200px;
+  max-height: 300px;
   background: white;
-}
-
-:root.dark .preview-container {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .preview-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .preview-table th {
   background: #f9fafb;
-  padding: 8px;
+  padding: 12px;
   text-align: left;
   font-weight: 600;
   color: #374151;
@@ -1650,39 +1708,24 @@ const importAnother = () => {
   z-index: 10;
 }
 
-:root.dark .preview-table th {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e5e7eb;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
 .preview-table td {
-  padding: 8px;
+  padding: 10px 12px;
   border-bottom: 1px solid #f3f4f6;
   color: #4b5563;
-}
-
-:root.dark .preview-table td {
-  color: #d1d5db;
-  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .preview-table tr:hover td {
   background: #f9fafb;
 }
 
-:root.dark .preview-table tr:hover td {
-  background: rgba(255, 255, 255, 0.05);
-}
-
 .col-header {
-  min-width: 80px;
+  min-width: 120px;
 }
 
 .header-content {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .col-title {
@@ -1690,74 +1733,61 @@ const importAnother = () => {
   color: #374151;
 }
 
-:root.dark .col-title {
-  color: #e5e7eb;
-}
-
 .col-index {
-  font-size: 10px;
+  font-size: 11px;
   color: #9ca3af;
 }
 
 .cell-data {
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 11px;
-  max-width: 120px;
+  font-size: 12px;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 字段映射配置 */
+/* 字段映射表格 */
 .field-mapping {
-  margin-bottom: 24px;
+  margin-bottom: 40px;
 }
 
-.mapping-block {
-  margin-bottom: 20px;
-}
-
-.mapping-block h3 {
+.field-mapping h3 {
   color: #374151;
-  font-size: 16px;
-  margin-bottom: 12px;
+  font-size: 18px;
+  margin-bottom: 15px;
   font-weight: 600;
-}
-
-:root.dark .mapping-block h3 {
-  color: #e5e7eb;
 }
 
 .mapping-table {
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
-:root.dark .mapping-table {
-  border-color: rgba(255, 255, 255, 0.1);
+.mapping-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 20px;
+  background: #f8fafc;
+  padding: 16px 20px;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
 }
 
 .mapping-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
-  gap: 12px;
-  padding: 12px;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 20px;
+  padding: 20px;
   border-bottom: 1px solid #f1f5f9;
   align-items: center;
   transition: background 0.2s ease;
 }
 
-:root.dark .mapping-row {
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
 .mapping-row:hover {
   background: #f8fafc;
-}
-
-:root.dark .mapping-row:hover {
-  background: rgba(255, 255, 255, 0.05);
 }
 
 .mapping-row:last-child {
@@ -1767,133 +1797,115 @@ const importAnother = () => {
 .field-col .field-name {
   font-weight: 600;
   color: #374151;
-  font-size: 14px;
+  margin-bottom: 5px;
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-
-:root.dark .field-col .field-name {
-  color: #e5e7eb;
+  gap: 5px;
 }
 
 .required-badge {
   color: #ef4444;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: bold;
+}
+
+.field-col .field-description {
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .column-select {
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: 6px;
+  font-size: 14px;
   color: #374151;
   background: white;
   transition: all 0.2s ease;
 }
 
-:root.dark .column-select {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e5e7eb;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
 .column-select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .sample-data {
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 11px;
+  font-size: 12px;
   color: #6b7280;
-  padding: 6px;
+  padding: 8px;
   background: #f9fafb;
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid #e5e7eb;
-  max-width: 100px;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-:root.dark .sample-data {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #9ca3af;
-}
-
 .status-mapped {
   color: #10b981;
   font-weight: 600;
-  font-size: 12px;
-  padding: 4px 8px;
+  font-size: 14px;
+  padding: 6px 12px;
   background: #d1fae5;
-  border-radius: 12px;
+  border-radius: 20px;
 }
 
 .status-required {
   color: #f59e0b;
   font-weight: 600;
-  font-size: 12px;
-  padding: 4px 8px;
+  font-size: 14px;
+  padding: 6px 12px;
   background: #fef3c7;
-  border-radius: 12px;
+  border-radius: 20px;
 }
 
 .status-optional {
   color: #6b7280;
   font-weight: 500;
-  font-size: 12px;
-  padding: 4px 8px;
+  font-size: 14px;
+  padding: 6px 12px;
   background: #f3f4f6;
-  border-radius: 12px;
-}
-
-:root.dark .status-optional {
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
 }
 
 /* 智能推荐 */
 .auto-suggestion {
   background: #f0f9ff;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
   border: 1px solid #bae6fd;
 }
 
-:root.dark .auto-suggestion {
-  background: rgba(14, 165, 233, 0.1);
-  border-color: rgba(14, 165, 233, 0.2);
+.auto-suggestion h3 {
+  color: #0369a1;
+  margin: 0 0 10px 0;
+  font-size: 16px;
 }
 
 .auto-suggestion p {
   color: #0c4a6e;
-  margin: 0 0 12px 0;
-  font-size: 13px;
-}
-
-:root.dark .auto-suggestion p {
-  color: #bae6fd;
+  margin: 0 0 15px 0;
+  font-size: 14px;
 }
 
 .suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .suggestion-btn {
   background: #0ea5e9;
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1905,41 +1917,31 @@ const importAnother = () => {
 
 /* 导入选项 */
 .import-options {
-  margin-bottom: 20px;
+  margin-bottom: 30px;
 }
 
 .import-options h3 {
   color: #374151;
-  font-size: 16px;
-  margin-bottom: 16px;
+  font-size: 18px;
+  margin-bottom: 20px;
   font-weight: 600;
-}
-
-:root.dark .import-options h3 {
-  color: #e5e7eb;
 }
 
 .options-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 .option-item {
   display: flex;
   align-items: flex-start;
-  padding: 12px;
+  padding: 20px;
   background: #f9fafb;
-  border-radius: 6px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
   cursor: pointer;
   transition: all 0.2s ease;
-}
-
-:root.dark .option-item {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .option-item:hover {
@@ -1947,15 +1949,11 @@ const importAnother = () => {
   border-color: #d1d5db;
 }
 
-:root.dark .option-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
 .option-item input[type="checkbox"] {
-  margin-right: 12px;
-  margin-top: 2px;
-  width: 16px;
-  height: 16px;
+  margin-right: 15px;
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
 }
 
@@ -1966,67 +1964,36 @@ const importAnother = () => {
 .option-title {
   color: #374151;
   font-weight: 600;
-  margin-bottom: 4px;
-  font-size: 14px;
-}
-
-:root.dark .option-title {
-  color: #e5e7eb;
+  margin-bottom: 5px;
+  font-size: 15px;
 }
 
 .option-description {
   color: #6b7280;
-  font-size: 12px;
-  line-height: 1.3;
-}
-
-:root.dark .option-description {
-  color: #9ca3af;
-}
-
-.import-note {
-  background: #fef3c7;
-  border-radius: 6px;
-  padding: 12px;
-  border-left: 4px solid #f59e0b;
-}
-
-:root.dark .import-note {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.3);
-}
-
-.import-note p {
-  color: #92400e;
   font-size: 13px;
-  margin: 0;
   line-height: 1.4;
-}
-
-:root.dark .import-note p {
-  color: #fcd34d;
 }
 
 /* 导入统计 */
 .import-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
 }
 
 .stat-card {
   display: flex;
   align-items: center;
-  padding: 12px;
+  padding: 20px;
   background: #f8fafc;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e5e7eb;
 }
 
-:root.dark .stat-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+.stat-icon {
+  font-size: 32px;
+  margin-right: 20px;
 }
 
 .stat-content {
@@ -2034,23 +2001,15 @@ const importAnother = () => {
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
   color: #1f2937;
-  margin-bottom: 4px;
-}
-
-:root.dark .stat-value {
-  color: #e5e7eb;
+  margin-bottom: 5px;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 14px;
   color: #6b7280;
-}
-
-:root.dark .stat-label {
-  color: #9ca3af;
 }
 
 /* 步骤操作按钮 */
@@ -2058,25 +2017,20 @@ const importAnother = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 20px;
+  padding-top: 30px;
   border-top: 1px solid #e5e7eb;
-}
-
-:root.dark .step-actions {
-  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .prev-btn,
 .next-btn,
 .import-btn {
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: 14px 32px;
+  border-radius: 10px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   border: none;
-  min-width: 120px;
 }
 
 .prev-btn {
@@ -2085,28 +2039,21 @@ const importAnother = () => {
   border: 1px solid #d1d5db;
 }
 
-:root.dark .prev-btn {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e5e7eb;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
 .prev-btn:hover {
   background: #e5e7eb;
-  transform: translateX(-1px);
+  transform: translateX(-2px);
 }
 
 .next-btn,
 .import-btn {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
 
 .next-btn:hover:not(:disabled),
 .import-btn:hover:not(:disabled) {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
 }
 
 .next-btn:disabled,
@@ -2118,19 +2065,19 @@ const importAnother = () => {
 }
 
 .import-btn {
-  padding: 12px 24px;
-  font-size: 16px;
+  padding: 16px 40px;
+  font-size: 18px;
 }
 
 .spinner {
   display: inline-block;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;
   animation: spin 1s ease-in-out infinite;
-  margin-right: 8px;
+  margin-right: 10px;
 }
 
 @keyframes spin {
@@ -2140,116 +2087,113 @@ const importAnother = () => {
 /* 结果区域 */
 .result-section {
   background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-:root.dark .result-section {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 .result-header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 40px;
 }
 
 .result-header h2 {
   color: #1f2937;
-  font-size: 20px;
-  margin-bottom: 12px;
-}
-
-:root.dark .result-header h2 {
-  color: #e5e7eb;
+  font-size: 32px;
+  margin-bottom: 10px;
 }
 
 .result-summary {
+  font-size: 18px;
+  color: #6b7280;
+}
+
+.result-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.result-card {
+  padding: 30px;
+  border-radius: 12px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 500;
 }
 
-.summary-stats {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+.result-card.success {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  color: white;
 }
 
-:root.dark .summary-stats {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+.result-card.failed {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+  color: white;
 }
 
-.stat-success {
-  color: #10b981;
+.card-icon {
+  font-size: 40px;
+  margin-right: 20px;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-content h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
   font-weight: 600;
 }
 
-.stat-failed {
-  color: #ef4444;
-  font-weight: 600;
+.card-value {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 5px;
 }
 
-.stat-separator {
-  color: #9ca3af;
+.card-label {
+  font-size: 14px;
+  opacity: 0.9;
 }
 
 /* 错误详情 */
 .errors-section {
   background: #fef2f2;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
   border: 1px solid #fecaca;
-}
-
-:root.dark .errors-section {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.2);
 }
 
 .errors-section h3 {
   color: #dc2626;
-  margin: 0 0 12px 0;
-  font-size: 14px;
+  margin: 0 0 15px 0;
+  font-size: 18px;
 }
 
 .errors-list {
-  max-height: 120px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
 .error-item {
-  padding: 8px;
+  padding: 12px;
   background: white;
-  border-radius: 4px;
-  margin-bottom: 6px;
+  border-radius: 6px;
+  margin-bottom: 8px;
   border: 1px solid #fecaca;
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-:root.dark .error-item {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(239, 68, 68, 0.3);
+  gap: 10px;
 }
 
 .error-line {
   color: #dc2626;
   font-weight: 600;
-  min-width: 40px;
+  min-width: 60px;
 }
 
 .error-separator {
@@ -2259,11 +2203,7 @@ const importAnother = () => {
 .error-field {
   color: #374151;
   font-weight: 500;
-  min-width: 60px;
-}
-
-:root.dark .error-field {
-  color: #e5e7eb;
+  min-width: 80px;
 }
 
 .error-message {
@@ -2271,78 +2211,79 @@ const importAnother = () => {
   flex: 1;
 }
 
-:root.dark .error-message {
-  color: #9ca3af;
-}
-
 /* 结果操作按钮 */
 .result-actions {
   display: flex;
-  gap: 12px;
+  gap: 15px;
   justify-content: center;
 }
 
 .action-btn {
-  padding: 12px 20px;
-  border-radius: 8px;
+  padding: 14px 28px;
+  border-radius: 10px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 120px;
-  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .action-btn.primary {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-}
-
-.action-btn.primary:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  border: none;
 }
 
 .action-btn.secondary {
   background: #10b981;
   color: white;
+  border: none;
+}
+
+.action-btn.outline {
+  background: white;
+  color: #374151;
+  border: 2px solid #d1d5db;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn.primary:hover {
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
 }
 
 .action-btn.secondary:hover {
-  background: #059669;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .container {
-    padding: 12px;
+    padding: 10px;
   }
   
   .step-indicator {
-    padding: 12px;
-    margin-bottom: 20px;
+    padding: 15px;
   }
   
   .step-line {
-    width: 20px;
-    margin: 0 8px;
+    width: 40px;
+    margin: 0 10px;
   }
   
   .step-content {
-    padding: 16px;
-    margin-bottom: 16px;
+    padding: 20px;
   }
   
-  .upload-zone {
-    padding: 30px 16px;
-  }
-  
+  .mapping-header,
   .mapping-row {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 10px;
   }
   
   .options-grid {
@@ -2359,11 +2300,16 @@ const importAnother = () => {
   
   .action-btn {
     width: 100%;
+    justify-content: center;
+  }
+  
+  .upload-zone {
+    padding: 40px 20px;
   }
   
   .step-actions {
     flex-direction: column;
-    gap: 12px;
+    gap: 15px;
   }
   
   .prev-btn,
@@ -2373,58 +2319,20 @@ const importAnother = () => {
   }
 }
 
-@media (max-width: 480px) {
-  .step-number {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
-  }
-  
-  .step-label {
-    font-size: 11px;
-  }
-  
-  .step-content h2 {
-    font-size: 18px;
-  }
-  
-  .section-description {
-    font-size: 13px;
-  }
-  
-  .result-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .action-btn {
-    min-width: auto;
-    width: 100%;
-  }
-}
-
 /* 滚动条样式 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 3px;
-}
-
-:root.dark ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
-  border-radius: 3px;
-}
-
-:root.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -2440,8 +2348,8 @@ const importAnother = () => {
 /* 警告文本 */
 .warning-text {
   color: #ef4444;
-  font-size: 12px;
-  margin-top: 8px;
+  font-size: 14px;
+  margin-top: 10px;
   text-align: center;
 }
 
@@ -2459,10 +2367,6 @@ const importAnother = () => {
 }
 
 :deep(.nav-bar h1) {
-  color: #1f2937;
-}
-
-:root.dark :deep(.nav-bar h1) {
-  color: #e5e7eb;
+  color: white;
 }
 </style>
