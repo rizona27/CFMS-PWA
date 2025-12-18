@@ -49,7 +49,7 @@
 
 ------
 
-## 📂 核心目录结构
+## 📂 目录结构
 
 Plaintext
 
@@ -58,7 +58,6 @@ src/
 ├── components/
 │   ├── layout/         # NavBar, CustomTabBar (导航核心)
 │   ├── common/         # CustomCard, ToastMessage, EmptyState (原子组件)
-│   └── feedback/       # NoFilterResults (反馈组件)
 ├── stores/
 │   ├── dataStore.ts    # 资产计算核心逻辑、持久化、日志
 │   └── authStore.ts    # 鉴权、用户等级、激活逻辑
@@ -67,8 +66,7 @@ src/
 ├── views/
 │   ├── holdings/       # Add/Edit/Import/Export/Manage (持仓管理全家桶)
 │   ├── statistics/     # Summary, TopPerformers (数据看板)
-│   └── system/         # Auth, Activation, Config, APILog (系统基建)
-└── utils/              # 导入导出工具函数、日期格式化
+└── └── system/         # Auth, Activation, Config, APILog (系统基建)
 ```
 
 ### 
@@ -77,7 +75,7 @@ src/
 
 ## 📝 备注
 
-- **API 部分**：项目默认指向 `https://cfms.crnas.uk`。如需私有化部署后端，请修改 `fundService.ts` 中的 `API_BASE_URL`。
+- **API 部分**：项目默认指向 `https://cfms.crnas.uk`。如需私有化部署，请修改  `API_BASE_URL`。
 - **数据安全**：所有持仓计算均在前端完成，后端不存储用户数据（除非主动同步）。
 - **开发环境**：`AuthView.vue` 已内置开发环境 Banner，方便在测试期间使用模拟登录模式。
 
@@ -93,7 +91,7 @@ src/
 
    ## 🙏 致谢
 
-   **天天基金**、**同花顺 **：提供了高效的实时行情数据参考。 
+   **天天基金、同花顺 **：提供了高效的实时行情数据参考。 
 
    如有侵权或需移除接口调用，请通过邮件联系作者。
 
