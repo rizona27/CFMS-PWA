@@ -1012,14 +1012,13 @@ export function useImportHolding() {
     const cleanID = clientID.replace(/\D/g, '')
     cleaned.clientID = cleanID || '000000000000'
     
-    cleaned.clientName = String(rowData.clientName || '').trim()
-    if (!cleaned.clientName || cleaned.clientName === '未知客户') {
-      if (cleaned.clientID && cleaned.clientID !== '000000000000') {
-        cleaned.clientName = `客户${cleaned.clientID.slice(-6)}`
-      } else {
-        cleaned.clientName = '未知客户'
-      }
+    // 处理客户名：如果客户名不存在，直接使用客户号
+    let clientName = String(rowData.clientName || '').trim()
+    if (!clientName || clientName === '未知客户' || clientName === cleaned.clientID) {
+      // 直接使用客户号作为客户名
+      clientName = cleaned.clientID || '000000000000'
     }
+    cleaned.clientName = clientName
     
     let fundCode = String(rowData.fundCode || '').trim()
     fundCode = fundCode.replace(/\D/g, '')
@@ -1063,7 +1062,7 @@ export function useImportHolding() {
     
     cleaned.id = crypto.randomUUID()
     
-    addImportLog(`清洗后数据: ${cleaned.clientID} | ${cleaned.fundCode} | ${cleaned.purchaseAmount} | ${cleaned.purchaseShares} | ${cleaned.purchaseDate}`)
+    addImportLog(`清洗后数据: ${cleaned.clientName} | ${cleaned.clientID} | ${cleaned.fundCode} | ${cleaned.purchaseAmount} | ${cleaned.purchaseShares} | ${cleaned.purchaseDate}`)
     
     return cleaned
   }

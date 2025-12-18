@@ -3,10 +3,15 @@
     <!-- 使用统一的 NavBar 组件 -->
     <NavBar title="导入持仓数据" backText="返回" backRoute="/holdings/manage" />
     
-    <!-- 固定顶部部分 - 类似 ManageHoldingsView 样式 -->
+    <!-- 步骤指示器放在顶部 -->
     <div class="fixed-top-section">
       <div class="top-container">
-        <!-- 固定分隔符 - 与 ManageHoldingsView 一致，无底色 -->
+        <StepIndicator
+          :current-step="currentStep"
+          :steps="steps"
+        />
+        
+        <!-- 固定分隔符 -->
         <div class="stylish-divider">
           <div class="divider-line"></div>
           <div class="divider-icon">
@@ -27,12 +32,6 @@
       <div class="content-scroll">
         <div class="content-wrapper">
           <div class="import-content">
-            
-            <!-- 步骤指示器 -->
-            <StepIndicator
-              :current-step="currentStep"
-              :steps="steps"
-            />
             
             <!-- 步骤内容 -->
             <div class="steps-container">
@@ -163,12 +162,13 @@ const {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-/* 固定顶部部分 - 类似 ManageHoldingsView 样式 */
+/* 固定顶部部分 */
 .fixed-top-section {
   flex-shrink: 0;
-  z-index: 90; /* 低于 NavBar */
+  z-index: 90;
   padding-top: 0;
-  background: transparent; /* 无底色 */
+  background: transparent;
+  padding-bottom: 8px;
 }
 
 .top-container {
@@ -177,7 +177,7 @@ const {
   padding: 0 16px;
 }
 
-/* 分隔符样式 - 与 ManageHoldingsView 一致 */
+/* 分隔符样式 */
 .stylish-divider {
   display: flex;
   align-items: center;

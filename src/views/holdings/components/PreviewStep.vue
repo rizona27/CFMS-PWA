@@ -5,7 +5,7 @@
       <div class="preview-header">
         <h3>转换后数据预览（前5条）</h3>
         <div class="preview-info">
-          共 {{ previewData.length }} 条有效数据
+          共 {{ rawDataLength }} 条数据
         </div>
       </div>
       <div class="preview-container">
@@ -48,7 +48,7 @@
         
         <div class="stat-card valid">
           <div class="stat-content">
-            <div class="stat-value">{{ validRowsCount }}</div>
+            <div class="stat-value">{{ rawDataLength }}</div>
             <div class="stat-label">有效数据行</div>
           </div>
         </div>
@@ -117,30 +117,6 @@
           <div class="card-content">
             <div class="card-value">{{ importResult.skipped }}</div>
             <div class="card-label">重复跳过</div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 错误详情 -->
-      <div v-if="importResult.errors.length > 0" class="errors-section">
-        <div class="errors-header">
-          <h4>错误详情</h4>
-          <span class="errors-count">{{ importResult.errors.length }} 个错误</span>
-        </div>
-        <div class="errors-list">
-          <div
-            v-for="(error, index) in importResult.errors.slice(0, 3)"
-            :key="index"
-            class="error-item"
-          >
-            <span class="error-line">第{{ error.line }}行</span>
-            <span class="error-separator">·</span>
-            <span class="error-field">{{ error.field }}</span>
-            <span class="error-separator">·</span>
-            <span class="error-message">{{ error.message }}</span>
-          </div>
-          <div v-if="importResult.errors.length > 3" class="error-more">
-            还有 {{ importResult.errors.length - 3 }} 条错误...
           </div>
         </div>
       </div>
@@ -685,109 +661,6 @@ const formatDate = (date: Date): string => {
   color: #9ca3af;
 }
 
-.errors-section {
-  background: #fef2f2;
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 16px;
-  border: 1px solid #fecaca;
-}
-
-:root.dark .errors-section {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.errors-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.errors-header h4 {
-  color: #dc2626;
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-:root.dark .errors-header h4 {
-  color: #fca5a5;
-}
-
-.errors-count {
-  font-size: 12px;
-  color: #ef4444;
-  font-weight: 500;
-}
-
-.errors-list {
-  max-height: 100px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.error-item {
-  padding: 6px 8px;
-  background: white;
-  border-radius: 4px;
-  margin-bottom: 6px;
-  border: 1px solid #fecaca;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-:root.dark .error-item {
-  background: rgba(30, 41, 59, 0.7);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.error-line {
-  color: #dc2626;
-  font-weight: 600;
-  min-width: 40px;
-}
-
-.error-separator {
-  color: #9ca3af;
-}
-
-.error-field {
-  color: #374151;
-  font-weight: 500;
-  min-width: 60px;
-}
-
-:root.dark .error-field {
-  color: #e5e7eb;
-}
-
-.error-message {
-  color: #6b7280;
-  flex: 1;
-  min-width: 150px;
-}
-
-:root.dark .error-message {
-  color: #d1d5db;
-}
-
-.error-more {
-  padding: 8px;
-  text-align: center;
-  color: #6b7280;
-  font-size: 11px;
-  font-style: italic;
-}
-
-:root.dark .error-more {
-  color: #9ca3af;
-}
-
 .result-actions {
   display: flex;
   gap: 12px;
@@ -904,18 +777,6 @@ const formatDate = (date: Date): string => {
   .preview-table {
     font-size: 11px;
     min-width: 400px;
-  }
-  
-  .error-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-  }
-  
-  .error-line,
-  .error-field,
-  .error-message {
-    min-width: auto;
   }
 }
 

@@ -539,6 +539,9 @@ const getFullSampleData = (columnIndex: number | null): string => {
   border: 1px solid #e5e7eb;
   transition: all 0.3s ease;
   min-height: 100px;
+  box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 :root.dark .field-card {
@@ -587,6 +590,8 @@ const getFullSampleData = (columnIndex: number | null): string => {
   align-items: flex-start;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 
 .field-name {
@@ -597,6 +602,7 @@ const getFullSampleData = (columnIndex: number | null): string => {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
+  line-height: 1.4;
 }
 
 :root.dark .field-name {
@@ -607,6 +613,8 @@ const getFullSampleData = (columnIndex: number | null): string => {
   font-weight: normal;
   color: #6b7280;
   font-size: 11px;
+  display: block;
+  margin-top: 2px;
 }
 
 :root.dark .field-desc {
@@ -619,6 +627,7 @@ const getFullSampleData = (columnIndex: number | null): string => {
   font-size: 11px;
   font-weight: 500;
   flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .status-mapped {
@@ -659,6 +668,7 @@ const getFullSampleData = (columnIndex: number | null): string => {
   transition: all 0.2s ease;
   appearance: none;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 :root.dark .column-select {
@@ -699,6 +709,9 @@ const getFullSampleData = (columnIndex: number | null): string => {
   display: flex;
   gap: 4px;
   align-items: flex-start;
+  box-sizing: border-box;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 :root.dark .sample-data {
@@ -716,7 +729,8 @@ const getFullSampleData = (columnIndex: number | null): string => {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .auto-suggestion {
@@ -773,6 +787,7 @@ const getFullSampleData = (columnIndex: number | null): string => {
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
+  box-sizing: border-box;
 }
 
 :root.dark .suggestion-btn {
@@ -791,6 +806,8 @@ const getFullSampleData = (columnIndex: number | null): string => {
 
 .suggestion-text {
   text-align: left;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .step-actions {
@@ -876,20 +893,48 @@ const getFullSampleData = (columnIndex: number | null): string => {
   
   .fields-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
   
   .field-card {
     padding: 10px;
     min-height: 90px;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  
+  .field-name {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  
+  .field-desc {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  
+  .column-select {
+    padding: 4px 10px;
+    padding-right: 28px;
+    font-size: 11px;
+  }
+  
+  .sample-data {
+    padding: 4px 6px;
+    font-size: 10px;
+    line-height: 1.3;
   }
   
   .suggestions {
     flex-direction: column;
+    gap: 6px;
   }
   
   .suggestion-btn {
     width: 100%;
     text-align: left;
+    padding: 6px 8px;
+    font-size: 10px;
   }
   
   .step-actions {
@@ -901,6 +946,7 @@ const getFullSampleData = (columnIndex: number | null): string => {
   .next-btn {
     width: 100%;
     justify-content: center;
+    padding: 10px 16px;
   }
   
   .next-btn {
@@ -917,6 +963,7 @@ const getFullSampleData = (columnIndex: number | null): string => {
   
   .preview-table {
     font-size: 11px;
+    min-width: 500px;
   }
   
   .preview-table th,
@@ -925,13 +972,21 @@ const getFullSampleData = (columnIndex: number | null): string => {
   }
   
   .field-name {
-    font-size: 12px;
+    font-size: 11px;
+  }
+  
+  .field-desc {
+    font-size: 9px;
   }
   
   .column-select {
-    padding: 4px 10px;
-    padding-right: 28px;
-    font-size: 11px;
+    padding: 3px 8px;
+    padding-right: 26px;
+    font-size: 10px;
+  }
+  
+  .sample-value {
+    font-size: 9px;
   }
 }
 </style>

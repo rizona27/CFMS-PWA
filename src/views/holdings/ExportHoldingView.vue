@@ -3,10 +3,10 @@
     <!-- 使用统一的 NavBar 组件 -->
     <NavBar title="导出持仓数据" backText="返回" backRoute="/holdings/manage" />
     
-    <!-- 固定顶部部分 - 类似 ImportHoldingView 样式 -->
+    <!-- 固定顶部部分 -->
     <div class="fixed-top-section">
       <div class="top-container">
-        <!-- 固定分隔符 - 与 ImportHoldingView 一致，无底色 -->
+        <!-- 固定分隔符 -->
         <div class="stylish-divider">
           <div class="divider-line"></div>
           <div class="divider-icon">
@@ -126,7 +126,7 @@
                     </div>
                   </div>
                   
-                  <!-- 日期范围 - 保持两行布局 -->
+                  <!-- 日期范围 -->
                   <div class="filter-group full-width">
                     <label class="filter-label">购买日期范围</label>
                     <div class="date-range">
@@ -144,7 +144,7 @@
                     </div>
                   </div>
                   
-                  <!-- 金额范围 - 保持两行布局 -->
+                  <!-- 金额范围 -->
                   <div class="filter-group full-width">
                     <label class="filter-label">购买金额范围 (元)</label>
                     <div class="amount-range">
@@ -171,60 +171,39 @@
               </div>
             </div>
             
-            <!-- 导出选项 -->
-            <div class="options-section">
-              <div class="section-card">
-                <h3 class="section-subtitle">导出内容</h3>
-                
-                <div class="options-grid">
-                  <div class="option-item">
-                    <label class="option-label">
-                      <input
-                        type="checkbox"
-                        v-model="options.includeCalculations"
-                        checked
-                      />
-                      <span>包含计算字段（当前市值、收益率等）</span>
-                    </label>
-                  </div>
-                  
-                  <div class="option-item">
-                    <label class="option-label">
-                      <input
-                        type="checkbox"
-                        v-model="options.includeFundInfo"
-                        checked
-                      />
-                      <span>包含基金基本信息</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
             <!-- 字段选择 -->
             <div class="fields-section">
               <div class="section-card">
                 <h3 class="section-subtitle">选择导出字段</h3>
                 
                 <div class="fields-grid">
+                  <!-- 可选字段 -->
                   <div
-                    v-for="field in exportFields"
+                    v-for="field in optionalFields"
                     :key="field.id"
                     class="field-item"
-                    :class="{ required: field.required }"
+                    :class="{
+                      selected: selectedFields.includes(field.id),
+                      optional: true
+                    }"
+                    @click="toggleField(field)"
                   >
-                    <label class="field-label">
-                      <input
-                        type="checkbox"
-                        :value="field.id"
-                        v-model="selectedFields"
-                        :disabled="field.required"
-                      />
+                    <div class="field-content">
                       <span class="field-name">{{ field.name }}</span>
-                      <span class="field-type">{{ field.type }}</span>
-                    </label>
-                    <p class="field-description">{{ field.description }}</p>
+                    </div>
+                  </div>
+                  
+                  <!-- 必选字段 -->
+                  <div
+                    v-for="field in requiredFields"
+                    :key="field.id"
+                    class="field-item required"
+                    :class="{ selected: selectedFields.includes(field.id) }"
+                  >
+                    <div class="field-content">
+                      <span class="field-name">{{ field.name }}</span>
+                      <span class="required-badge">必选</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -347,15 +326,10 @@ const filters = ref({
   maxAmount: null as number | null
 })
 
-const options = ref({
-  includeCalculations: true,
-  includeFundInfo: true
-})
-
 // 导出字段定义
 const exportFields = ref([
   { id: 'client_name', name: '客户姓名', type: '文本', description: '客户姓名', required: true },
-  { id: 'client_id', name: '客户号', type: '文本', description: '客户号', required: false },
+  { id: 'client_id', name: '客户号', type: '文本', description: '客户号', required: true },
   { id: 'fund_code', name: '基金代码', type: '文本', description: '6位基金代码', required: true },
   { id: 'fund_name', name: '基金名称', type: '文本', description: '基金全称', required: false },
   { id: 'purchase_date', name: '购买日期', type: '日期', description: 'YYYY-MM-DD格式', required: true },
@@ -454,12 +428,32 @@ const estimatedRecords = computed(() => {
   return filtered.length
 })
 
+// 分离必选和可选字段
+const requiredFields = computed(() => {
+  return exportFields.value.filter(field => field.required)
+})
+
+const optionalFields = computed(() => {
+  return exportFields.value.filter(field => !field.required)
+})
+
 const selectFormat = (format: any) => {
   selectedFormat.value = format
   
   // 根据格式调整默认字段选择
   if (format.id === 'csv') {
     selectedFields.value = ['client_name', 'client_id', 'fund_code', 'fund_name', 'purchase_date', 'purchase_amount', 'purchase_shares', 'current_nav', 'nav_date', 'remarks']
+  }
+}
+
+const toggleField = (field: any) => {
+  if (field.required) return // 必选字段不可取消
+  
+  const index = selectedFields.value.indexOf(field.id)
+  if (index > -1) {
+    selectedFields.value.splice(index, 1)
+  } else {
+    selectedFields.value.push(field.id)
   }
 }
 
@@ -716,12 +710,12 @@ onMounted(() => {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-/* 固定顶部部分 - 类似 ImportHoldingView 样式 */
+/* 固定顶部部分 */
 .fixed-top-section {
   flex-shrink: 0;
-  z-index: 90; /* 低于 NavBar */
+  z-index: 90;
   padding-top: 0;
-  background: transparent; /* 无底色 */
+  background: transparent;
 }
 
 .top-container {
@@ -730,7 +724,7 @@ onMounted(() => {
   padding: 0 16px;
 }
 
-/* 分隔符样式 - 与 ImportHoldingView 一致 */
+/* 分隔符样式 */
 .stylish-divider {
   display: flex;
   align-items: center;
@@ -811,10 +805,10 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* 格式选择样式 */
+/* 格式选择样式 - 改为一行显示两个卡片 */
 .format-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -859,10 +853,10 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
-/* 导出范围样式 */
+/* 导出范围样式 - 改为一行显示 */
 .scope-options {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
 }
 
@@ -871,14 +865,20 @@ onMounted(() => {
   align-items: center;
   cursor: pointer;
   font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .scope-option input {
   margin-right: 0.5rem;
+  flex-shrink: 0;
 }
 
 .radio-label {
   color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 筛选条件样式 */
@@ -910,6 +910,7 @@ onMounted(() => {
   font-weight: 500;
   color: var(--text-primary);
   font-size: 0.875rem;
+  flex-shrink: 0;
 }
 
 .filter-group.full-width {
@@ -932,6 +933,7 @@ onMounted(() => {
   transition: border-color 0.3s ease;
   background: var(--bg-card);
   color: var(--text-primary);
+  min-width: 0;
 }
 
 .filter-input:focus {
@@ -965,80 +967,87 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
-/* 导出选项样式 */
-.options-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.option-item {
-  display: flex;
-  align-items: center;
-}
-
-.option-label {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  gap: 0.5rem;
-  color: var(--text-primary);
-  font-size: 0.95rem;
-}
-
-/* 字段选择样式 */
+/* 字段选择样式 - 改为一行4个 */
 .fields-grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .field-item {
-  padding: 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.75rem;
-  transition: all 0.3s ease;
+  padding: 0.75rem 0.5rem;
+  border: 2px solid var(--border-color);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
   background: var(--bg-card);
+  cursor: pointer;
+  text-align: center;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .field-item:hover {
-  border-color: var(--accent-color);
-  background: rgba(var(--accent-color-rgb), 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.field-item.selected {
+  border-color: #10b981;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
 }
 
 .field-item.required {
-  background: rgba(245, 158, 11, 0.05);
-  border-color: #f59e0b;
+  border-color: #ef4444;
+  background: #fef2f2;
+  cursor: default;
+  order: 2; /* 将必选字段放在下面 */
 }
 
-.field-label {
+.field-item.optional {
+  order: 1; /* 将可选字段放在上面 */
+}
+
+.field-item.required.selected {
+  border-color: #ef4444;
+}
+
+.field-content {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.25rem;
-  cursor: pointer;
-  margin-bottom: 0.5rem;
+  width: 100%;
 }
 
 .field-name {
   font-weight: 500;
   color: var(--text-primary);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  width: 100%;
 }
 
-.field-type {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  background: var(--bg-hover);
+.required-badge {
+  font-size: 0.625rem;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
-  align-self: flex-start;
-}
-
-.field-description {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
+  font-weight: 600;
+  white-space: nowrap;
+  position: absolute;
+  top: 4px;
+  right: 4px;
 }
 
 /* 导出按钮样式 */
@@ -1229,6 +1238,11 @@ onMounted(() => {
     gap: 0.75rem;
   }
   
+  .scope-options {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
   .format-option {
     padding: 0.75rem;
   }
@@ -1267,23 +1281,23 @@ onMounted(() => {
   
   .fields-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
   
   .field-item {
-    padding: 0.75rem;
+    padding: 0.5rem 0.25rem;
+    min-height: 55px;
   }
   
   .field-name {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
   }
   
-  .field-type {
-    font-size: 0.6875rem;
-  }
-  
-  .field-description {
-    font-size: 0.6875rem;
+  .required-badge {
+    font-size: 0.5625rem;
+    padding: 0.1rem 0.3rem;
+    top: 2px;
+    right: 2px;
   }
   
   .export-button {
@@ -1333,6 +1347,15 @@ onMounted(() => {
     grid-template-columns: repeat(2, 1fr);
   }
   
+  .field-item {
+    min-height: 50px;
+    padding: 0.4rem 0.2rem;
+  }
+  
+  .field-name {
+    font-size: 0.6875rem;
+  }
+  
   .footer-section {
     margin-top: 16px;
   }
@@ -1360,6 +1383,15 @@ onMounted(() => {
     grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
   }
+  
+  .field-item {
+    min-height: 45px;
+    padding: 0.3rem 0.1rem;
+  }
+  
+  .field-name {
+    font-size: 0.6875rem;
+  }
 }
 
 /* PC WEB端布局 */
@@ -1368,8 +1400,12 @@ onMounted(() => {
     grid-template-columns: repeat(2, 1fr);
   }
   
+  .scope-options {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
   .fields-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -1410,6 +1446,22 @@ onMounted(() => {
 
 :root.dark .field-item {
   background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+:root.dark .field-item.selected {
+  border-color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+:root.dark .field-item.required {
+  border-color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+:root.dark .required-badge {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.2);
 }
 
 :root.dark .filter-input,

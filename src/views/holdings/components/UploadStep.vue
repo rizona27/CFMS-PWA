@@ -48,10 +48,12 @@
             </svg>
           </div>
           <button class="remove-btn" @click="handleClearSelection">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <div class="remove-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -330,11 +332,30 @@ const getFileExtension = (file: File): string => {
   justify-content: center;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  padding: 0;
+  position: relative;
 }
 
 .remove-btn:hover {
   background: #dc2626;
   transform: scale(1.1);
+}
+
+.remove-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.remove-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.remove-btn svg path {
+  stroke: white;
 }
 
 .step-actions {
@@ -438,6 +459,11 @@ const getFileExtension = (file: File): string => {
   .remove-btn {
     width: 28px;
     height: 28px;
+  }
+  
+  .remove-btn svg {
+    width: 12px;
+    height: 12px;
   }
   
   .next-btn {
