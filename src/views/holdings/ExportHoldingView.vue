@@ -78,7 +78,7 @@
             
             <!-- 筛选条件（当选择筛选结果时显示） -->
             <div v-if="exportScope === 'filtered'" class="filters-section">
-              <div class="section-card">
+              <div class="section-card compact-card">
                 <h3 class="section-subtitle">筛选条件</h3>
                 
                 <div class="filters-grid">
@@ -1180,6 +1180,55 @@ onMounted(() => {
   background: #dc2626;
 }
 
+/* 筛选条件卡片紧凑样式 */
+.compact-card {
+  padding: 16px !important;
+}
+
+.compact-card .section-subtitle {
+  margin-bottom: 1rem;
+}
+
+.compact-card .filters-grid {
+  gap: 0.75rem;
+}
+
+.compact-card .filter-row {
+  gap: 0.75rem;
+}
+
+.compact-card .filter-group.compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.compact-card .filter-group.compact label {
+  min-width: 60px;
+  font-size: 0.8125rem;
+}
+
+.compact-card .filter-input {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+.compact-card .filter-label {
+  font-size: 0.8125rem;
+  margin-bottom: 0.375rem;
+}
+
+.compact-card .date-input,
+.compact-card .amount-input {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+.compact-card .date-separator,
+.compact-card .amount-separator {
+  font-size: 0.8125rem;
+}
+
 .footer-section {
   margin-top: 30px;
   text-align: center;
@@ -1233,54 +1282,73 @@ onMounted(() => {
     margin-bottom: 1rem;
   }
   
+  /* 移动端：导出格式两个选项在同一行 */
   .format-options {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
   }
   
+  /* 移动端：导出范围两个选项在同一行 */
   .scope-options {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
   }
   
+  /* 减小格式选项宽度 */
   .format-option {
     padding: 0.75rem;
+    min-width: 0;
   }
   
   .format-icon {
     font-size: 1.5rem;
-    margin-right: 0.75rem;
+    margin-right: 0.5rem;
   }
   
   .format-info h4 {
-    font-size: 1rem;
+    font-size: 0.875rem;
   }
   
   .format-info p {
     font-size: 0.75rem;
+    margin-top: 0.125rem;
+  }
+  
+  /* 减小导出范围选项宽度 */
+  .scope-option {
+    font-size: 0.8125rem;
+    white-space: normal;
+  }
+  
+  .radio-label {
+    font-size: 0.8125rem;
+    line-height: 1.3;
   }
   
   .filter-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
   }
   
   .filter-group.compact {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
   }
   
   .filter-group.compact label {
-    min-width: auto;
-    margin-bottom: 0.25rem;
+    min-width: 60px;
+    font-size: 0.8125rem;
+    margin-bottom: 0;
   }
   
   .filter-input {
-    width: 100%;
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.625rem;
   }
   
+  /* 移动端：字段选择每行4个 */
   .fields-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
   }
   
@@ -1320,6 +1388,51 @@ onMounted(() => {
     justify-content: center;
   }
   
+  /* 筛选条件卡片在移动端更紧凑 */
+  .compact-card {
+    padding: 12px !important;
+  }
+  
+  .compact-card .section-subtitle {
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .compact-card .filter-row {
+    gap: 0.5rem;
+  }
+  
+  .compact-card .filter-group.compact {
+    flex-direction: row;
+    gap: 0.375rem;
+  }
+  
+  .compact-card .filter-group.compact label {
+    min-width: 50px;
+    font-size: 0.75rem;
+  }
+  
+  .compact-card .filter-input {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .compact-card .filter-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .compact-card .date-input,
+  .compact-card .amount-input {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .compact-card .date-separator,
+  .compact-card .amount-separator {
+    font-size: 0.75rem;
+  }
+  
   .footer-section {
     margin-top: 20px;
   }
@@ -1343,8 +1456,10 @@ onMounted(() => {
     border-radius: 12px;
   }
   
+  /* 超小屏幕：字段选择每行4个 */
   .fields-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.375rem;
   }
   
   .field-item {
@@ -1353,6 +1468,21 @@ onMounted(() => {
   }
   
   .field-name {
+    font-size: 0.6875rem;
+  }
+  
+  /* 超小屏幕：筛选条件更紧凑 */
+  .compact-card {
+    padding: 10px !important;
+  }
+  
+  .compact-card .filter-group.compact label {
+    min-width: 45px;
+    font-size: 0.6875rem;
+  }
+  
+  .compact-card .filter-input {
+    padding: 0.25rem 0.375rem;
     font-size: 0.6875rem;
   }
   
@@ -1379,6 +1509,7 @@ onMounted(() => {
     margin-bottom: 12px;
   }
   
+  /* 横屏模式：字段选择保持每行4个 */
   .fields-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
@@ -1404,6 +1535,7 @@ onMounted(() => {
     grid-template-columns: repeat(2, 1fr);
   }
   
+  /* PC端：字段选择每行4个 */
   .fields-grid {
     grid-template-columns: repeat(4, 1fr);
   }
