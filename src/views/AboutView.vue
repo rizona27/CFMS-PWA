@@ -4,6 +4,7 @@
     
     <div class="fixed-top-section">
       <div class="top-container">
+        <!-- 将应用标题移到与返回按钮同行 -->
         <div class="app-title-container">
           <h2 class="app-name">CFMS · 一基暴富</h2>
         </div>
@@ -26,36 +27,12 @@
     <div class="scrollable-content-section">
       <div class="content-scroll">
         <div class="content-wrapper">
-          <!-- 更新日志 -->
-          <div class="update-log-section">
-            <div class="auto-scroll-container">
-              <div
-                ref="scrollContentRef"
-                class="scroll-content"
-                :style="{ transform: `translateY(-${Math.round(scrollOffset)}px)` }"
-                @mouseenter="pauseScroll"
-                @mouseleave="resumeScroll"
-              >
-                <div v-for="(log, index) in scrollLogs" :key="index" class="log-item">
-                  <div class="log-header">
-                    <span class="log-version">{{ log.version }}</span>
-                  </div>
-                  <div class="log-content">
-                    <p class="log-description">{{ log.description }}</p>
-                  </div>
-                </div>
-              </div>
-              <div class="scroll-mask top-mask"></div>
-              <div class="scroll-mask bottom-mask"></div>
-            </div>
-          </div>
-          
           <!-- 统计卡片滑动容器 -->
           <div class="stats-slider-section">
             <!-- 滑动指示器 -->
             <div class="slider-indicators">
               <div
-                v-for="index in 3"
+                v-for="index in 4"
                 :key="index"
                 class="slider-dot"
                 :class="{ active: currentSlide === index - 1 }"
@@ -81,9 +58,45 @@
                   transition: isDragging ? 'none' : 'transform 0.3s ease'
                 }"
               >
-                <!-- 服务器基本信息卡片 -->
+                <!-- 版本更新信息卡片（第一张） -->
                 <div class="stat-card-wrapper">
-                  <div class="stat-card">
+                  <div class="stat-card version-card">
+                    <div class="stat-header">
+                      <div class="stat-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </div>
+                      <h4 class="stat-title">版本更新记录</h4>
+                    </div>
+                    <div class="version-content">
+                      <div class="auto-scroll-container">
+                        <div
+                          ref="scrollContentRef"
+                          class="scroll-content"
+                          :style="{ transform: `translateY(-${Math.round(scrollOffset)}px)` }"
+                          @mouseenter="pauseScroll"
+                          @mouseleave="resumeScroll"
+                        >
+                          <div v-for="(log, index) in scrollLogs" :key="index" class="log-item">
+                            <div class="log-header">
+                              <span class="log-version">{{ log.version }}</span>
+                            </div>
+                            <div class="log-content">
+                              <p class="log-description">{{ log.description }}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="scroll-mask top-mask"></div>
+                        <div class="scroll-mask bottom-mask"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 服务器基本信息卡片（第二张） -->
+                <div class="stat-card-wrapper">
+                  <div class="stat-card server-card">
                     <div class="stat-header">
                       <div class="stat-icon">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -94,7 +107,8 @@
                       </div>
                       <h4 class="stat-title">服务器基本信息</h4>
                     </div>
-                    <div class="stat-content">
+                    
+                    <div class="server-stats-content">
                       <div v-if="fundCacheStats.loading" class="loading-indicator">
                         <div class="loading-spinner"></div>
                         <span>正在加载服务器信息...</span>
@@ -102,29 +116,39 @@
                       <div v-else-if="fundCacheStats.error" class="error-message">
                         {{ fundCacheStats.error }}
                       </div>
-                      <div v-else>
-                        <div class="stat-item">
-                          <span class="stat-label">缓存基金数量:</span>
-                          <span class="stat-value stat-value-right">{{ fundCacheStats.totalCount || '0' }}</span>
+                      <div v-else class="server-stats">
+                        <!-- 缓存基金数量和累计登录人次分为两行 -->
+                        <div class="stat-row">
+                          <div class="stat-item-full">
+                            <span class="stat-label">缓存基金数量:</span>
+                            <span class="stat-value highlight-1">{{ fundCacheStats.totalCount || '0' }}</span>
+                          </div>
                         </div>
-                        <div class="stat-item">
-                          <span class="stat-label">最后更新时间:</span>
-                          <span class="stat-value stat-value-right">{{ fundCacheStats.lastUpdated ? formatDate(fundCacheStats.lastUpdated) : '未知' }}</span>
+                        <div class="stat-row">
+                          <div class="stat-item-full">
+                            <span class="stat-label">累计登录人次:</span>
+                            <span class="stat-value highlight-2">{{ userLoginStats.totalLogins || 0 }}</span>
+                          </div>
                         </div>
-                        <div class="stat-item">
-                          <span class="stat-label">已运行时间:</span>
-                          <span class="stat-value stat-value-right">{{ uptime }}</span>
+                        <!-- 最后更新时间和已运行时间 -->
+                        <div class="stat-row">
+                          <div class="stat-item-full">
+                            <span class="stat-label">最后更新时间:</span>
+                            <span class="stat-value stat-value-right">{{ fundCacheStats.lastUpdated ? formatDate(fundCacheStats.lastUpdated) : '未知' }}</span>
+                          </div>
                         </div>
-                        <div class="stat-item">
-                          <span class="stat-label">累计登录人次:</span>
-                          <span class="stat-value stat-value-right">{{ userLoginStats.totalLogins || 0 }}</span>
+                        <div class="stat-row">
+                          <div class="stat-item-full">
+                            <span class="stat-label">已运行时间:</span>
+                            <span class="stat-value stat-value-right">{{ uptime }}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                <!-- 登录地域分布卡片 -->
+                <!-- 登录地域分布卡片（第三张） -->
                 <div class="stat-card-wrapper">
                   <div class="stat-card">
                     <div class="stat-header">
@@ -146,11 +170,13 @@
                         {{ userLoginStats.error }}
                       </div>
                       <div v-else>
-                        <div v-if="userLoginStats.locations && userLoginStats.locations.length > 0" class="location-section">
+                        <div v-if="displayedLocations.length > 0" class="location-section">
                           <div class="location-list-content">
                             <div v-for="(location, index) in displayedLocations" :key="index" class="location-item-detail">
                               <div class="location-info">
-                                <span class="location-name">{{ location.name }}</span>
+                                <span class="location-name">
+                                  {{ location.name }}
+                                </span>
                                 <span class="location-count">{{ location.count }}次</span>
                               </div>
                               <div class="location-bar">
@@ -164,16 +190,16 @@
                               </div>
                             </div>
                           </div>
-                          <div v-if="userLoginStats.locations.length === 0" class="empty-message">
-                            暂无登录地域数据
-                          </div>
+                        </div>
+                        <div v-else class="empty-message">
+                          暂无登录地域数据
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                <!-- 登录时段统计卡片 -->
+                <!-- 登录时段统计卡片（第四张） -->
                 <div class="stat-card-wrapper">
                   <div class="stat-card">
                     <div class="stat-header">
@@ -216,44 +242,36 @@
                   </div>
                 </div>
                 
-                <!-- 第四个卡片 - 克隆第一个卡片用于无缝循环 -->
+                <!-- 第五个卡片 - 克隆第一个卡片用于无缝循环 -->
                 <div class="stat-card-wrapper">
-                  <div class="stat-card">
+                  <div class="stat-card version-card">
                     <div class="stat-header">
                       <div class="stat-icon">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/>
-                          <polyline points="3.29 7 12 12 20.71 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <line x1="12" y1="22" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                       </div>
-                      <h4 class="stat-title">服务器基本信息</h4>
+                      <h4 class="stat-title">版本更新记录</h4>
                     </div>
-                    <div class="stat-content">
-                      <div v-if="fundCacheStats.loading" class="loading-indicator">
-                        <div class="loading-spinner"></div>
-                        <span>正在加载服务器信息...</span>
-                      </div>
-                      <div v-else-if="fundCacheStats.error" class="error-message">
-                        {{ fundCacheStats.error }}
-                      </div>
-                      <div v-else>
-                        <div class="stat-item">
-                          <span class="stat-label">缓存基金数量:</span>
-                          <span class="stat-value stat-value-right">{{ fundCacheStats.totalCount || '0' }}</span>
+                    <div class="version-content">
+                      <div class="auto-scroll-container">
+                        <div
+                          class="scroll-content"
+                          :style="{ transform: `translateY(-${Math.round(scrollOffset)}px)` }"
+                          @mouseenter="pauseScroll"
+                          @mouseleave="resumeScroll"
+                        >
+                          <div v-for="(log, index) in scrollLogs" :key="index" class="log-item">
+                            <div class="log-header">
+                              <span class="log-version">{{ log.version }}</span>
+                            </div>
+                            <div class="log-content">
+                              <p class="log-description">{{ log.description }}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div class="stat-item">
-                          <span class="stat-label">最后更新时间:</span>
-                          <span class="stat-value stat-value-right">{{ fundCacheStats.lastUpdated ? formatDate(fundCacheStats.lastUpdated) : '未知' }}</span>
-                        </div>
-                        <div class="stat-item">
-                          <span class="stat-label">已运行时间:</span>
-                          <span class="stat-value stat-value-right">{{ uptime }}</span>
-                        </div>
-                        <div class="stat-item">
-                          <span class="stat-label">累计登录人次:</span>
-                          <span class="stat-value stat-value-right">{{ userLoginStats.totalLogins || 0 }}</span>
-                        </div>
+                        <div class="scroll-mask top-mask"></div>
+                        <div class="scroll-mask bottom-mask"></div>
                       </div>
                     </div>
                   </div>
@@ -335,7 +353,7 @@ let isPaused = false
 
 // 服务器启动时间
 const serverStartTime = new Date('2025-12-18T18:00:00')
-const uptime = ref('00天00时00分00秒')
+const uptime = ref('')
 
 // 滑动状态
 const currentSlide = ref(0)
@@ -374,29 +392,16 @@ const loginTimeStats = ref({
   error: ''
 })
 
-// 计算显示的地域数据（固定显示6个）
+// 计算显示的地域数据（只显示有数据的，最多5个）
 const displayedLocations = computed(() => {
   if (!userLoginStats.value.locations || userLoginStats.value.locations.length === 0) {
-    // 如果没有数据，返回6个空的占位项，包含userCount属性
-    return Array(6).fill(null).map((_, index) => ({
-      name: `地区${index + 1}`,
-      count: 0,
-      userCount: 0
-    }))
+    return []
   }
-  // 按登录次数降序排序，取前6个
-  const sorted = [...userLoginStats.value.locations]
+  // 按登录次数降序排序，取前5个有数据的
+  const filtered = userLoginStats.value.locations.filter(location => location.count > 0)
+  const sorted = filtered
     .sort((a, b) => b.count - a.count)
-    .slice(0, 6)
-  
-  // 如果不足6个，用空数据补齐，包含userCount属性
-  while (sorted.length < 6) {
-    sorted.push({
-      name: `地区${sorted.length + 1}`,
-      count: 0,
-      userCount: 0
-    })
-  }
+    .slice(0, 5)
   
   return sorted
 })
@@ -469,7 +474,7 @@ const getPeriodColor = (index: number) => {
 
 // 获取地域颜色
 const getLocationColor = (index: number) => {
-  const colors = ['#3498DB', '#2ECC71', '#F39C12', '#E74C3C', '#9B59B6', '#1ABC9C']
+  const colors = ['#3498DB', '#2ECC71', '#F39C12', '#E74C3C', '#9B59B6']
   return colors[index % colors.length]
 }
 
@@ -479,21 +484,50 @@ const getLocationPercentage = (locationCount: number, totalCount: number) => {
   return Math.round((locationCount / totalCount) * 100)
 }
 
-// 更新运行时间
-const updateUptime = () => {
-  const now = new Date()
-  const diff = now.getTime() - serverStartTime.getTime()
-  
+// 格式化运行时间，如果数据是0则不显示
+const formatUptime = (diff: number) => {
   const seconds = Math.floor(diff / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
   const days = Math.floor(hours / 24)
   
+  // 计算年、月（按30天计算一个月）
+  const years = Math.floor(days / 365)
+  const remainingDays = days % 365
+  const months = Math.floor(remainingDays / 30)
+  const finalDays = remainingDays % 30
+  
   const remainingHours = hours % 24
   const remainingMinutes = minutes % 60
   const remainingSeconds = seconds % 60
   
-  uptime.value = `${days.toString().padStart(2, '0')}天${remainingHours.toString().padStart(2, '0')}时${remainingMinutes.toString().padStart(2, '0')}分${remainingSeconds.toString().padStart(2, '0')}秒`
+  const parts = []
+  
+  if (years > 0) {
+    parts.push(`${years}年`)
+  }
+  if (months > 0 || years > 0) {
+    parts.push(`${months}月`)
+  }
+  if (finalDays > 0 || months > 0 || years > 0) {
+    parts.push(`${finalDays}天`)
+  }
+  if (remainingHours > 0 || finalDays > 0 || months > 0 || years > 0) {
+    parts.push(`${remainingHours}时`)
+  }
+  if (remainingMinutes > 0 || remainingHours > 0 || finalDays > 0 || months > 0 || years > 0) {
+    parts.push(`${remainingMinutes}分`)
+  }
+  parts.push(`${remainingSeconds}秒`)
+  
+  return parts.join('')
+}
+
+// 更新运行时间
+const updateUptime = () => {
+  const now = new Date()
+  const diff = now.getTime() - serverStartTime.getTime()
+  uptime.value = formatUptime(diff)
 }
 
 // 获取服务器信息统计
@@ -658,12 +692,12 @@ const startAutoRefresh = () => {
   }, 15 * 60 * 1000)
 }
 
-// 滑动控制 - 实现无缝循环
+// 滑动控制 - 实现无缝循环（现在是4张卡片）
 const nextSlide = () => {
   currentSlide.value++
   
-  // 如果滑动到第四个卡片（克隆的第一个卡片），立即无动画跳转到第一个卡片
-  if (currentSlide.value === 3) {
+  // 如果滑动到第五个卡片（克隆的第一个卡片），立即无动画跳转到第一个卡片
+  if (currentSlide.value === 4) {
     setTimeout(() => {
       // 禁用过渡效果，瞬间跳转回第一个卡片
       isDragging.value = true // 临时禁用过渡
@@ -735,7 +769,7 @@ const onTouchEnd = () => {
       nextSlide()
     } else {
       // 向左滑动，切换到上一张
-      currentSlide.value = (currentSlide.value - 1 + 3) % 3
+      currentSlide.value = (currentSlide.value - 1 + 4) % 4
     }
   }
   
@@ -767,7 +801,7 @@ const onMouseUp = () => {
       nextSlide()
     } else {
       // 向左滑动，切换到上一张
-      currentSlide.value = (currentSlide.value - 1 + 3) % 3
+      currentSlide.value = (currentSlide.value - 1 + 4) % 4
     }
   }
   
@@ -904,22 +938,26 @@ onUnmounted(() => {
   z-index: 90;
   padding-top: 0;
   background: transparent;
+  margin-top: -8px;
 }
 
 .top-container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 16px 5px;
 }
 
 .app-title-container {
   text-align: center;
-  margin-bottom: 8px;
-  margin-top: 8px;
+  margin-bottom: 0;
+  margin-top: 0;
+  padding: 8px 0 2px;
+  position: relative;
+  z-index: 1;
 }
 
 .app-name {
-  font-size: 36px;
+  font-size: 26px;
   font-weight: bold;
   background: linear-gradient(135deg, #FFD700, #FFA500);
   -webkit-background-clip: text;
@@ -927,6 +965,8 @@ onUnmounted(() => {
   background-clip: text;
   margin: 0;
   display: inline-block;
+  line-height: 1.2;
+  padding: 4px 0;
 }
 
 .app-info-section {
@@ -1090,13 +1130,6 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.update-log-section {
-  margin-bottom: 16px;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
 /* 统计卡片滑动样式 */
 .stats-slider-section {
   position: relative;
@@ -1105,6 +1138,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-top: 8px;
 }
 
 .slider-indicators {
@@ -1162,13 +1196,14 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
+/* 卡片通用样式 - 降低高度 */
 .stat-card {
   background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   padding: 16px;
-  min-height: 280px;
+  min-height: 220px; /* 从260px降低到220px */
   height: 100%;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   width: 100%;
@@ -1189,8 +1224,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -1220,27 +1255,56 @@ onUnmounted(() => {
   color: #e5e7eb;
 }
 
-.stat-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  height: calc(100% - 68px);
+/* 版本卡片样式 */
+.version-card {
+  min-height: 220px; /* 从260px降低到220px */
 }
 
-.stat-item {
+.version-content {
+  height: calc(100% - 60px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 服务器卡片样式 */
+.server-card {
+  min-height: 220px; /* 从260px降低到220px */
+}
+
+.server-stats-content {
+  height: calc(100% - 60px);
+  display: flex;
+  flex-direction: column;
+}
+
+.server-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* 减小间距 */
+  flex: 1;
+}
+
+.stat-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 6px 0; /* 减小内边距 */
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  min-height: 28px;
+  min-height: 24px; /* 减小最小高度 */
 }
 
-:root.dark .stat-item {
+.stat-item-full {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+:root.dark .stat-row {
   border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
-.stat-item:last-child {
+.stat-row:last-child {
   border-bottom: none;
 }
 
@@ -1266,10 +1330,37 @@ onUnmounted(() => {
   color: #e5e7eb;
 }
 
+/* 高亮样式 */
+.highlight-1 {
+  color: #3498DB; /* 缓存基金数量颜色 */
+  font-weight: 700;
+}
+
+:root.dark .highlight-1 {
+  color: #3B82F6;
+}
+
+.highlight-2 {
+  color: #2ECC71; /* 累计登录人次颜色 */
+  font-weight: 700;
+}
+
+:root.dark .highlight-2 {
+  color: #10B981;
+}
+
 .stat-value-right {
   text-align: right;
   flex: 1;
   margin-left: 8px;
+}
+
+/* 通用内容区域 */
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* 减小间距 */
+  height: calc(100% - 60px);
 }
 
 .loading-indicator {
@@ -1277,10 +1368,10 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 16px;
+  padding: 12px;
   color: #666;
   height: 100%;
-  min-height: 200px;
+  min-height: 60px; /* 降低最小高度 */
 }
 
 :root.dark .loading-indicator {
@@ -1288,8 +1379,8 @@ onUnmounted(() => {
 }
 
 .loading-spinner {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: 2px solid rgba(0, 0, 0, 0.1);
   border-top-color: #14B8A6;
   border-radius: 50%;
@@ -1301,15 +1392,15 @@ onUnmounted(() => {
 }
 
 .error-message {
-  padding: 16px;
+  padding: 12px;
   color: #e74c3c;
   text-align: center;
-  font-size: 14px;
+  font-size: 13px;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
+  min-height: 60px; /* 降低最小高度 */
 }
 
 :root.dark .error-message {
@@ -1317,15 +1408,15 @@ onUnmounted(() => {
 }
 
 .empty-message {
-  padding: 16px;
+  padding: 12px;
   color: #666;
   text-align: center;
-  font-size: 14px;
+  font-size: 13px;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
+  min-height: 60px; /* 降低最小高度 */
 }
 
 :root.dark .empty-message {
@@ -1336,14 +1427,14 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: calc(100% - 60px);
+  height: 100%;
 }
 
 .location-list-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px; /* 减小间距 */
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -1351,8 +1442,8 @@ onUnmounted(() => {
 .location-item-detail {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 6px 0;
+  gap: 4px;
+  padding: 3px 0; /* 减小内边距 */
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -1367,7 +1458,7 @@ onUnmounted(() => {
 }
 
 .location-name {
-  font-size: 13px;
+  font-size: 12px;
   color: #333;
   font-weight: 500;
   flex: 1;
@@ -1381,17 +1472,17 @@ onUnmounted(() => {
 }
 
 .location-count {
-  font-size: 13px;
+  font-size: 12px;
   color: #14B8A6;
   font-weight: 600;
-  min-width: 50px;
+  min-width: 45px;
   text-align: right;
 }
 
 .location-bar {
-  height: 6px;
+  height: 4px; /* 减小高度 */
   background: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
@@ -1403,14 +1494,14 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px; /* 减小间距 */
   height: 100%;
 }
 
 .time-period {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px; /* 减小间距 */
 }
 
 .period-info {
@@ -1420,7 +1511,7 @@ onUnmounted(() => {
 }
 
 .period-name {
-  font-size: 13px;
+  font-size: 12px;
   color: #333;
   font-weight: 500;
 }
@@ -1430,7 +1521,7 @@ onUnmounted(() => {
 }
 
 .period-count {
-  font-size: 13px;
+  font-size: 12px;
   color: #666;
   font-weight: 500;
 }
@@ -1440,9 +1531,9 @@ onUnmounted(() => {
 }
 
 .period-bar {
-  height: 8px;
+  height: 5px; /* 减小高度 */
   background: rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
@@ -1452,34 +1543,37 @@ onUnmounted(() => {
 
 .bar-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 3px;
   transition: width 0.5s ease;
 }
 
+/* 版本更新日志容器样式 */
 .auto-scroll-container {
   position: relative;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  height: 160px;
+  background: rgba(245, 247, 250, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.03);
+  height: 100%;
   overflow: hidden;
   width: 100%;
-  max-width: 500px;
+  flex: 1;
+  min-height: 140px; /* 从180px降低到140px */
 }
 
 :root.dark .auto-scroll-container {
-  background: rgba(45, 45, 65, 0.8);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: rgba(30, 30, 45, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .scroll-content {
   will-change: transform;
+  padding: 6px;
 }
 
 .log-item {
-  padding: 14px;
+  padding: 6px; /* 减小内边距 */
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -1494,11 +1588,11 @@ onUnmounted(() => {
 .log-header {
   display: flex;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 2px; /* 减小边距 */
 }
 
 .log-version {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
   color: #14B8A6;
   line-height: 1.2;
@@ -1511,13 +1605,13 @@ onUnmounted(() => {
 .log-content {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 1px; /* 减小间距 */
 }
 
 .log-description {
-  font-size: 13px;
+  font-size: 11px;
   color: #666;
-  line-height: 1.4;
+  line-height: 1.3;
   white-space: pre-line;
   margin: 0;
 }
@@ -1530,7 +1624,7 @@ onUnmounted(() => {
   position: absolute;
   left: 0;
   right: 0;
-  height: 30px;
+  height: 12px; /* 减小高度 */
   pointer-events: none;
   z-index: 2;
 }
@@ -1538,13 +1632,13 @@ onUnmounted(() => {
 .top-mask {
   top: 0;
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
-  border-radius: 16px 16px 0 0;
+  border-radius: 12px 12px 0 0;
 }
 
 .bottom-mask {
   bottom: 0;
   background: linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
-  border-radius: 0 0 16px 16px;
+  border-radius: 0 0 12px 12px;
 }
 
 :root.dark .top-mask {
@@ -1558,7 +1652,7 @@ onUnmounted(() => {
 .divider {
   height: 1px;
   background: rgba(0, 0, 0, 0.1);
-  margin: 16px 0;
+  margin: 12px 0;
   width: 100%;
 }
 
@@ -1569,18 +1663,23 @@ onUnmounted(() => {
 .divider.decorative {
   height: 2px;
   background: linear-gradient(90deg, transparent, #14B8A6, transparent);
-  margin: 20px 0;
+  margin: 16px 0;
   opacity: 0.5;
   width: 100%;
 }
 
 @media (max-width: 768px) {
   .top-container {
-    padding: 0 12px;
+    padding: 0 12px 3px;
   }
   
   .app-name {
-    font-size: 32px;
+    font-size: 22px;
+    padding: 6px 0;
+  }
+  
+  .app-title-container {
+    padding: 10px 0 4px;
   }
   
   .app-info {
@@ -1608,34 +1707,44 @@ onUnmounted(() => {
   }
   
   .stat-card {
-    min-height: 260px;
-    padding: 14px;
-  }
-  
-  .auto-scroll-container {
-    height: 140px;
-  }
-  
-  .log-item {
+    min-height: 200px; /* 从240px降低到200px */
     padding: 12px;
   }
   
+  .version-card,
+  .server-card {
+    min-height: 200px; /* 从240px降低到200px */
+  }
+  
+  .auto-scroll-container {
+    min-height: 130px; /* 从160px降低到130px */
+  }
+  
+  .log-item {
+    padding: 5px;
+  }
+  
   .log-version {
-    font-size: 14px;
+    font-size: 11px;
   }
   
   .log-description {
-    font-size: 12px;
+    font-size: 10px;
   }
   
   .scroll-mask {
-    height: 25px;
+    height: 10px; /* 减小高度 */
   }
 }
 
 @media (max-width: 480px) {
   .app-name {
-    font-size: 28px;
+    font-size: 20px;
+    padding: 8px 0;
+  }
+  
+  .app-title-container {
+    padding: 12px 0 6px;
   }
   
   .app-info {
@@ -1665,23 +1774,32 @@ onUnmounted(() => {
   }
   
   .stat-card {
-    min-height: 240px;
-    padding: 12px;
+    min-height: 180px; /* 从220px降低到180px */
+    padding: 10px;
+  }
+  
+  .version-card,
+  .server-card {
+    min-height: 180px; /* 从220px降低到180px */
   }
   
   .stat-header {
     gap: 8px;
-    margin-bottom: 12px;
-    padding-bottom: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
   }
   
   .stat-icon {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
   }
   
   .stat-title {
-    font-size: 14px;
+    font-size: 13px;
+  }
+  
+  .auto-scroll-container {
+    min-height: 120px; /* 从140px降低到120px */
   }
   
   .stat-label {
@@ -1692,24 +1810,29 @@ onUnmounted(() => {
     font-size: 13px;
   }
   
-  .auto-scroll-container {
-    height: 120px;
-  }
-  
   .log-item {
-    padding: 10px;
+    padding: 4px;
   }
   
   .log-version {
-    font-size: 13px;
+    font-size: 10px;
   }
   
   .log-description {
-    font-size: 11px;
+    font-size: 9px;
   }
 }
 
 @media (max-width: 360px) {
+  .app-name {
+    font-size: 18px;
+    padding: 10px 0;
+  }
+  
+  .app-title-container {
+    padding: 14px 0 8px;
+  }
+  
   .app-info {
     flex-direction: column;
     align-items: flex-end;
@@ -1726,11 +1849,16 @@ onUnmounted(() => {
   }
   
   .stat-card {
-    min-height: 220px;
+    min-height: 160px; /* 从200px降低到160px */
+  }
+  
+  .version-card,
+  .server-card {
+    min-height: 160px; /* 从200px降低到160px */
   }
   
   .auto-scroll-container {
-    height: 110px;
+    min-height: 110px; /* 从130px降低到110px */
   }
 }
 
@@ -1739,17 +1867,22 @@ onUnmounted(() => {
     height: calc(100vh - 140px);
   }
   
-  .auto-scroll-container {
-    height: 100px;
-  }
-  
   .content-wrapper {
     padding: 0 16px 40px;
   }
   
   .stat-card {
-    min-height: 200px;
-    padding: 10px;
+    min-height: 150px; /* 从180px降低到150px */
+    padding: 8px;
+  }
+  
+  .version-card,
+  .server-card {
+    min-height: 150px; /* 从180px降低到150px */
+  }
+  
+  .auto-scroll-container {
+    min-height: 100px; /* 从120px降低到100px */
   }
 }
 
@@ -1789,11 +1922,6 @@ onUnmounted(() => {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
-  .auto-scroll-container {
-    max-height: 180px;
-    overflow: hidden;
-  }
 }
 
 .about-view {
@@ -1817,7 +1945,7 @@ onUnmounted(() => {
 
 .auto-scroll-container {
   position: relative;
-  min-height: 120px;
+  min-height: 140px; /* 从180px降低到140px */
 }
 
 .scroll-content {
