@@ -16,8 +16,7 @@
             <path d="M12 5V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h3>拖放文件到此处</h3>
-        <p>或点击选择文件</p>
+        <h3>点击选择文件上传</h3>
         <p class="file-format">支持 .csv, .xlsx, .xls 格式</p>
         <input
           type="file"
@@ -42,6 +41,11 @@
             <p v-if="fileFormatDetected" class="file-detected">
               检测到格式: <strong>{{ fileFormatDetected }}</strong>
             </p>
+          </div>
+          <div class="status-indicator success">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </div>
           <button class="remove-btn" @click="handleClearSelection">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -231,6 +235,7 @@ const getFileExtension = (file: File): string => {
   padding: 16px;
   border: 1px solid #e5e7eb;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 :root.dark .file-card {
@@ -297,6 +302,21 @@ const getFileExtension = (file: File): string => {
   color: #60a5fa !important;
 }
 
+.status-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+}
+
+.status-indicator.success {
+  background: #10b981;
+  color: white;
+}
+
 .remove-btn {
   background: #ef4444;
   color: white;
@@ -310,7 +330,6 @@ const getFileExtension = (file: File): string => {
   justify-content: center;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  margin-left: 12px;
 }
 
 .remove-btn:hover {
@@ -389,6 +408,12 @@ const getFileExtension = (file: File): string => {
     font-size: 11px;
   }
   
+  .status-indicator {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+  }
+  
   .next-btn {
     padding: 10px 20px;
     font-size: 13px;
@@ -413,7 +438,6 @@ const getFileExtension = (file: File): string => {
   .remove-btn {
     width: 28px;
     height: 28px;
-    margin-left: 8px;
   }
   
   .next-btn {

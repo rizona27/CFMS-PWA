@@ -68,7 +68,6 @@
                 :preview-data="previewData"
                 :raw-data-length="rawData.length"
                 :valid-rows-count="validRowsCount"
-                :import-logs="importLogs"
                 :is-importing="isImporting"
                 :progress-percentage="progressPercentage"
                 :all-required-fields-mapped="allRequiredFieldsMapped"
@@ -95,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import NavBar from '@/components/layout/NavBar.vue'
 import StepIndicator from './components/StepIndicator.vue'
@@ -121,7 +120,6 @@ const {
   rawData,
   fieldConfigs,
   previewData,
-  importLogs,
   isImporting,
   progressPercentage,
   importResult,
@@ -140,10 +138,6 @@ const {
   importAnother,
   showNotification
 } = useImportHolding()
-
-const goBack = () => {
-  router.push('/holdings/manage')
-}
 </script>
 
 <style scoped>

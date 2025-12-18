@@ -94,7 +94,7 @@
                 </div>
                 
                 <div v-if="field.columnIndex !== null && field.columnIndex >= 0" class="sample-data">
-                  <span class="sample-label">示例：</span>
+                  <span class="sample-label">内容：</span>
                   <span class="sample-value">{{ getFullSampleData(field.columnIndex) || '(无数据)' }}</span>
                 </div>
               </div>
@@ -151,7 +151,7 @@
                 </div>
                 
                 <div v-if="field.columnIndex !== null && field.columnIndex >= 0" class="sample-data">
-                  <span class="sample-label">示例：</span>
+                  <span class="sample-label">内容：</span>
                   <span class="sample-value">{{ getFullSampleData(field.columnIndex) || '(无数据)' }}</span>
                 </div>
               </div>

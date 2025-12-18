@@ -52,42 +52,6 @@
             <div class="stat-label">有效数据行</div>
           </div>
         </div>
-        
-        <div class="stat-card" :class="{ 'ready': allRequiredFieldsMapped }">
-          <div class="stat-content">
-            <div class="stat-value">{{ requiredFieldsMappedCount }}/{{ requiredFieldsTotalCount }}</div>
-            <div class="stat-label">必填字段已映射</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 导入日志 -->
-    <div v-if="importLogs.length > 0" class="import-logs">
-      <div class="logs-header">
-        <h3>导入日志</h3>
-        <button
-          class="clear-logs-btn"
-          @click="clearLogs"
-          :disabled="importLogs.length === 0"
-        >
-          清空
-        </button>
-      </div>
-      <div class="logs-container">
-        <div
-          v-for="(log, index) in importLogs.slice(0, 5)"
-          :key="index"
-          class="log-item"
-          :class="getLogTypeClass(log.message)"
-        >
-          <span class="log-time">{{ log.time }}</span>
-          <span class="log-separator">·</span>
-          <span class="log-message">{{ log.message }}</span>
-        </div>
-        <div v-if="importLogs.length > 5" class="log-more">
-          还有 {{ importLogs.length - 5 }} 条日志...
-        </div>
       </div>
     </div>
     
@@ -203,11 +167,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-interface ImportLog {
-  time: string
-  message: string
-}
-
 interface ImportResult {
   success: number
   failed: number
@@ -219,7 +178,6 @@ interface Props {
   previewData: any[]
   rawDataLength: number
   validRowsCount: number
-  importLogs: ImportLog[]
   isImporting: boolean
   progressPercentage: number
   allRequiredFieldsMapped: boolean
@@ -235,7 +193,6 @@ const emit = defineEmits<{
   'start-import': []
   'go-to-holdings': []
   'import-another': []
-  'clear-logs': []
 }>()
 
 const handlePrevStep = () => {
@@ -254,10 +211,6 @@ const handleImportAnother = () => {
   emit('import-another')
 }
 
-const clearLogs = () => {
-  emit('clear-logs')
-}
-
 const formatNumber = (num: number, decimals: number = 2): string => {
   return num.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
@@ -265,17 +218,6 @@ const formatNumber = (num: number, decimals: number = 2): string => {
 const formatDate = (date: Date): string => {
   if (!date || isNaN(date.getTime())) return '无效日期'
   return date.toISOString().split('T')[0]
-}
-
-const getLogTypeClass = (message: string): string => {
-  if (message.includes('失败') || message.includes('错误') || message.includes('异常')) {
-    return 'error'
-  } else if (message.includes('成功') || message.includes('完成') || message.includes('✓')) {
-    return 'success'
-  } else if (message.includes('警告') || message.includes('⚠')) {
-    return 'warning'
-  }
-  return 'info'
 }
 </script>
 
@@ -403,7 +345,7 @@ const getLogTypeClass = (message: string): string => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
@@ -442,16 +384,6 @@ const getLogTypeClass = (message: string): string => {
 :root.dark .stat-card.valid {
   border-color: #34d399;
   background: rgba(16, 185, 129, 0.1);
-}
-
-.stat-card.ready {
-  border-color: #f59e0b;
-  background: #fef3c7;
-}
-
-:root.dark .stat-card.ready {
-  border-color: #fbbf24;
-  background: rgba(245, 158, 11, 0.1);
 }
 
 .stat-card:hover {
@@ -496,14 +428,6 @@ const getLogTypeClass = (message: string): string => {
   color: #34d399;
 }
 
-.stat-card.ready .stat-value {
-  color: #b45309;
-}
-
-:root.dark .stat-card.ready .stat-value {
-  color: #fbbf24;
-}
-
 .stat-label {
   font-size: 12px;
   color: #6b7280;
@@ -511,191 +435,6 @@ const getLogTypeClass = (message: string): string => {
 }
 
 :root.dark .stat-label {
-  color: #9ca3af;
-}
-
-.import-logs {
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 20px;
-  border: 1px solid #e5e7eb;
-}
-
-:root.dark .import-logs {
-  background: rgba(30, 41, 59, 0.5);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.logs-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.logs-header h3 {
-  color: #374151;
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-:root.dark .logs-header h3 {
-  color: #e5e7eb;
-}
-
-.clear-logs-btn {
-  background: #ef4444;
-  color: white;
-  border: none;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.clear-logs-btn:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-.clear-logs-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-.logs-container {
-  max-height: 150px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.log-item {
-  padding: 6px 8px;
-  background: white;
-  border-radius: 4px;
-  margin-bottom: 6px;
-  border: 1px solid #e5e7eb;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  animation: fadeIn 0.3s ease;
-}
-
-:root.dark .log-item {
-  background: rgba(30, 41, 59, 0.7);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.log-item.error {
-  border-color: #fecaca;
-  background: #fef2f2;
-}
-
-:root.dark .log-item.error {
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.log-item.success {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-}
-
-:root.dark .log-item.success {
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.1);
-}
-
-.log-item.warning {
-  border-color: #fde68a;
-  background: #fffbeb;
-}
-
-:root.dark .log-item.warning {
-  border-color: rgba(245, 158, 11, 0.3);
-  background: rgba(245, 158, 11, 0.1);
-}
-
-.log-item.info {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-}
-
-:root.dark .log-item.info {
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(59, 130, 246, 0.1);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.log-time {
-  color: #3b82f6;
-  font-weight: 500;
-  min-width: 50px;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-}
-
-:root.dark .log-time {
-  color: #60a5fa;
-}
-
-.log-item.error .log-time {
-  color: #dc2626;
-}
-
-.log-item.success .log-time {
-  color: #059669;
-}
-
-.log-item.warning .log-time {
-  color: #d97706;
-}
-
-.log-separator {
-  color: #9ca3af;
-}
-
-.log-message {
-  color: #4b5563;
-  flex: 1;
-  word-break: break-all;
-  line-height: 1.3;
-}
-
-:root.dark .log-message {
-  color: #d1d5db;
-}
-
-.log-item.error .log-message {
-  color: #dc2626;
-}
-
-.log-item.success .log-message {
-  color: #059669;
-}
-
-.log-item.warning .log-message {
-  color: #d97706;
-}
-
-.log-more {
-  padding: 8px;
-  text-align: center;
-  color: #6b7280;
-  font-size: 11px;
-  font-style: italic;
-}
-
-:root.dark .log-more {
   color: #9ca3af;
 }
 
@@ -848,7 +587,7 @@ const getLogTypeClass = (message: string): string => {
 
 .result-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -1134,18 +873,18 @@ const getLogTypeClass = (message: string): string => {
 /* 移动端优化 */
 @media (max-width: 768px) {
   .converted-preview,
-  .import-logs,
   .import-result {
     padding: 12px;
     border-radius: 6px;
   }
   
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
   
   .result-cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
   }
   
   .result-actions {
@@ -1182,7 +921,6 @@ const getLogTypeClass = (message: string): string => {
 
 @media (max-width: 480px) {
   .converted-preview,
-  .import-logs,
   .import-result {
     padding: 10px;
   }
