@@ -148,7 +148,7 @@
                       <div v-else>
                         <div v-if="userLoginStats.locations && userLoginStats.locations.length > 0" class="location-section">
                           <div class="location-list-content">
-                            <div v-for="(location, index) in userLoginStats.locations.slice(0, 5)" :key="index" class="location-item-detail">
+                            <div v-for="(location, index) in displayedLocations" :key="index" class="location-item-detail">
                               <div class="location-info">
                                 <span class="location-name">{{ location.name }}</span>
                                 <span class="location-count">{{ location.count }}次</span>
@@ -178,7 +178,7 @@
                   <div class="stat-card">
                     <div class="stat-header">
                       <div class="stat-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org2000/svg">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                           <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -195,7 +195,7 @@
                       </div>
                       <div v-else>
                         <div class="time-periods">
-                          <div class="time-period" v-for="(period, index) in loginTimeStats.periods" :key="index">
+                          <div class="time-period" v-for="(period, index) in displayedPeriods" :key="index">
                             <div class="period-info">
                               <span class="period-name">{{ period.name }}</span>
                               <span class="period-count">{{ period.count }}次({{ period.percentage }}%)</span>
@@ -210,6 +210,49 @@
                               ></div>
                             </div>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 第四个卡片 - 克隆第一个卡片用于无缝循环 -->
+                <div class="stat-card-wrapper">
+                  <div class="stat-card">
+                    <div class="stat-header">
+                      <div class="stat-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2"/>
+                          <polyline points="3.29 7 12 12 20.71 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <line x1="12" y1="22" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </div>
+                      <h4 class="stat-title">服务器基本信息</h4>
+                    </div>
+                    <div class="stat-content">
+                      <div v-if="fundCacheStats.loading" class="loading-indicator">
+                        <div class="loading-spinner"></div>
+                        <span>正在加载服务器信息...</span>
+                      </div>
+                      <div v-else-if="fundCacheStats.error" class="error-message">
+                        {{ fundCacheStats.error }}
+                      </div>
+                      <div v-else>
+                        <div class="stat-item">
+                          <span class="stat-label">缓存基金数量:</span>
+                          <span class="stat-value stat-value-right">{{ fundCacheStats.totalCount || '0' }}</span>
+                        </div>
+                        <div class="stat-item">
+                          <span class="stat-label">最后更新时间:</span>
+                          <span class="stat-value stat-value-right">{{ fundCacheStats.lastUpdated ? formatDate(fundCacheStats.lastUpdated) : '未知' }}</span>
+                        </div>
+                        <div class="stat-item">
+                          <span class="stat-label">已运行时间:</span>
+                          <span class="stat-value stat-value-right">{{ uptime }}</span>
+                        </div>
+                        <div class="stat-item">
+                          <span class="stat-label">累计登录人次:</span>
+                          <span class="stat-value stat-value-right">{{ userLoginStats.totalLogins || 0 }}</span>
                         </div>
                       </div>
                     </div>
@@ -261,6 +304,19 @@ interface UpdateLog {
   description: string
 }
 
+interface LocationStat {
+  name: string
+  count: number
+  userCount: number
+}
+
+interface PeriodStat {
+  name: string
+  count: number
+  uniqueUsers?: number
+  percentage: number
+}
+
 const updateLogs: UpdateLog[] = [
   { id: '3', version: 'Version 3.0.0', description: '在CFMS基础上构建PWA版本。\n支持多端同步。' },
   { id: '2', version: 'Version 2.0.0', description: '项目重构CFMS。\n重做UI界面。' },
@@ -306,16 +362,85 @@ const fundCacheStats = ref({
 // 用户登录统计
 const userLoginStats = ref({
   totalLogins: 0,
-  locations: [] as Array<{name: string, count: number, userCount: number}>,
+  locations: [] as Array<LocationStat>,
   loading: false,
   error: ''
 })
 
 // 登录时段统计
 const loginTimeStats = ref({
-  periods: [] as Array<{name: string, count: number, percentage: number}>,
+  periods: [] as Array<PeriodStat>,
   loading: false,
   error: ''
+})
+
+// 计算显示的地域数据（固定显示6个）
+const displayedLocations = computed(() => {
+  if (!userLoginStats.value.locations || userLoginStats.value.locations.length === 0) {
+    // 如果没有数据，返回6个空的占位项，包含userCount属性
+    return Array(6).fill(null).map((_, index) => ({
+      name: `地区${index + 1}`,
+      count: 0,
+      userCount: 0
+    }))
+  }
+  // 按登录次数降序排序，取前6个
+  const sorted = [...userLoginStats.value.locations]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6)
+  
+  // 如果不足6个，用空数据补齐，包含userCount属性
+  while (sorted.length < 6) {
+    sorted.push({
+      name: `地区${sorted.length + 1}`,
+      count: 0,
+      userCount: 0
+    })
+  }
+  
+  return sorted
+})
+
+// 计算显示的时段数据（固定显示6个时辰分组）
+const displayedPeriods = computed(() => {
+  if (!loginTimeStats.value.periods || loginTimeStats.value.periods.length === 0) {
+    // 如果没有数据，返回6个古代时辰分组
+    const defaultPeriods = [
+      { name: '子丑(23:00-03:00)', count: 0, percentage: 0 },
+      { name: '寅卯(03:00-07:00)', count: 0, percentage: 0 },
+      { name: '辰巳(07:00-11:00)', count: 0, percentage: 0 },
+      { name: '午未(11:00-15:00)', count: 0, percentage: 0 },
+      { name: '申酉(15:00-19:00)', count: 0, percentage: 0 },
+      { name: '戌亥(19:00-23:00)', count: 0, percentage: 0 }
+    ]
+    return defaultPeriods
+  }
+  
+  // 确保返回6个时间段
+  const periods = [...loginTimeStats.value.periods]
+  
+  // 如果不足6个，用空数据补齐
+  const allPeriodNames = [
+    '子丑(23:00-03:00)',
+    '寅卯(03:00-07:00)',
+    '辰巳(07:00-11:00)',
+    '午未(11:00-15:00)',
+    '申酉(15:00-19:00)',
+    '戌亥(19:00-23:00)'
+  ]
+  
+  // 创建映射以确保顺序正确
+  const periodMap = new Map()
+  periods.forEach(p => periodMap.set(p.name, p))
+  
+  const result = allPeriodNames.map(name => {
+    if (periodMap.has(name)) {
+      return periodMap.get(name)
+    }
+    return { name, count: 0, percentage: 0 }
+  })
+  
+  return result
 })
 
 // 格式化日期
@@ -344,7 +469,7 @@ const getPeriodColor = (index: number) => {
 
 // 获取地域颜色
 const getLocationColor = (index: number) => {
-  const colors = ['#3498DB', '#2ECC71', '#F39C12', '#E74C3C', '#9B59B6']
+  const colors = ['#3498DB', '#2ECC71', '#F39C12', '#E74C3C', '#9B59B6', '#1ABC9C']
   return colors[index % colors.length]
 }
 
@@ -469,9 +594,16 @@ const fetchLoginTimeStats = async () => {
         // 获取时间段数据
         let periods = data.periods || []
         
-        // 如果没有数据，创建默认的6个时间段
+        // 如果没有数据，创建默认的6个时辰分组
         if (periods.length === 0) {
-          const timeSlots = ['0-4点', '4-8点', '8-12点', '12-16点', '16-20点', '20-24点']
+          const timeSlots = [
+            '子丑(23:00-03:00)',
+            '寅卯(03:00-07:00)',
+            '辰巳(07:00-11:00)',
+            '午未(11:00-15:00)',
+            '申酉(15:00-19:00)',
+            '戌亥(19:00-23:00)'
+          ]
           periods = timeSlots.map(name => ({
             name,
             count: 0,
@@ -481,6 +613,16 @@ const fetchLoginTimeStats = async () => {
         
         // 确保只有6个时间段
         periods = periods.slice(0, 6)
+        
+        // 计算每个时间段的百分比
+        const totalCount = periods.reduce((sum: number, period: PeriodStat) => sum + period.count, 0)
+        
+        if (totalCount > 0) {
+          periods = periods.map((period: PeriodStat) => ({
+            ...period,
+            percentage: Math.round((period.count / totalCount) * 100)
+          }))
+        }
         
         loginTimeStats.value = {
           periods,
@@ -516,9 +658,23 @@ const startAutoRefresh = () => {
   }, 15 * 60 * 1000)
 }
 
-// 滑动控制 - 向左循环滚动
+// 滑动控制 - 实现无缝循环
 const nextSlide = () => {
-  currentSlide.value = (currentSlide.value + 1) % 3
+  currentSlide.value++
+  
+  // 如果滑动到第四个卡片（克隆的第一个卡片），立即无动画跳转到第一个卡片
+  if (currentSlide.value === 3) {
+    setTimeout(() => {
+      // 禁用过渡效果，瞬间跳转回第一个卡片
+      isDragging.value = true // 临时禁用过渡
+      currentSlide.value = 0
+      
+      // 在下一次事件循环中恢复过渡效果
+      setTimeout(() => {
+        isDragging.value = false
+      }, 50)
+    }, 300) // 等待300ms让滑动动画完成
+  }
 }
 
 const goToSlide = (index: number) => {
