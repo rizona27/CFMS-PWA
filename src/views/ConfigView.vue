@@ -46,22 +46,20 @@
                     >
                       {{ displayName }}
                     </h3>
-                    <p class="user-email" v-if="authStore.currentUser?.email">{{ authStore.currentUser.email }}</p>
-                  </div>
-                </div>
-                
-                <!-- 仅对体验用户显示订阅信息 -->
-                <div v-if="authStore.userType === 'subscribed' && subscriptionEndDate" class="subscription-info-section">
-                  <div class="subscription-info">
-                    <div class="subscription-item">
-                      <span class="subscription-label">到期日:</span>
-                      <span class="subscription-value">{{ subscriptionEndDate.date }}</span>
-                    </div>
-                    <div class="subscription-item">
-                      <span class="subscription-label">状态:</span>
-                      <span class="subscription-status" :class="{ 'expired': subscriptionEndDate.isExpired }">
-                        {{ subscriptionEndDate.isExpired ? '已过期' : `剩余${subscriptionEndDate.daysLeft}天` }}
-                      </span>
+                    <p class="user-id" v-if="authStore.currentUser?.username">ID: {{ authStore.currentUser.username }}</p>
+                    
+                    <!-- 体验用户状态信息 -->
+                    <div v-if="authStore.userType === 'subscribed' && subscriptionEndDate" class="trial-info">
+                      <div class="trial-item">
+                        <span class="trial-label">到期日:</span>
+                        <span class="trial-value">{{ subscriptionEndDate.date }}</span>
+                      </div>
+                      <div class="trial-item">
+                        <span class="trial-label">状态:</span>
+                        <span class="trial-status" :class="{ 'expired': subscriptionEndDate.isExpired }">
+                          {{ subscriptionEndDate.isExpired ? '已过期' : `剩余${subscriptionEndDate.daysLeft}天` }}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -123,7 +121,7 @@
               <div
                 class="function-card cloud-sync-card"
                 :class="{ 'disabled': authStore.userType === 'free' }"
-                @click="handleFeature('CloudSync')"
+                @click="handleCloudSync"
               >
                 <div class="card-content">
                   <div class="card-header">
@@ -135,10 +133,8 @@
                           <path d="M8 17H6C5.20435 17 4.44129 16.6839 3.87868 16.1213C3.31607 15.5587 3 14.7956 3 14C3 13.2044 3.31607 12.4413 3.87868 11.8787C4.44129 11.3161 5.20435 11 6 11C6.06 11 6.12 11.01 6.18 11.01C6.27318 9.53982 6.94165 8.16912 8.04683 7.17849C9.15201 6.18787 10.6094 5.65345 12.115 5.68652C13.6206 5.7196 15.0592 6.31761 16.127 7.355" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <svg v-else key="cloud-vip" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                           <path d="M6 19L12 13L18 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M12 13V1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M4 12L8 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M20 12L16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M12 16V8M9 11L12 8L15 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                       </transition>
                     </div>
@@ -476,6 +472,15 @@ const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
   }
 }
 
+const handleCloudSync = () => {
+  if (authStore.userType === 'free') {
+    showNotification('该功能需要升级到体验用户或VIP用户', 'warning')
+  } else {
+    router.push('/cloud-sync')
+    dataStore.safeAddLog('用户访问云端同步页面', 'info', false)
+  }
+}
+
 const handleFeature = (featureName: string) => {
   switch (featureName) {
     case 'About':
@@ -486,13 +491,6 @@ const handleFeature = (featureName: string) => {
       break
     case 'APILog':
       router.push('/logs')
-      break
-    case 'CloudSync':
-      if (authStore.userType === 'free') {
-        showNotification('该功能需要升级到VIP用户', 'warning')
-      } else {
-        showNotification('云端同步功能正在开发中...', 'info')
-      }
       break
     default:
       showNotification(`功能 ${featureName} 正在开发中...`, 'info')
@@ -721,61 +719,6 @@ onUnmounted(() => {
   margin-bottom: 12px;
 }
 
-/* 订阅信息区域 */
-.subscription-info-section {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  min-width: 120px;
-}
-
-.subscription-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.subscription-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
-.subscription-label {
-  font-size: 11px;
-  color: #666;
-  font-weight: 500;
-}
-
-:root.dark .subscription-label {
-  color: #9ca3af;
-}
-
-.subscription-value {
-  font-size: 12px;
-  font-weight: 600;
-  color: #333;
-}
-
-:root.dark .subscription-value {
-  color: #e5e7eb;
-}
-
-.subscription-status {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(76, 175, 80, 0.2);
-  color: #4caf50;
-}
-
-.subscription-status.expired {
-  background: rgba(244, 67, 54, 0.2);
-  color: #f44336;
-}
-
 .user-content {
   padding: 20px;
 }
@@ -826,7 +769,7 @@ onUnmounted(() => {
   color: #e5e7eb;
 }
 
-.user-email {
+.user-id {
   font-size: 13px;
   color: #666;
   margin: 0 0 8px 0;
@@ -834,8 +777,64 @@ onUnmounted(() => {
   line-height: 1.3;
 }
 
-:root.dark .user-email {
+:root.dark .user-id {
   color: #9ca3af;
+}
+
+.trial-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-top: 4px;
+  border-left: 3px solid #4CAF50;
+}
+
+:root.dark .trial-info {
+  background: rgba(255, 255, 255, 0.05);
+  border-left-color: #4CAF50;
+}
+
+.trial-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trial-label {
+  font-size: 11px;
+  color: #666;
+  font-weight: 500;
+}
+
+:root.dark .trial-label {
+  color: #9ca3af;
+}
+
+.trial-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: #333;
+}
+
+:root.dark .trial-value {
+  color: #e5e7eb;
+}
+
+.trial-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.trial-status.expired {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
 }
 
 .user-info-footer {
@@ -1414,24 +1413,24 @@ onUnmounted(() => {
     margin-bottom: 2px;
   }
   
-  .user-email {
+  .user-id {
     font-size: 12px;
     margin-bottom: 6px;
   }
   
-  .subscription-info-section {
-    min-width: 100px;
+  .trial-info {
+    padding: 6px 8px;
   }
   
-  .subscription-label {
+  .trial-label {
     font-size: 10px;
   }
   
-  .subscription-value {
-    font-size: 11px;
+  .trial-value {
+    font-size: 10px;
   }
   
-  .subscription-status {
+  .trial-status {
     font-size: 10px;
     padding: 1px 5px;
   }
@@ -1544,23 +1543,23 @@ onUnmounted(() => {
     font-size: 16px;
   }
   
-  .user-email {
+  .user-id {
     font-size: 11px;
   }
   
-  .subscription-info-section {
-    min-width: 90px;
+  .trial-info {
+    padding: 5px 6px;
   }
   
-  .subscription-label {
+  .trial-label {
     font-size: 9px;
   }
   
-  .subscription-value {
-    font-size: 10px;
+  .trial-value {
+    font-size: 9px;
   }
   
-  .subscription-status {
+  .trial-status {
     font-size: 9px;
     padding: 1px 4px;
   }

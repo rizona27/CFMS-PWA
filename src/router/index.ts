@@ -9,6 +9,7 @@ const ActivationView = () => import('@/views/ActivationView.vue')
 const AuthView = () => import('@/views/AuthView.vue')
 const AboutView = () => import('@/views/AboutView.vue')
 const APILogView = () => import('@/views/APILogView.vue')
+const CloudSyncView = () => import('@/views/CloudSyncView.vue')
 
 // 持仓管理相关路由
 const ManageHoldingsView = () => import('@/views/holdings/ManageHoldingsView.vue')
@@ -108,6 +109,16 @@ const routes: RouteRecordRaw[] = [
     component: APILogView,
     meta: {
       title: 'API 日志',
+      requiresAuth: true,
+      showTabBar: false
+    }
+  },
+  {
+    path: '/cloud-sync',
+    name: 'cloud-sync',
+    component: CloudSyncView,
+    meta: {
+      title: '云端同步',
       requiresAuth: true,
       showTabBar: false
     }
