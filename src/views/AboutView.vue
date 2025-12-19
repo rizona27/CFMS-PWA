@@ -357,7 +357,7 @@ const scrollLogs = computed(() => [...updateLogs.value, ...updateLogs.value])
 
 const scrollContentRef = ref<HTMLElement | null>(null)
 const scrollOffset = ref(0)
-const scrollSpeed = 20
+const scrollSpeed = 35
 let singleSetHeight = 0
 let animationId: number | null = null
 let lastTimestamp: number | null = null
@@ -965,8 +965,6 @@ onUnmounted(() => {
 
 .app-title-container {
   text-align: center;
-  margin-bottom: 0;
-  margin-top: 0;
   padding: 8px 0 2px;
   position: relative;
   z-index: 1;
@@ -986,15 +984,14 @@ onUnmounted(() => {
 }
 
 .app-info-section {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .app-info {
   display: flex;
   justify-content: flex-end;
   align-items: flex-end;
-  gap: 20px;
-  margin-bottom: 8px;
+  gap: 15px;
   width: 100%;
 }
 
@@ -1006,35 +1003,24 @@ onUnmounted(() => {
 }
 
 .app-version {
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
   margin-bottom: 2px;
   font-weight: 500;
 }
 
-.app-author {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 2px;
-  opacity: 0.8;
-}
-
-.app-github {
+.app-author, .app-github {
   font-size: 11px;
   color: #666;
   opacity: 0.7;
-  line-height: 1.2;
-  margin-top: 4px;
   margin-bottom: 2px;
 }
 
 .app-support {
-  font-size: 12px;
+  font-size: 11px;
   color: #FF6B6B;
   font-style: italic;
-  margin-top: 6px;
-  opacity: 0.9;
-  font-weight: 500;
+  margin-top: 4px;
 }
 
 :root.dark .app-version,
@@ -1047,40 +1033,14 @@ onUnmounted(() => {
   color: #FF9E9E;
 }
 
-.app-qr-code {
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;
-}
-
-.qr-link {
-  display: block;
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
 .wxpay-qr {
   width: auto;
-  height: calc(14px + 12px + 11px + 12px + 4px + 2px + 2px + 6px);
-  max-height: 100px;
+  height: 80px;
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
-  cursor: pointer;
   object-fit: cover;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-user-drag: none;
-  user-drag: none;
-  pointer-events: auto;
 }
 
 :root.dark .wxpay-qr {
@@ -1132,15 +1092,10 @@ onUnmounted(() => {
   background: transparent;
 }
 
-.content-scroll {
-  height: 100%;
-  overflow-y: auto;
-}
-
 .content-wrapper {
   max-width: 800px;
   margin: 0 auto;
-  padding: 0 16px 60px;
+  padding: 0 16px 30px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1149,24 +1104,24 @@ onUnmounted(() => {
 /* 统计卡片滑动样式 */
 .stats-slider-section {
   position: relative;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .slider-indicators {
   display: flex;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .slider-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: rgba(0, 0, 0, 0.2);
   cursor: pointer;
@@ -1192,7 +1147,7 @@ onUnmounted(() => {
   cursor: grab;
   touch-action: pan-y;
   width: 100%;
-  max-width: 500px;
+  max-width: 450px;
 }
 
 .stats-slider-container:active {
@@ -1212,15 +1167,17 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-/* 卡片通用样式 - 降低高度 */
+/* --- 核心修改：统一所有卡片高度为290px，但限制字体大小 --- */
 .stat-card {
   background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  padding: 16px;
-  min-height: 220px; /* 从260px降低到220px */
-  height: 100%;
+  padding: 16px 18px;
+  height: 290px;  /* 统一所有卡片高度为290px */
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   width: 100%;
 }
@@ -1236,13 +1193,19 @@ onUnmounted(() => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
+/* 统一版本和服务器卡片高度 */
+.version-card, .server-card {
+  height: 290px; /* 与其他卡片保持一致 */
+}
+
 .stat-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 12px; /* 合理间距 */
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 :root.dark .stat-header {
@@ -1250,9 +1213,9 @@ onUnmounted(() => {
 }
 
 .stat-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1260,8 +1223,14 @@ onUnmounted(() => {
   color: #14B8A6;
 }
 
+.stat-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 限制标题字体大小 */
 .stat-title {
-  font-size: 16px;
+  font-size: 14px; /* 保持较小字体 */
   font-weight: 600;
   color: #333;
   margin: 0;
@@ -1272,48 +1241,134 @@ onUnmounted(() => {
 }
 
 /* 版本卡片样式 */
-.version-card {
-  min-height: 220px; /* 从260px降低到220px */
-}
-
 .version-content {
-  height: calc(100% - 60px);
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* 重要：防止内容溢出 */
 }
 
-/* 服务器卡片样式 */
-.server-card {
-  min-height: 220px; /* 从260px降低到220px */
+/* --- 修改：滚动区域自动适配290px高度 --- */
+.auto-scroll-container {
+  position: relative;
+  background: rgba(245, 247, 250, 0.6);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.03);
+  height: 100%; /* 改为100%自动适配父容器 */
+  overflow: hidden;
+  width: 100%;
+  flex: 1; /* 充满剩余空间 */
+  min-height: 0; /* 重要：防止内容溢出 */
 }
 
+:root.dark .auto-scroll-container {
+  background: rgba(30, 30, 45, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.scroll-content {
+  will-change: transform;
+  padding: 8px; /* 合理内边距 */
+}
+
+.log-item {
+  padding: 6px 0; /* 合理间距 */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.log-item:last-child {
+  border-bottom: none;
+}
+
+:root.dark .log-item {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px; /* 标题和描述的间距 */
+}
+
+/* 限制版本字体大小 */
+.log-version {
+  font-size: 11px; /* 保持较小字体 */
+  font-weight: 700;
+  color: #14B8A6;
+  line-height: 1.2;
+}
+
+:root.dark .log-version {
+  color: #2DD4BF;
+}
+
+/* 限制描述字体大小 */
+.log-description {
+  font-size: 10px; /* 保持较小字体 */
+  color: #666;
+  line-height: 1.3; /* 合理行高 */
+  white-space: pre-line;
+  margin: 0;
+}
+
+:root.dark .log-description {
+  color: #9ca3af;
+}
+
+.scroll-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 12px; /* 合理遮罩高度 */
+  pointer-events: none;
+  z-index: 2;
+}
+
+.top-mask {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+  border-radius: 10px 10px 0 0;
+}
+
+.bottom-mask {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+  border-radius: 0 0 10px 10px;
+}
+
+:root.dark .top-mask {
+  background: linear-gradient(to bottom, rgba(45, 45, 65, 0.9), rgba(45, 45, 65, 0));
+}
+
+:root.dark .bottom-mask {
+  background: linear-gradient(to top, rgba(45, 45, 65, 0.9), rgba(45, 45, 65, 0));
+}
+
+/* 服务器卡片样式 - 从上到下的正常排列 */
 .server-stats-content {
-  height: calc(100% - 60px);
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .server-stats {
   display: flex;
   flex-direction: column;
-  gap: 8px; /* 减小间距 */
   flex: 1;
+  gap: 10px; /* 合理间距 */
+  min-height: 0;
+  padding-top: 6px; /* 合理顶部内边距 */
 }
 
 .stat-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 0; /* 减小内边距 */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  min-height: 24px; /* 减小最小高度 */
-}
-
-.stat-item-full {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
+  padding: 6px 0; /* 合理内边距 */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 :root.dark .stat-row {
@@ -1324,8 +1379,16 @@ onUnmounted(() => {
   border-bottom: none;
 }
 
+.stat-item-full {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* 限制统计标签字体大小 */
 .stat-label {
-  font-size: 14px;
+  font-size: 12px; /* 保持较小字体 */
   color: #666;
   font-weight: 500;
   white-space: nowrap;
@@ -1335,8 +1398,9 @@ onUnmounted(() => {
   color: #9ca3af;
 }
 
+/* 限制统计值字体大小 */
 .stat-value {
-  font-size: 14px;
+  font-size: 12px; /* 保持较小字体 */
   font-weight: 600;
   color: #333;
   white-space: nowrap;
@@ -1375,19 +1439,20 @@ onUnmounted(() => {
 .stat-content {
   display: flex;
   flex-direction: column;
-  gap: 8px; /* 减小间距 */
-  height: calc(100% - 60px);
+  gap: 10px; /* 合理间距 */
+  flex: 1;
+  min-height: 0;
 }
 
 .loading-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px; /* 合理内边距 */
   color: #666;
-  height: 100%;
-  min-height: 60px; /* 降低最小高度 */
+  flex: 1;
+  min-height: 50px; /* 合理最小高度 */
 }
 
 :root.dark .loading-indicator {
@@ -1395,8 +1460,8 @@ onUnmounted(() => {
 }
 
 .loading-spinner {
-  width: 18px;
-  height: 18px;
+  width: 16px; /* 合理大小 */
+  height: 16px;
   border: 2px solid rgba(0, 0, 0, 0.1);
   border-top-color: #14B8A6;
   border-radius: 50%;
@@ -1408,15 +1473,14 @@ onUnmounted(() => {
 }
 
 .error-message {
-  padding: 12px;
+  padding: 10px; /* 合理内边距 */
   color: #e74c3c;
   text-align: center;
-  font-size: 13px;
-  height: 100%;
+  font-size: 12px; /* 保持较小字体 */
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 60px; /* 降低最小高度 */
 }
 
 :root.dark .error-message {
@@ -1424,15 +1488,14 @@ onUnmounted(() => {
 }
 
 .empty-message {
-  padding: 12px;
+  padding: 10px; /* 合理内边距 */
   color: #666;
   text-align: center;
-  font-size: 13px;
-  height: 100%;
+  font-size: 12px; /* 保持较小字体 */
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 60px; /* 降低最小高度 */
 }
 
 :root.dark .empty-message {
@@ -1443,23 +1506,25 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
 }
 
+/* 地域分布内容区域 - 关键：使用较小字体和紧凑布局 */
 .location-list-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px; /* 减小间距 */
+  gap: 8px; /* 紧凑间距 */
   overflow-y: auto;
   padding-right: 4px;
+  min-height: 0;
 }
 
 .location-item-detail {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 3px 0; /* 减小内边距 */
+  gap: 4px; /* 紧凑间距 */
+  padding: 4px 0; /* 紧凑内边距 */
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -1473,8 +1538,9 @@ onUnmounted(() => {
   align-items: center;
 }
 
+/* 限制地域名称字体大小 */
 .location-name {
-  font-size: 12px;
+  font-size: 11px; /* 保持较小字体 */
   color: #333;
   font-weight: 500;
   flex: 1;
@@ -1487,16 +1553,17 @@ onUnmounted(() => {
   color: #e5e7eb;
 }
 
+/* 限制地域次数字体大小 */
 .location-count {
-  font-size: 12px;
+  font-size: 11px; /* 保持较小字体 */
   color: #14B8A6;
   font-weight: 600;
-  min-width: 45px;
+  min-width: 45px; /* 合理最小宽度 */
   text-align: right;
 }
 
 .location-bar {
-  height: 4px; /* 减小高度 */
+  height: 4px; /* 合理高度 */
   background: rgba(0, 0, 0, 0.1);
   border-radius: 2px;
   overflow: hidden;
@@ -1506,18 +1573,25 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* 时间段样式 - 关键：使用较小字体和紧凑布局 */
 .time-periods {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px; /* 减小间距 */
-  height: 100%;
+  gap: 8px; /* 紧凑间距 */
+  min-height: 0;
 }
 
 .time-period {
   display: flex;
   flex-direction: column;
-  gap: 3px; /* 减小间距 */
+  gap: 4px; /* 紧凑间距 */
 }
 
 .period-info {
@@ -1526,8 +1600,9 @@ onUnmounted(() => {
   align-items: center;
 }
 
+/* 限制时间段名称字体大小 */
 .period-name {
-  font-size: 12px;
+  font-size: 11px; /* 保持较小字体 */
   color: #333;
   font-weight: 500;
 }
@@ -1536,8 +1611,9 @@ onUnmounted(() => {
   color: #e5e7eb;
 }
 
+/* 限制时间段统计字体大小 */
 .period-count {
-  font-size: 12px;
+  font-size: 11px; /* 保持较小字体 */
   color: #666;
   font-weight: 500;
 }
@@ -1547,9 +1623,9 @@ onUnmounted(() => {
 }
 
 .period-bar {
-  height: 5px; /* 减小高度 */
+  height: 4px; /* 合理高度 */
   background: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
@@ -1557,118 +1633,10 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.5s ease;
-}
-
-/* 版本更新日志容器样式 */
-.auto-scroll-container {
-  position: relative;
-  background: rgba(245, 247, 250, 0.6);
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.03);
-  height: 100%;
-  overflow: hidden;
-  width: 100%;
-  flex: 1;
-  min-height: 140px; /* 从180px降低到140px */
-}
-
-:root.dark .auto-scroll-container {
-  background: rgba(30, 30, 45, 0.6);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.scroll-content {
-  will-change: transform;
-  padding: 6px;
-}
-
-.log-item {
-  padding: 6px; /* 减小内边距 */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.log-item:last-child {
-  border-bottom: none;
-}
-
-:root.dark .log-item {
-  border-bottom-color: rgba(255, 255, 255, 0.05);
-}
-
-.log-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 2px; /* 减小边距 */
-}
-
-.log-version {
-  font-size: 12px;
-  font-weight: 700;
-  color: #14B8A6;
-  line-height: 1.2;
-}
-
-:root.dark .log-version {
-  color: #2DD4BF;
-}
-
-.log-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1px; /* 减小间距 */
-}
-
-.log-description {
-  font-size: 11px;
-  color: #666;
-  line-height: 1.3;
-  white-space: pre-line;
-  margin: 0;
-}
-
-:root.dark .log-description {
-  color: #9ca3af;
-}
-
-.scroll-mask {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 12px; /* 减小高度 */
-  pointer-events: none;
-  z-index: 2;
-}
-
-.top-mask {
-  top: 0;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
-  border-radius: 12px 12px 0 0;
-}
-
-.bottom-mask {
-  bottom: 0;
-  background: linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
-  border-radius: 0 0 12px 12px;
-}
-
-:root.dark .top-mask {
-  background: linear-gradient(to bottom, rgba(45, 45, 65, 0.9), rgba(45, 45, 65, 0));
-}
-
-:root.dark .bottom-mask {
-  background: linear-gradient(to top, rgba(45, 45, 65, 0.9), rgba(45, 45, 65, 0));
-}
-
 .divider {
   height: 1px;
   background: rgba(0, 0, 0, 0.1);
-  margin: 12px 0;
+  margin: 12px 0; /* 合理外边距 */
   width: 100%;
 }
 
@@ -1677,13 +1645,14 @@ onUnmounted(() => {
 }
 
 .divider.decorative {
-  height: 2px;
+  height: 1px;
   background: linear-gradient(90deg, transparent, #14B8A6, transparent);
-  margin: 16px 0;
-  opacity: 0.5;
+  margin: 12px 0; /* 合理外边距 */
+  opacity: 0.4;
   width: 100%;
 }
 
+/* 响应式适配 */
 @media (max-width: 768px) {
   .top-container {
     padding: 0 12px 3px;
@@ -1691,143 +1660,29 @@ onUnmounted(() => {
   
   .app-name {
     font-size: 22px;
-    padding: 6px 0;
-  }
-  
-  .app-title-container {
-    padding: 10px 0 4px;
-  }
-  
-  .app-info {
-    flex-direction: row;
-    justify-content: flex-end;
-    align-items: flex-end;
-    gap: 15px;
-  }
-  
-  .app-meta {
-    align-items: flex-end;
-    text-align: right;
   }
   
   .wxpay-qr {
-    height: 90px;
-  }
-  
-  .app-support {
-    font-size: 13px;
-  }
-  
-  .stat-card-wrapper {
-    padding: 0 8px;
+    height: 75px;
   }
   
   .stat-card {
-    min-height: 200px; /* 从240px降低到200px */
-    padding: 12px;
+    height: 260px; /* 响应式调整为260px */
+    padding: 14px 16px;
   }
   
   .version-card,
   .server-card {
-    min-height: 200px; /* 从240px降低到200px */
-  }
-  
-  .auto-scroll-container {
-    min-height: 130px; /* 从160px降低到130px */
-  }
-  
-  .log-item {
-    padding: 5px;
-  }
-  
-  .log-version {
-    font-size: 11px;
-  }
-  
-  .log-description {
-    font-size: 10px;
-  }
-  
-  .scroll-mask {
-    height: 10px; /* 减小高度 */
-  }
-}
-
-@media (max-width: 480px) {
-  .app-name {
-    font-size: 20px;
-    padding: 8px 0;
-  }
-  
-  .app-title-container {
-    padding: 12px 0 6px;
-  }
-  
-  .app-info {
-    flex-direction: row;
-    justify-content: flex-end;
-    gap: 12px;
-  }
-  
-  .app-meta {
-    max-width: 65%;
-    align-items: flex-end;
-  }
-  
-  .app-support {
-    font-size: 12px;
-    line-height: 1.3;
-  }
-  
-  .wxpay-qr {
-    height: 80px;
-    -webkit-touch-callout: default;
-    touch-action: manipulation;
-  }
-  
-  .content-wrapper {
-    padding: 0 12px 40px;
-  }
-  
-  .stat-card {
-    min-height: 180px; /* 从220px降低到180px */
-    padding: 10px;
-  }
-  
-  .version-card,
-  .server-card {
-    min-height: 180px; /* 从220px降低到180px */
+    height: 260px; /* 响应式中也保持统一 */
   }
   
   .stat-header {
-    gap: 8px;
     margin-bottom: 10px;
-    padding-bottom: 8px;
   }
   
-  .stat-icon {
-    width: 28px;
-    height: 28px;
-  }
-  
+  /* 移动端保持小字体 */
   .stat-title {
     font-size: 13px;
-  }
-  
-  .auto-scroll-container {
-    min-height: 120px; /* 从140px降低到120px */
-  }
-  
-  .stat-label {
-    font-size: 13px;
-  }
-  
-  .stat-value {
-    font-size: 13px;
-  }
-  
-  .log-item {
-    padding: 4px;
   }
   
   .log-version {
@@ -1836,69 +1691,108 @@ onUnmounted(() => {
   
   .log-description {
     font-size: 9px;
+    line-height: 1.3;
+  }
+  
+  .stat-label,
+  .stat-value,
+  .location-name,
+  .location-count,
+  .period-name,
+  .period-count {
+    font-size: 11px;
+  }
+  
+  .server-stats {
+    gap: 8px;
+  }
+  
+  .location-list-content,
+  .time-periods {
+    gap: 6px;
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 480px) {
   .app-name {
-    font-size: 18px;
-    padding: 10px 0;
-  }
-  
-  .app-title-container {
-    padding: 14px 0 8px;
-  }
-  
-  .app-info {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 10px;
-  }
-  
-  .app-meta {
-    max-width: 100%;
-    align-items: flex-end;
+    font-size: 20px;
   }
   
   .wxpay-qr {
     height: 70px;
   }
   
+  .content-wrapper {
+    padding: 0 12px 20px;
+  }
+  
   .stat-card {
-    min-height: 160px; /* 从200px降低到160px */
+    height: 240px; /* 响应式调整为240px */
+    padding: 12px 14px;
   }
   
   .version-card,
   .server-card {
-    min-height: 160px; /* 从200px降低到160px */
+    height: 240px; /* 响应式中也保持统一 */
   }
   
-  .auto-scroll-container {
-    min-height: 110px; /* 从130px降低到110px */
+  .stat-header {
+    margin-bottom: 8px;
+  }
+  
+  .stat-title {
+    font-size: 12px;
+  }
+  
+  .log-version {
+    font-size: 9px;
+  }
+  
+  .log-description {
+    font-size: 8px;
+    line-height: 1.2;
+  }
+  
+  .stat-label,
+  .stat-value,
+  .location-name,
+  .location-count,
+  .period-name,
+  .period-count {
+    font-size: 10px;
+  }
+  
+  .server-stats {
+    gap: 6px;
+  }
+  
+  .location-list-content,
+  .time-periods {
+    gap: 5px;
   }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .scrollable-content-section {
-    height: calc(100vh - 140px);
-  }
-  
-  .content-wrapper {
-    padding: 0 16px 40px;
-  }
-  
   .stat-card {
-    min-height: 150px; /* 从180px降低到150px */
-    padding: 8px;
+    height: 200px; /* 横屏时调整为200px */
   }
   
   .version-card,
   .server-card {
-    min-height: 150px; /* 从180px降低到150px */
+    height: 200px; /* 横屏时也保持统一 */
   }
   
-  .auto-scroll-container {
-    min-height: 100px; /* 从120px降低到100px */
+  .stat-header {
+    margin-bottom: 6px;
+  }
+  
+  .server-stats {
+    gap: 5px;
+  }
+  
+  .location-list-content,
+  .time-periods {
+    gap: 4px;
   }
 }
 
@@ -1920,76 +1814,8 @@ onUnmounted(() => {
     touch-action: manipulation;
   }
   
-  .auto-scroll-container {
-    pointer-events: none;
-  }
-  
   .stats-slider-container {
     touch-action: pan-y;
-  }
-}
-
-@media (max-width: 768px) {
-  .about-view {
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .content-scroll {
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-.about-view {
-  overflow: hidden;
-}
-
-.content-scroll {
-  -webkit-overflow-scrolling: touch;
-}
-
-.qr-link {
-  display: inline-block;
-  line-height: 0;
-}
-
-.wxpay-qr {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-.auto-scroll-container {
-  position: relative;
-  min-height: 140px; /* 从180px降低到140px */
-}
-
-.scroll-content {
-  position: relative;
-  z-index: 1;
-}
-
-@media print {
-  .about-view {
-    background: white !important;
-    color: black !important;
-  }
-  
-  .wxpay-qr {
-    display: none !important;
-  }
-  
-  .auto-scroll-container {
-    height: auto !important;
-    overflow: visible !important;
-  }
-  
-  .scroll-content {
-    transform: none !important;
-  }
-  
-  .stats-slider-section {
-    display: none !important;
   }
 }
 
@@ -1997,19 +1823,5 @@ onUnmounted(() => {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   backface-visibility: hidden;
-}
-
-.fixed-top-section {
-  position: relative;
-}
-
-.scrollable-content-section {
-  position: relative;
-  flex: 1;
-}
-
-.content-wrapper {
-  min-height: 100%;
-  padding-bottom: 60px;
 }
 </style>

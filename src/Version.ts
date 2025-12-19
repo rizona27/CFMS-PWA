@@ -16,10 +16,10 @@ export interface VersionConfig {
 
 // 版本配置数据 - 按时间顺序排列，越新的越在后面
 export const versionConfig: VersionConfig = {
-  currentVersion: '3.0.1',
+  currentVersion: '3.0.2',
   author: 'rizona',
   year: '2025',
-  copyright: 'CFMS v3.0.1 © 2025 rizona',
+  copyright: 'CFMS v3.0.2 © 2025 rizona',
   updateLogs: [
     {
       version: 'Version 1.0.0',
@@ -44,6 +44,12 @@ export const versionConfig: VersionConfig = {
       displayName: 'Version 3.0.1',
       updateDate: '2025-12-19',
       description: '重新构建Login登录校验前后端。'
+    },
+    {
+      version: 'Version 3.0.2',
+      displayName: 'Version 3.0.2',
+      updateDate: '2025-12-19',
+      description: 'About页面卡片统一样式。'
     }
   ]
 };
