@@ -287,8 +287,8 @@
           <div class="app-info-section">
             <div class="app-info">
               <div class="app-meta">
-                <p class="app-version">Version: 3.0.0</p>
-                <p class="app-author">©2025 rizona.cn@gmail.com</p>
+                <p class="app-version">Version: {{ currentVersion }}</p>
+                <p class="app-author">©{{ authorInfo }}</p>
                 <p class="app-github">项目地址:github.com/rizona27/CFMS-PWA</p>
                 <p class="app-support">支持的话请我喝一杯吧~</p>
               </div>
@@ -315,6 +315,13 @@
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import NavBar from '@/components/layout/NavBar.vue'
 import wxpayQR from '../assets/wxpay.png'
+import {
+  versionConfig,
+  getSortedUpdateLogs,
+  getCurrentVersion,
+  getAuthor,
+  getYear
+} from '../Version'
 
 interface UpdateLog {
   id: string
@@ -335,13 +342,18 @@ interface PeriodStat {
   percentage: number
 }
 
-const updateLogs: UpdateLog[] = [
-  { id: '3', version: 'Version 3.0.0', description: '在CFMS基础上构建PWA版本。\n支持多端同步。' },
-  { id: '2', version: 'Version 2.0.0', description: '项目重构CFMS。\n重做UI界面。' },
-  { id: '1', version: 'Version 1.0.0', description: '初代MMP项目构建。' }
-]
+// 使用版本配置文件中的更新日志数据
+const updateLogs = computed(() => {
+  const sortedLogs = getSortedUpdateLogs()
+  // 转换为组件需要的格式
+  return sortedLogs.map((log, index) => ({
+    id: (index + 1).toString(),
+    version: log.displayName,
+    description: log.description
+  }))
+})
 
-const scrollLogs = computed(() => [...updateLogs, ...updateLogs])
+const scrollLogs = computed(() => [...updateLogs.value, ...updateLogs.value])
 
 const scrollContentRef = ref<HTMLElement | null>(null)
 const scrollOffset = ref(0)
@@ -350,6 +362,10 @@ let singleSetHeight = 0
 let animationId: number | null = null
 let lastTimestamp: number | null = null
 let isPaused = false
+
+// 从版本配置文件获取信息
+const currentVersion = ref(getCurrentVersion())
+const authorInfo = ref(`${getYear()} ${getAuthor()}`)
 
 // 服务器启动时间
 const serverStartTime = new Date('2025-12-18T18:00:00')
@@ -706,7 +722,7 @@ const nextSlide = () => {
       // 在下一次事件循环中恢复过渡效果
       setTimeout(() => {
         isDragging.value = false
-      }, 50)
+      }, 50) // 等待300ms让滑动动画完成
     }, 300) // 等待300ms让滑动动画完成
   }
 }
@@ -824,7 +840,7 @@ const calculateSingleSetHeight = () => {
   
   let totalHeight = 0
   
-  for (let i = 0; i < updateLogs.length; i++) {
+  for (let i = 0; i < updateLogs.value.length; i++) {
     const item = logItems[i] as HTMLElement
     totalHeight += item.offsetHeight
   }

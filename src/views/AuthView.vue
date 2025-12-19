@@ -36,362 +36,396 @@
             </button>
           </div>
           
-          <form v-if="!isRegistering" @submit.prevent="handleLogin" class="auth-form">
-            <div class="form-content">
-              <div class="form-group with-icon" :class="{
-                'has-error': loginErrors.username,
-                'has-success': loginForm.username && !loginErrors.username
-              }">
-                <div class="icon-container">
-                  <span class="input-icon">👤</span>
-                </div>
-                <input
-                  v-model="loginForm.username"
-                  type="text"
-                  placeholder="用户名"
-                  required
-                  autocomplete="username"
-                  class="icon-input"
-                  maxlength="10"
-                  @input="validateLoginUsername"
-                  @blur="handleUsernameBlur"
-                />
-                <div class="input-actions">
-                  <button
-                    v-if="loginForm.username"
-                    type="button"
-                    class="clear-button"
-                    @click="loginForm.username = ''; validateLoginUsername()"
-                    title="清除"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-              
-              <div class="form-group with-icon password-group" :class="{
-                'has-error': loginErrors.password,
-                'has-success': loginForm.password && !loginErrors.password
-              }">
-                <div class="icon-container">
-                  <span class="input-icon">🔒</span>
-                </div>
-                <input
-                  v-model="loginForm.password"
-                  :type="showLoginPassword ? 'text' : 'password'"
-                  placeholder="密码"
-                  required
-                  autocomplete="current-password"
-                  class="icon-input password-input"
-                  maxlength="20"
-                  @input="validateLoginPassword"
-                />
-                <div class="input-actions">
-                  <button
-                    v-if="loginForm.password"
-                    type="button"
-                    class="clear-button"
-                    @click="loginForm.password = ''; validateLoginPassword()"
-                    title="清除"
-                  >
-                    ✕
-                  </button>
-                  <button
-                    type="button"
-                    class="password-toggle"
-                    @click="showLoginPassword = !showLoginPassword"
-                    :aria-label="showLoginPassword ? '隐藏密码' : '显示密码'"
-                  >
-                    <svg v-if="showLoginPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              
-              <div v-if="showLoginCaptcha && loginAttempts >= 3" class="form-group captcha-group">
-                <div class="captcha-row">
-                  <div class="captcha-input-group">
-                    <div class="icon-container">
-                      <span class="input-icon">🖼️</span>
+          <div class="auth-form-wrapper">
+            <div v-if="!isRegistering" class="auth-form">
+              <div class="form-content">
+                <!-- 登录页使用与注册页相同的嵌套结构 -->
+                <div class="auth-steps-container single-step-active">
+                  <div class="auth-step single-step">
+                    <div class="form-group with-icon" :class="{
+                      'has-error': loginErrors.username,
+                      'has-success': loginForm.username && !loginErrors.username
+                    }">
+                      <div class="icon-container">
+                        <span class="input-icon">👤</span>
+                      </div>
+                      <input
+                        v-model="loginForm.username"
+                        type="text"
+                        placeholder="用户名"
+                        required
+                        autocomplete="username"
+                        class="icon-input"
+                        maxlength="10"
+                        @input="validateLoginUsername"
+                        @blur="handleUsernameBlur"
+                      />
+                      <div class="input-actions">
+                        <button
+                          v-if="loginForm.username"
+                          type="button"
+                          class="clear-button"
+                          @click="loginForm.username = ''; validateLoginUsername()"
+                          title="清除"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
-                    <input
-                      v-model="loginForm.captcha_code"
-                      type="text"
-                      placeholder="验证码"
-                      required
-                      class="icon-input captcha-input"
-                      maxlength="4"
-                      @input="handleCaptchaInput('login')"
-                    />
-                    <div class="input-actions">
-                      <button
-                        v-if="loginForm.captcha_code"
-                        type="button"
-                        class="clear-button"
-                        @click="loginForm.captcha_code = ''"
-                        title="清除"
-                      >
-                        ✕
-                      </button>
+                    
+                    <div class="form-group with-icon password-group" :class="{
+                      'has-error': loginErrors.password,
+                      'has-success': loginForm.password && !loginErrors.password
+                    }">
+                      <div class="icon-container">
+                        <span class="input-icon">🔒</span>
+                      </div>
+                      <input
+                        v-model="loginForm.password"
+                        :type="showLoginPassword ? 'text' : 'password'"
+                        placeholder="密码"
+                        required
+                        autocomplete="current-password"
+                        class="icon-input password-input"
+                        maxlength="20"
+                        @input="validateLoginPassword"
+                      />
+                      <div class="input-actions">
+                        <button
+                          v-if="loginForm.password"
+                          type="button"
+                          class="clear-button"
+                          @click="loginForm.password = ''; validateLoginPassword()"
+                          title="清除"
+                        >
+                          ✕
+                        </button>
+                        <button
+                          type="button"
+                          class="password-toggle"
+                          @click="showLoginPassword = !showLoginPassword"
+                          :aria-label="showLoginPassword ? '隐藏密码' : '显示密码'"
+                        >
+                          <svg v-if="showLoginPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div v-if="showLoginCaptcha && loginAttempts >= 3" class="form-group captcha-group">
+                      <div class="captcha-row">
+                        <div class="captcha-input-group">
+                          <div class="icon-container">
+                            <span class="input-icon">🖼️</span>
+                          </div>
+                          <input
+                            v-model="loginForm.captcha_code"
+                            type="text"
+                            placeholder="验证码"
+                            required
+                            class="icon-input captcha-input"
+                            maxlength="4"
+                            @input="handleCaptchaInput('login')"
+                          />
+                          <div class="input-actions">
+                            <button
+                              v-if="loginForm.captcha_code"
+                              type="button"
+                              class="clear-button"
+                              @click="loginForm.captcha_code = ''"
+                              title="清除"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                        <div class="captcha-image-container">
+                          <div class="captcha-image" @click="refreshCaptcha">
+                            <img v-if="captchaImage" :src="captchaImage" alt="验证码" />
+                            <div v-else class="captcha-placeholder">刷新</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div class="captcha-image-container">
-                    <div class="captcha-image" @click="refreshCaptcha">
-                      <img v-if="captchaImage" :src="captchaImage" alt="验证码" />
-                      <div v-else class="captcha-placeholder">刷新</div>
-                    </div>
+                </div>
+                
+                <div v-if="!isRegistering && loginAttempts > 0 && hasValidAccountForLoginAttempt" class="auth-alerts">
+                  <div class="attempt-hint">
+                    <span class="hint-text">
+                      <span v-if="loginAttempts < 5">
+                        密码错误{{ loginAttempts }}次，还剩{{ 5 - loginAttempts }}次锁定
+                        <span v-if="loginAttempts >= 3">，请输入验证码</span>
+                      </span>
+                      <span v-else class="locked-message">
+                        账户已锁定，请管理员解锁！
+                      </span>
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="errors-container" :class="{ 'has-errors': hasLoginErrors }">
+                  <div v-if="loginErrors.username" class="error-message">
+                    {{ loginErrors.username }}
+                  </div>
+                  <div v-if="loginErrors.password" class="error-message">
+                    {{ loginErrors.password }}
                   </div>
                 </div>
               </div>
               
               <div class="auth-button-area">
-                <button type="submit" class="auth-button gradient-button" :disabled="isLoading || hasLoginErrors || !isLoginFormValid">
-                  <span class="button-text">
-                    {{ isLoading ? '登录中...' : '登录' }}
-                  </span>
-                  <div v-if="isLoading" class="button-loading">
-                    <div class="loading-spinner"></div>
-                  </div>
-                </button>
-              </div>
-              
-              <div v-if="!isRegistering && loginAttempts > 0 && hasValidAccountForLoginAttempt" class="auth-alerts">
-                <div class="attempt-hint">
-                  <span class="hint-text">
-                    <span v-if="loginAttempts < 5">
-                      密码错误{{ loginAttempts }}次，还剩{{ 5 - loginAttempts }}次锁定
-                      <span v-if="loginAttempts >= 3">，请输入验证码</span>
+                <div class="button-container">
+                  <button type="button" class="auth-button gradient-button"
+                    @click="handleLogin"
+                    :disabled="isLoading || hasLoginErrors || !isLoginFormValid">
+                    <span class="button-text">
+                      {{ isLoading ? '登录中...' : '登录' }}
                     </span>
-                    <span v-else class="locked-message">
-                      账户已锁定，请管理员解锁！
-                    </span>
-                  </span>
-                </div>
-              </div>
-              
-              <div class="errors-container" :class="{ 'has-errors': hasLoginErrors }">
-                <div v-if="loginErrors.username" class="error-message">
-                  {{ loginErrors.username }}
-                </div>
-                <div v-if="loginErrors.password" class="error-message">
-                  {{ loginErrors.password }}
+                    <div v-if="isLoading" class="button-loading">
+                      <div class="loading-spinner"></div>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
-          </form>
-          
-          <div v-else class="auth-form">
-            <div class="form-content">
-              <div class="register-steps-container" :class="{ 'step-two-active': registerStep === 2 }">
-                <div class="register-step step-one" :class="{ 'slide-left': registerStep === 2 }">
-                  <div class="form-group with-icon" :class="{
-                    'has-error': registerErrors.username,
-                    'has-success': registerForm.username && !registerErrors.username
-                  }">
-                    <div class="icon-container">
-                      <span class="input-icon">👤</span>
+            
+            <div v-else class="auth-form">
+              <div class="form-content">
+                <div class="auth-steps-container" :class="{ 'two-steps-active': registerStep === 2 }">
+                  <div class="auth-step step-one" :class="{ 'slide-left': registerStep === 2 }">
+                    <div class="form-group with-icon" :class="{
+                      'has-error': registerErrors.username,
+                      'has-success': registerForm.username && !registerErrors.username
+                    }">
+                      <div class="icon-container">
+                        <span class="input-icon">👤</span>
+                      </div>
+                      <input
+                        v-model="registerForm.username"
+                        type="text"
+                        placeholder="用户名"
+                        required
+                        autocomplete="username"
+                        class="icon-input"
+                        maxlength="10"
+                        @input="validateRegisterUsername"
+                      />
+                      <div class="input-actions">
+                        <button
+                          v-if="registerForm.username"
+                          type="button"
+                          class="clear-button"
+                          @click="registerForm.username = ''; validateRegisterUsername()"
+                          title="清除"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
-                    <input
-                      v-model="registerForm.username"
-                      type="text"
-                      placeholder="用户名"
-                      required
-                      autocomplete="username"
-                      class="icon-input"
-                      maxlength="10"
-                      @input="validateRegisterUsername"
-                    />
-                    <div class="input-actions">
-                      <button
-                        v-if="registerForm.username"
-                        type="button"
-                        class="clear-button"
-                        @click="registerForm.username = ''; validateRegisterUsername()"
-                        title="清除"
-                      >
-                        ✕
-                      </button>
+                    
+                    <div class="form-group with-icon password-group" :class="{
+                      'has-error': registerErrors.password,
+                      'has-success': registerForm.password && !registerErrors.password
+                    }">
+                      <div class="icon-container">
+                        <span class="input-icon">🔒</span>
+                      </div>
+                      <input
+                        v-model="registerForm.password"
+                        :type="showRegisterPassword ? 'text' : 'password'"
+                        placeholder="密码"
+                        required
+                        autocomplete="new-password"
+                        class="icon-input password-input"
+                        maxlength="20"
+                        @input="validateRegisterPassword"
+                      />
+                      <div class="input-actions">
+                        <button
+                          v-if="registerForm.password"
+                          type="button"
+                          class="clear-button"
+                          @click="registerForm.password = ''; validateRegisterPassword()"
+                          title="清除"
+                        >
+                          ✕
+                        </button>
+                        <button
+                          type="button"
+                          class="password-toggle"
+                          @click="showRegisterPassword = !showRegisterPassword"
+                          :aria-label="showRegisterPassword ? '隐藏密码' : '显示密码'"
+                        >
+                          <svg v-if="showRegisterPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                   
-                  <div class="form-group with-icon password-group" :class="{
-                    'has-error': registerErrors.password,
-                    'has-success': registerForm.password && !registerErrors.password
-                  }">
-                    <div class="icon-container">
-                      <span class="input-icon">🔒</span>
+                  <div class="auth-step step-two" :class="{ 'slide-in': registerStep === 2 }">
+                    <div class="form-group with-icon password-group" :class="{
+                      'has-error': registerErrors.confirmPassword,
+                      'has-success': registerForm.confirmPassword && !registerErrors.confirmPassword
+                    }">
+                      <div class="icon-container">
+                        <span class="input-icon">🔒</span>
+                      </div>
+                      <input
+                        v-model="registerForm.confirmPassword"
+                        :type="showConfirmPassword ? 'text' : 'password'"
+                        placeholder="确认密码"
+                        required
+                        autocomplete="new-password"
+                        class="icon-input password-input"
+                        maxlength="20"
+                        @input="validateConfirmPassword"
+                      />
+                      <div class="input-actions">
+                        <button
+                          v-if="registerForm.confirmPassword"
+                          type="button"
+                          class="clear-button"
+                          @click="registerForm.confirmPassword = ''; validateConfirmPassword()"
+                          title="清除"
+                        >
+                          ✕
+                        </button>
+                        <button
+                          type="button"
+                          class="password-toggle"
+                          @click="showConfirmPassword = !showConfirmPassword"
+                          :aria-label="showConfirmPassword ? '隐藏密码' : '显示密码'"
+                        >
+                          <svg v-if="showConfirmPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                    <input
-                      v-model="registerForm.password"
-                      :type="showRegisterPassword ? 'text' : 'password'"
-                      placeholder="密码"
-                      required
-                      autocomplete="new-password"
-                      class="icon-input password-input"
-                      maxlength="20"
-                      @input="validateRegisterPassword"
-                    />
-                    <div class="input-actions">
-                      <button
-                        v-if="registerForm.password"
-                        type="button"
-                        class="clear-button"
-                        @click="registerForm.password = ''; validateRegisterPassword()"
-                        title="清除"
-                      >
-                        ✕
-                      </button>
-                      <button
-                        type="button"
-                        class="password-toggle"
-                        @click="showRegisterPassword = !showRegisterPassword"
-                        :aria-label="showRegisterPassword ? '隐藏密码' : '显示密码'"
-                      >
-                        <svg v-if="showRegisterPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </button>
+                    
+                    <div class="form-group with-icon" :class="{
+                      'has-error': registerErrors.email,
+                      'has-success': registerForm.email && !registerErrors.email
+                    }">
+                      <div class="icon-container">
+                        <span class="input-icon">📧</span>
+                      </div>
+                      <input
+                        v-model="registerForm.email"
+                        type="email"
+                        placeholder="邮箱(选填)"
+                        autocomplete="email"
+                        class="icon-input"
+                        @input="validateRegisterEmail"
+                      />
+                      <div class="input-actions">
+                        <button
+                          v-if="registerForm.email"
+                          type="button"
+                          class="clear-button"
+                          @click="registerForm.email = ''; validateRegisterEmail()"
+                          title="清除"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div v-if="showRegisterCaptcha && registerAttempts >= 3" class="form-group captcha-group">
+                      <div class="captcha-row">
+                        <div class="captcha-input-group">
+                          <div class="icon-container">
+                            <span class="input-icon">🖼️</span>
+                          </div>
+                          <input
+                            v-model="registerForm.captcha_code"
+                            type="text"
+                            placeholder="验证码"
+                            required
+                            class="icon-input captcha-input"
+                            maxlength="4"
+                            @input="handleCaptchaInput('register')"
+                          />
+                          <div class="input-actions">
+                            <button
+                              v-if="registerForm.captcha_code"
+                              type="button"
+                              class="clear-button"
+                              @click="registerForm.captcha_code = ''"
+                              title="清除"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                        <div class="captcha-image-container">
+                          <div class="captcha-image" @click="refreshCaptcha">
+                            <img v-if="captchaImage" :src="captchaImage" alt="验证码" />
+                            <div v-else class="captcha-placeholder">刷新</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <div class="register-step step-two" :class="{ 'slide-in': registerStep === 2 }">
-                  <div class="form-group with-icon password-group" :class="{
-                    'has-error': registerErrors.confirmPassword,
-                    'has-success': registerForm.confirmPassword && !registerErrors.confirmPassword
-                  }">
-                    <div class="icon-container">
-                      <span class="input-icon">🔒</span>
-                    </div>
-                    <input
-                      v-model="registerForm.confirmPassword"
-                      :type="showConfirmPassword ? 'text' : 'password'"
-                      placeholder="确认密码"
-                      required
-                      autocomplete="new-password"
-                      class="icon-input password-input"
-                      maxlength="20"
-                      @input="validateConfirmPassword"
-                    />
-                    <div class="input-actions">
-                      <button
-                        v-if="registerForm.confirmPassword"
-                        type="button"
-                        class="clear-button"
-                        @click="registerForm.confirmPassword = ''; validateConfirmPassword()"
-                        title="清除"
-                      >
-                        ✕
-                      </button>
-                      <button
-                        type="button"
-                        class="password-toggle"
-                        @click="showConfirmPassword = !showConfirmPassword"
-                        :aria-label="showConfirmPassword ? '隐藏密码' : '显示密码'"
-                      >
-                        <svg v-if="showConfirmPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </button>
-                    </div>
+                <div v-if="isRegistering && registerAttempts > 0 && registerAttempts < 3" class="auth-alerts">
+                  <div class="attempt-hint">
+                    <span class="hint-text">注册失败 {{ registerAttempts }} 次，{{ 3 - registerAttempts }} 次后将需要验证码</span>
                   </div>
-                  
-                  <div class="form-group with-icon" :class="{
-                    'has-error': registerErrors.email,
-                    'has-success': registerForm.email && !registerErrors.email
-                  }">
-                    <div class="icon-container">
-                      <span class="input-icon">📧</span>
-                    </div>
-                    <input
-                      v-model="registerForm.email"
-                      type="email"
-                      placeholder="邮箱(选填)"
-                      autocomplete="email"
-                      class="icon-input"
-                      @input="validateRegisterEmail"
-                    />
-                    <div class="input-actions">
-                      <button
-                        v-if="registerForm.email"
-                        type="button"
-                        class="clear-button"
-                        @click="registerForm.email = ''; validateRegisterEmail()"
-                        title="清除"
-                      >
-                        ✕
-                      </button>
-                    </div>
+                </div>
+                
+                <div class="errors-container" :class="{ 'has-errors': hasRegisterStepErrors }">
+                  <div v-if="registerStep === 1 && registerErrors.username" class="error-message">
+                    {{ registerErrors.username }}
                   </div>
-                  
-                  <div v-if="showRegisterCaptcha && registerAttempts >= 3" class="form-group captcha-group">
-                    <div class="captcha-row">
-                      <div class="captcha-input-group">
-                        <div class="icon-container">
-                          <span class="input-icon">🖼️</span>
-                        </div>
-                        <input
-                          v-model="registerForm.captcha_code"
-                          type="text"
-                          placeholder="验证码"
-                          required
-                          class="icon-input captcha-input"
-                          maxlength="4"
-                          @input="handleCaptchaInput('register')"
-                        />
-                        <div class="input-actions">
-                          <button
-                            v-if="registerForm.captcha_code"
-                            type="button"
-                            class="clear-button"
-                            @click="registerForm.captcha_code = ''"
-                            title="清除"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                      <div class="captcha-image-container">
-                        <div class="captcha-image" @click="refreshCaptcha">
-                          <img v-if="captchaImage" :src="captchaImage" alt="验证码" />
-                          <div v-else class="captcha-placeholder">刷新</div>
-                        </div>
-                      </div>
-                    </div>
+                  <div v-if="registerStep === 1 && registerErrors.password" class="error-message">
+                    {{ registerErrors.password }}
+                  </div>
+                  <div v-if="registerStep === 2 && registerErrors.confirmPassword" class="error-message">
+                    {{ registerErrors.confirmPassword }}
+                  </div>
+                  <div v-if="registerStep === 2 && registerErrors.email" class="error-message">
+                    {{ registerErrors.email }}
                   </div>
                 </div>
               </div>
               
               <div class="auth-button-area">
                 <div v-if="registerStep === 1" class="button-container">
-                  <button
-                    type="button"
-                    class="auth-button gradient-button"
-                    @click="handleNextStep"
-                    :disabled="isLoading || hasRegisterStep1Errors || !isRegisterStep1Valid"
-                  >
-                    <span class="button-text">下一步</span>
-                  </button>
+                  <div class="button-group single-button">
+                    <button
+                      type="button"
+                      class="auth-button gradient-button"
+                      @click="handleNextStep"
+                      :disabled="isLoading || hasRegisterStep1Errors || !isRegisterStep1Valid"
+                    >
+                      <span class="button-text">下一步</span>
+                    </button>
+                  </div>
                 </div>
                 
                 <div v-else class="button-container">
-                  <div class="button-group">
+                  <div class="button-group two-buttons">
                     <button
                       type="button"
                       class="auth-button back-button"
@@ -414,27 +448,6 @@
                   </div>
                 </div>
               </div>
-              
-              <div v-if="isRegistering && registerAttempts > 0 && registerAttempts < 3" class="auth-alerts">
-                <div class="attempt-hint">
-                  <span class="hint-text">注册失败 {{ registerAttempts }} 次，{{ 3 - registerAttempts }} 次后将需要验证码</span>
-                </div>
-              </div>
-              
-              <div class="errors-container" :class="{ 'has-errors': hasRegisterStepErrors }">
-                <div v-if="registerStep === 1 && registerErrors.username" class="error-message">
-                  {{ registerErrors.username }}
-                </div>
-                <div v-if="registerStep === 1 && registerErrors.password" class="error-message">
-                  {{ registerErrors.password }}
-                </div>
-                <div v-if="registerStep === 2 && registerErrors.confirmPassword" class="error-message">
-                  {{ registerErrors.confirmPassword }}
-                </div>
-                <div v-if="registerStep === 2 && registerErrors.email" class="error-message">
-                  {{ registerErrors.email }}
-                </div>
-              </div>
             </div>
           </div>
           
@@ -452,7 +465,7 @@
           </div>
           
           <div class="auth-footer">
-            <p class="version-info">CFMS v3.0.0 © 2025 rizona</p>
+            <p class="version-info">{{ copyrightInfo }}</p>
           </div>
         </div>
       </div>
@@ -461,13 +474,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, reactive, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
+import { getCopyright } from '../Version'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const particlesContainer = ref<HTMLElement | null>(null)
 
 const isRegistering = ref(false)
 const registerStep = ref(1)
@@ -529,6 +542,9 @@ const isRegisterStep2Valid = computed(() => {
          (!registerForm.value.email || validateEmailFormat(registerForm.value.email)) &&
          (!showRegisterCaptcha.value || registerForm.value.captcha_code.length >= 4)
 })
+
+// 从版本配置文件获取版权信息
+const copyrightInfo = ref(getCopyright())
 
 const LOGIN_ATTEMPTS_KEY = 'cfms_login_attempts'
 const REGISTER_ATTEMPTS_KEY = 'cfms_register_attempts'
@@ -1352,19 +1368,205 @@ const handleRegister = async () => {
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.auth-form {
-  margin-bottom: 15px;
-  flex: 1;
+/* 统一的表单包装容器 */
+.auth-form-wrapper {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 240px;
 }
 
-.form-content {
+.auth-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 统一表单内容区域 */
+.auth-form .form-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 104px; /* 两个输入框+间距的高度：46*2 + 12 = 104px */
+  margin-bottom: 0;
+}
+
+/* 统一的认证步骤容器 */
+.auth-steps-container {
+  position: relative;
+  width: 100%;
+  height: 104px; /* 固定高度，确保和登录页两个框的高度一致 */
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+}
+
+/* 统一的步骤样式 */
+.auth-step {
+  width: 100%;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 0;
+  margin: 0;
+}
+
+/* 登录页的特殊处理 - 单步始终显示 */
+.auth-step.single-step {
+  position: relative; /* 不使用绝对定位 */
+  transform: none !important;
+  opacity: 1 !important;
+  height: auto;
+}
+
+/* 注册页的第一步 */
+.auth-step.step-one {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.auth-step.step-one.slide-left {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* 注册页的第二步 */
+.auth-step.step-two {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.auth-step.step-two.slide-in {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* 统一的按钮区域 - 固定高度和边距 */
+.auth-button-area {
+  margin-top: 20px;
+  height: 46px; /* 统一高度 */
+  display: flex;
+  align-items: stretch; /* 让内部按钮撑满 */
+  width: 100%;
+  margin-bottom: 0;
+}
+
+/* 统一的按钮容器 */
+.button-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 统一的按钮组 */
+.button-group {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  gap: 10px;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.button-group.single-button {
+  gap: 0;
+}
+
+.button-group.two-buttons {
+  gap: 10px;
+}
+
+/* 统一按钮样式 */
+.auth-button, .back-button {
+  height: 100%; /* 撑满父级区域 */
+  padding: 11px 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-sizing: border-box;
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  backdrop-filter: blur(4px);
+}
+
+.auth-button {
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.back-button {
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.gradient-button {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.theme-dark .auth-button,
+.theme-dark .back-button {
+  background: rgba(99, 102, 241, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.theme-dark .gradient-button {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.auth-button:hover:not(:disabled),
+.back-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+.gradient-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.theme-dark .gradient-button:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.auth-button:active:not(:disabled),
+.back-button:active:not(:disabled),
+.gradient-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.auth-button:disabled,
+.back-button:disabled,
+.gradient-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .auth-alerts {
@@ -1460,39 +1662,6 @@ const handleRegister = async () => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 修复按钮高度不一致问题 */
-.auth-button-area {
-  margin-top: 8px;
-  margin-bottom: 0;
-  padding-top: 0;
-  position: relative;
-  min-height: 46px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-
-.button-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  margin: 0;
-}
-
-/* 修复注册容器高度问题 */
-.register-steps-container {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-  min-height: 120px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
 .form-group {
   margin-bottom: 0;
   position: relative;
@@ -1513,9 +1682,10 @@ const handleRegister = async () => {
 }
 
 /* 修复注册页面框体边框被截断的问题 */
-.register-step .form-group.with-icon {
+.auth-step .form-group.with-icon {
   z-index: 2;
   position: relative;
+  margin: 2px 0; /* 为边框留出空间 */
 }
 
 .theme-dark .form-group.with-icon {
@@ -1537,7 +1707,7 @@ const handleRegister = async () => {
 .form-group.with-icon.has-error {
   border-color: #ef4444;
   box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
-  z-index: 3; /* 提高错误状态的z-index */
+  z-index: 3;
 }
 
 .theme-dark .form-group.with-icon.has-error {
@@ -1547,10 +1717,13 @@ const handleRegister = async () => {
 
 .form-group.with-icon:focus-within {
   background-color: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1), 0 0 0 2px rgba(99, 102, 241, 0.15);
+  box-shadow:
+    0 4px 12px rgba(99, 102, 241, 0.1),
+    0 0 0 2px rgba(99, 102, 241, 0.15);
   border-color: #6366f1;
   transform: translateY(-1px);
-  z-index: 4; /* 提高焦点状态的z-index */
+  z-index: 20; /* 更高的z-index确保在最上层 */
+  position: relative;
 }
 
 .theme-dark .form-group.with-icon:focus-within {
@@ -1705,99 +1878,6 @@ const handleRegister = async () => {
   to { transform: rotate(360deg); }
 }
 
-.register-step {
-  width: 100%;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.register-step.step-one {
-  transform: translateX(0);
-  opacity: 1;
-}
-
-.register-step.step-one.slide-left {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
-.register-step.step-two {
-  transform: translateX(100%);
-  opacity: 0;
-}
-
-.register-step.step-two.slide-in {
-  transform: translateX(0);
-  opacity: 1;
-}
-
-.button-group {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  margin: 0;
-}
-
-.button-group .back-button,
-.button-group .auth-button {
-  flex: 1;
-  min-width: 0;
-  position: relative;
-}
-
-.back-button {
-  padding: 11px 16px;
-  border: none;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-sizing: border-box;
-  letter-spacing: 0.3px;
-  position: relative;
-  overflow: hidden;
-  background: rgba(99, 102, 241, 0.08);
-  color: #6366f1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  width: 100%;
-  backdrop-filter: blur(4px);
-}
-
-.theme-dark .back-button {
-  background: rgba(99, 102, 241, 0.12);
-  color: #a78bfa;
-  border: 1px solid rgba(167, 139, 250, 0.2);
-}
-
-.back-button:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.12);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
-}
-
-.theme-dark .back-button:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.16);
-}
-
-.back-button:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.back-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
 .captcha-group {
   margin-top: 0;
   width: 100%;
@@ -1905,69 +1985,6 @@ const handleRegister = async () => {
   color: #a78bfa;
 }
 
-.auth-button {
-  width: 100%;
-  padding: 11px 16px;
-  border: none;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-sizing: border-box;
-  letter-spacing: 0.3px;
-  position: relative;
-  overflow: hidden;
-  background: rgba(99, 102, 241, 0.08);
-  color: #6366f1;
-  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  backdrop-filter: blur(4px);
-}
-
-.gradient-button {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.theme-dark .gradient-button {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.gradient-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
-.theme-dark .gradient-button:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-}
-
-.gradient-button:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.25);
-}
-
-.auth-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
-}
-
-.auth-button:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-.auth-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
 .hint-area {
   min-height: 25px;
   display: flex;
@@ -2042,16 +2059,22 @@ const handleRegister = async () => {
   .auth-card { padding: 28px 24px; min-height: 380px; }
   .auth-title { font-size: 26px; margin-bottom: 24px; }
   .mode-tabs { margin-bottom: 20px; }
-  .form-content { gap: 10px; }
+  /* 统一调整移动端间距 */
+  .auth-form .form-content,
+  .auth-step,
+  .auth-steps-container {
+    gap: 10px;
+    height: 88px; /* 调整高度 */
+  }
+  .auth-form .form-content { min-height: 88px; }
   .form-group.with-icon { padding: 0 14px; min-height: 44px; }
   .icon-input { padding: 11px 0; font-size: 13px; }
   .password-input { padding-right: 45px; }
   .captcha-input-group, .captcha-image { height: 44px; min-height: 44px; }
   .captcha-image-container { min-width: 100px; }
   .auth-button, .back-button { padding: 10px 14px; font-size: 13px; }
-  .register-steps-container { min-height: 110px; gap: 10px; }
-  .auth-form { min-height: 200px; }
-  .auth-button-area { min-height: 42px; margin-top: 8px; }
+  .auth-form-wrapper { min-height: 200px; }
+  .auth-button-area { height: 42px; margin-top: 16px; }
   .hint-area { min-height: 20px; margin-top: 8px; }
   .errors-container.has-errors { min-height: 40px; }
 }
@@ -2061,7 +2084,14 @@ const handleRegister = async () => {
   .auth-card { padding: 28px 24px; min-height: 400px; }
   .auth-title { font-size: 26px; }
   .mode-tab { font-size: 14px; padding: 10px; }
-  .form-content { gap: 10px; }
+  /* 统一调整移动端间距 */
+  .auth-form .form-content,
+  .auth-step,
+  .auth-steps-container {
+    gap: 10px;
+    height: 88px; /* 调整高度 */
+  }
+  .auth-form .form-content { min-height: 88px; }
   .captcha-row { flex-direction: row; gap: 8px; }
   .captcha-input-group { flex: 2; height: 44px; min-height: 44px; }
   .captcha-image-container { flex: 1; min-width: 100px; max-width: 120px; }
@@ -2069,13 +2099,9 @@ const handleRegister = async () => {
   .auth-button, .back-button { padding: 10px 14px; font-size: 13px; }
   .mode-switch { font-size: 12px; }
   .attempt-hint { font-size: 12px; padding: 8px 10px; }
-  .register-steps-container { min-height: 110px; gap: 10px; }
-  .auth-form { min-height: 220px; }
-  .button-group {
-    gap: 8px;
-    margin: 0;
-  }
-  .auth-button-area { min-height: 44px; margin-top: 8px; }
+  .auth-form-wrapper { min-height: 220px; }
+  .button-group.two-buttons { gap: 8px; }
+  .auth-button-area { height: 44px; margin-top: 16px; }
   .hint-area { min-height: 22px; margin-top: 8px; }
   .errors-container.has-errors { min-height: 40px; }
 }
@@ -2084,19 +2110,22 @@ const handleRegister = async () => {
   .auth-scroll-container { align-items: flex-start; padding-top: 10px; }
   .auth-card { min-height: 340px; padding: 24px 28px; }
   .auth-title { font-size: 24px; margin-bottom: 20px; }
-  .form-content { gap: 8px; }
+  /* 统一调整横屏模式间距 */
+  .auth-form .form-content,
+  .auth-step,
+  .auth-steps-container {
+    gap: 8px;
+    height: 72px; /* 调整高度 */
+  }
+  .auth-form .form-content { min-height: 72px; }
   .form-group.with-icon { padding: 0 12px; min-height: 42px; }
   .icon-input { padding: 10px 0; font-size: 13px; }
   .password-input { padding-right: 40px; }
   .captcha-row { gap: 6px; }
   .captcha-input-group, .captcha-image { height: 42px; min-height: 42px; }
-  .register-steps-container { min-height: 90px; gap: 8px; }
-  .auth-form { min-height: 160px; }
-  .button-group {
-    gap: 6px;
-    margin: 0;
-  }
-  .auth-button-area { min-height: 40px; margin-top: 8px; }
+  .auth-form-wrapper { min-height: 160px; }
+  .button-group.two-buttons { gap: 6px; }
+  .auth-button-area { height: 40px; margin-top: 12px; }
   .hint-area { min-height: 20px; margin-top: 8px; }
   .errors-container.has-errors { min-height: 36px; }
 }
