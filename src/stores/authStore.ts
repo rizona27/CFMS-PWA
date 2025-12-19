@@ -41,10 +41,8 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string>('')
   const isRegistering = ref(false)
 
-  // 后端API地址 - 修改为新的后端域名
-  const API_BASE_URL = import.meta.env.PROD 
-    ? 'https://cfms.crnas.uk/api'
-    : '/api'  // 开发时使用代理
+  // 后端API地址 - 【修改】开发和生产环境都使用真实后端
+  const API_BASE_URL = 'https://cfms.crnas.uk/api'
   
   // 验证码相关状态
   const captchaImage = ref<string>('')
@@ -126,7 +124,7 @@ export const useAuthStore = defineStore('auth', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include'  // 跨域请求需要携带凭证
+        credentials: 'include'
       })
 
       const data = await response.json()
@@ -155,7 +153,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = ''
     
     try {
-      console.log(`登录尝试: ${username}, 环境: ${import.meta.env.MODE}`)
+      console.log(`登录尝试: ${username}`)
       console.log(`API地址: ${API_BASE_URL}`)
 
       if (!username || !password) {
@@ -179,7 +177,7 @@ export const useAuthStore = defineStore('auth', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestData),
-        credentials: 'include'  // 跨域请求需要携带凭证
+        credentials: 'include'
       })
 
       const data = await response.json()
@@ -207,8 +205,6 @@ export const useAuthStore = defineStore('auth', () => {
         console.log('登录响应数据:', data)
         console.log('用户数据:', userData)
         console.log('登录成功，存储token和用户信息')
-        console.log('当前登录状态:', isLoggedIn.value)
-        console.log('当前用户:', currentUser.value)
         
         localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
         localStorage.setItem('auth_token', token.value)
@@ -230,11 +226,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.error('登录错误:', err)
       error.value = err.message || '登录失败，请检查网络连接'
       
-      if (err.message.includes('Failed to fetch') || err.message.includes('Network')) {
-        console.log('后端API不可用，使用模拟登录作为备用')
-        return mockLogin(username, password)
-      }
-      
+      // 开发环境下也使用真实后端，移除模拟登录备用
       return false
     } finally {
       isLoading.value = false
@@ -264,7 +256,7 @@ export const useAuthStore = defineStore('auth', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
-        credentials: 'include'  // 跨域请求需要携带凭证
+        credentials: 'include'
       })
 
       const data = await response.json()
@@ -338,71 +330,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function mockLogin(username: string, password: string): boolean {
-    console.log('开始模拟登录，用户名:', username, '密码:', password)
-    
-    const mockUsers: Record<string, Partial<User>> = {
-      'admin': {
-        id: 1,
-        username: 'admin',
-        email: 'admin@cfms.com',
-        user_type: 'vip',
-        displayName: '管理员',
-        has_full_access: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      'user': {
-        id: 2,
-        username: 'user',
-        email: 'user@cfms.com',
-        user_type: 'subscribed',
-        has_full_access: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      'guest': {
-        id: 3,
-        username: 'guest',
-        email: 'guest@cfms.com',
-        user_type: 'free',
-        has_full_access: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    }
-
-    const normalizedUsername = username.toLowerCase()
-    const user = mockUsers[normalizedUsername]
-    
-    if (user && password) {
-      currentUser.value = user as User
-      isLoggedIn.value = true
-      
-      // 关键：设置一个有效的token
-      const mockToken = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      token.value = mockToken
-      
-      // 确保保存到 localStorage
-      localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
-      localStorage.setItem('auth_token', mockToken)
-      
-      console.log(`模拟登录成功: ${normalizedUsername} (${user.user_type})`)
-      console.log('设置的token:', mockToken)
-      console.log('localStorage 检查:')
-      console.log('  auth_token:', localStorage.getItem('auth_token'))
-      console.log('  auth_user:', localStorage.getItem('auth_user'))
-      console.log('当前登录状态:', isLoggedIn.value)
-      console.log('当前用户:', currentUser.value)
-      
-      return true
-    } else {
-      error.value = '用户名或密码错误'
-      console.log('模拟登录失败: 用户名或密码错误')
-      console.log('可用用户名:', Object.keys(mockUsers))
-      return false
-    }
-  }
+  // 移除了 mockLogin 方法
 
   async function checkDatabaseConnection(): Promise<boolean> {
     try {
@@ -415,12 +343,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchUserProfile(): Promise<void> {
-    // 在开发环境下，如果后端不可用，跳过用户信息获取
-    if (import.meta.env.DEV) {
-      console.log('开发环境，跳过用户信息获取请求')
-      return
-    }
-    
     if (!currentUser.value || !token.value) return
     
     try {
@@ -429,7 +351,7 @@ export const useAuthStore = defineStore('auth', () => {
         headers: {
           'Authorization': `Bearer ${token.value}`
         },
-        credentials: 'include'  // 跨域请求需要携带凭证
+        credentials: 'include'
       })
       
       if (response.ok) {
@@ -447,50 +369,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function forceLogin(username: string) {
-    const mockUsers: Record<string, Partial<User>> = {
-      'admin': {
-        id: 1,
-        username: 'admin',
-        email: 'admin@cfms.com',
-        user_type: 'vip',
-        displayName: '管理员',
-        has_full_access: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      'user': {
-        id: 2,
-        username: 'user',
-        email: 'user@cfms.com',
-        user_type: 'subscribed',
-        has_full_access: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      'guest': {
-        id: 3,
-        username: 'guest',
-        email: 'guest@cfms.com',
-        user_type: 'free',
-        has_full_access: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    }
-
-    const user = mockUsers[username]
-    if (user) {
-      currentUser.value = user as User
-      isLoggedIn.value = true
-      const mockToken = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      token.value = mockToken
-      localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
-      localStorage.setItem('auth_token', mockToken)
-      console.log(`强制登录成功: ${username}`)
-    }
-  }
-
   function logout() {
     console.log('用户退出登录')
     
@@ -502,10 +380,9 @@ export const useAuthStore = defineStore('auth', () => {
     
     console.log('清除登录状态完成，正在跳转到登录页...')
     
-    // 直接使用 window.location 跳转，避免 useRouter() 问题
+    // 直接使用 window.location 跳转
     setTimeout(() => {
       window.location.hash = '#/auth'
-      // 刷新页面以确保状态完全重置
       setTimeout(() => {
         window.location.reload()
       }, 100)
@@ -530,12 +407,8 @@ export const useAuthStore = defineStore('auth', () => {
         console.log('自动登录成功:', userData.username)
         console.log('当前登录状态:', isLoggedIn.value)
         
-        // 只在生产环境或后端可用时获取用户信息
-        if (import.meta.env.PROD) {
-          fetchUserProfile()
-        } else {
-          console.log('开发环境，跳过用户信息获取')
-        }
+        // 获取用户信息
+        fetchUserProfile()
         
         return true
       } else {
@@ -552,19 +425,13 @@ export const useAuthStore = defineStore('auth', () => {
   async function validateToken(): Promise<boolean> {
     if (!token.value) return false
     
-    // 开发环境下使用模拟验证
-    if (import.meta.env.DEV && token.value.startsWith('mock_token_')) {
-      console.log('开发环境，模拟token验证成功')
-      return true
-    }
-    
     try {
       const response = await fetch(`${API_BASE_URL}/validate-token`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token.value}`
         },
-        credentials: 'include'  // 跨域请求需要携带凭证
+        credentials: 'include'
       })
       
       return response.ok
@@ -612,10 +479,8 @@ export const useAuthStore = defineStore('auth', () => {
     resetRegisterForm,
     toggleRegisterMode,
     getCaptcha,
-    mockLogin,
     checkDatabaseConnection,
     fetchUserProfile,
-    forceLogin,
     logout,
     autoLogin,
     validateToken,

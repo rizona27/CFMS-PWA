@@ -1,6 +1,6 @@
 import { useDataStore } from '@/stores/dataStore'
 
-// 【重要修改】定义正确的 API 基础 URL，解决因域名不一致导致的 404/401 错误
+// 【修改】使用统一的后端地址
 const API_BASE_URL = 'https://cfms.crnas.uk'
 
 export interface FundInfo {
@@ -54,7 +54,6 @@ class FundService {
   private readonly cacheExpirationInterval: number = 24 * 60 * 60 * 1000
 
   constructor() {
-    // 【正确】从 Pinia 获取 Store 实例
     this.dataStore = useDataStore()
   }
 
@@ -77,27 +76,6 @@ class FundService {
     return date1.getFullYear() === date2.getFullYear() &&
            date1.getMonth() === date2.getMonth() &&
            date1.getDate() === date2.getDate()
-  }
-
-  private async getAuthHeaders() {
-    // 关键：从 localStorage 获取正确的令牌键名
-    const token = localStorage.getItem('auth_token') || ''
-    console.log('[认证头] 当前令牌:', token ? token.substring(0, 20) + '...' : '未找到')
-    
-    if (!token) {
-      console.warn('[认证头] 令牌不存在，请先登录')
-      // 触发重新登录事件
-      const event = new CustomEvent('auth-required', {
-        detail: { message: '请先登录以获取基金数据' }
-      })
-      window.dispatchEvent(event)
-    }
-    
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      'Origin': window.location.origin
-    }
   }
 
   // 🔴 新增方法：从数据库缓存获取基金数据
@@ -367,7 +345,7 @@ class FundService {
       const response = await fetch(url, {
         method: 'GET',
         headers: headers,
-        credentials: 'include'  // 重要：跨域请求携带凭证
+        credentials: 'include'
       })
       
       console.log(`[响应] 状态: ${response.status}`)
@@ -626,7 +604,7 @@ class FundService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误'
       this.dataStore.addLog(`基金代码 ${formattedCode}: 详情数据获取失败: ${errorMessage}`, 'error')
-      return { 
+      return {
         fundName: 'N/A',
         nav: 0,
         navDate: 'N/A',
