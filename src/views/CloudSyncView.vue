@@ -1,37 +1,8 @@
+<!-- CloudSyncView.vue -->
 <template>
   <div class="cloud-sync-view">
     <!-- 使用统一的 NavBar 组件 -->
     <NavBar title="云端同步" backText="返回" backRoute="/config" />
-    
-    <!-- 固定顶部区域 -->
-    <div class="fixed-top-section">
-      <div class="top-container">
-        <!-- 用户信息卡片 -->
-        <div class="sync-user-card">
-          <div class="user-header">
-            <div class="user-avatar">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
-                <path d="M20 21V19C20 16.7909 18.2091 15 16 15H8C5.79086 15 4 16.7909 4 19V21" stroke="currentColor" stroke-width="2"/>
-              </svg>
-            </div>
-            <div class="user-info">
-              <h3 class="username">{{ authStore.displayName }}</h3>
-              <p class="user-type">{{ authStore.userTypeDisplay }}</p>
-            </div>
-            <div class="sync-status" :class="getSyncStatusClass()">
-              {{ getSyncStatusText() }}
-            </div>
-          </div>
-        </div>
-        
-        <!-- 分隔符 -->
-        <div class="stylish-divider">
-          <div class="divider-line"></div>
-          <div class="divider-line"></div>
-        </div>
-      </div>
-    </div>
     
     <!-- 可滚动的内容区域 -->
     <div class="scrollable-content-section">
@@ -237,6 +208,9 @@ const confirmTitle = ref('')
 const confirmMessage = ref('')
 const confirmType = ref<'upload' | 'download'>('upload')
 
+// 云端数据更新时间
+const cloudUpdateTime = ref<string>('')
+
 // 同步历史
 const syncHistory = ref<Array<{
   id: number
@@ -259,19 +233,12 @@ const getTableName = () => {
   return authStore.currentUser.username.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-// 获取同步状态
-const getSyncStatusClass = () => {
-  if (!authStore.isLoggedIn) return 'offline'
-  return 'online'
-}
-
-const getSyncStatusText = () => {
-  if (!authStore.isLoggedIn) return '未登录'
-  return '已连接'
-}
-
-// 获取最后更新时间
+// 获取最后更新时间（从云端获取）
 const getLastUpdateTime = () => {
+  if (cloudUpdateTime.value) {
+    return cloudUpdateTime.value
+  }
+  
   try {
     const lastUpdate = localStorage.getItem('last_data_update')
     if (lastUpdate) {
@@ -286,6 +253,9 @@ const getLastUpdateTime = () => {
 
 // 获取云端数据状态
 const getCloudDataStatus = () => {
+  if (cloudUpdateTime.value) {
+    return '已更新'
+  }
   return '未检查'
 }
 
@@ -362,16 +332,15 @@ const loadSyncHistory = () => {
   }
 }
 
-// 检查云端数据
-const checkCloudData = async (): Promise<boolean> => {
+// 检查云端数据更新时间
+const checkCloudUpdateTime = async () => {
   try {
     const token = authStore.token || localStorage.getItem('auth_token')
     if (!token) {
-      showNotification('请先登录', 'warning')
-      return false
+      return
     }
     
-    const response = await fetch(`${API_BASE_URL}/api/holdings/check`, {
+    const response = await fetch(`${API_BASE_URL}/api/holdings/last-update`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -379,10 +348,15 @@ const checkCloudData = async (): Promise<boolean> => {
       }
     })
     
-    return response.ok
+    if (response.ok) {
+      const result = await response.json()
+      if (result.lastUpdate) {
+        const date = new Date(result.lastUpdate)
+        cloudUpdateTime.value = date.toLocaleDateString('zh-CN')
+      }
+    }
   } catch (error) {
-    console.error('检查云端数据失败:', error)
-    return false
+    console.error('检查云端数据更新时间失败:', error)
   }
 }
 
@@ -500,7 +474,11 @@ const uploadHoldingsToCloud = async () => {
       const uploadedCount = result.uploaded_count || holdings.length
       
       // 更新最后同步时间
-      localStorage.setItem('last_cloud_sync', new Date().toISOString())
+      const now = new Date()
+      localStorage.setItem('last_cloud_sync', now.toISOString())
+      
+      // 更新云端更新时间显示
+      cloudUpdateTime.value = now.toLocaleDateString('zh-CN')
       
       // 添加历史记录
       addSyncHistory('upload', 'success', '上传到云端成功', uploadedCount)
@@ -590,7 +568,11 @@ const downloadHoldingsFromCloud = async () => {
       const batchResult = dataStore.batchAddHoldings(holdings)
       
       // 更新最后同步时间
-      localStorage.setItem('last_cloud_sync', new Date().toISOString())
+      const now = new Date()
+      localStorage.setItem('last_cloud_sync', now.toISOString())
+      
+      // 更新本地数据更新时间
+      localStorage.setItem('last_data_update', now.toISOString())
       
       // 添加历史记录
       addSyncHistory('download', 'success', '从云端下载成功', batchResult.success)
@@ -614,6 +596,7 @@ const downloadHoldingsFromCloud = async () => {
 
 onMounted(() => {
   loadSyncHistory()
+  checkCloudUpdateTime()
   dataStore.safeAddLog('用户访问云端同步页面', 'info', false)
 })
 </script>
@@ -638,165 +621,6 @@ onMounted(() => {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-/* 固定顶部部分 */
-.fixed-top-section {
-  flex-shrink: 0;
-  z-index: 90;
-  padding-top: 0;
-  background: transparent;
-  padding-bottom: 8px;
-}
-
-.top-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-.page-title-section {
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 4px 0;
-}
-
-:root.dark .page-title {
-  color: #f1f5f9;
-}
-
-.page-subtitle {
-  font-size: 14px;
-  color: #64748b;
-  margin: 0;
-}
-
-:root.dark .page-subtitle {
-  color: #94a3b8;
-}
-
-.sync-user-card {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-}
-
-:root.dark .sync-user-card {
-  background: rgba(30, 41, 59, 0.8);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.user-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  flex-shrink: 0;
-}
-
-.user-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.username {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 2px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-:root.dark .username {
-  color: #f1f5f9;
-}
-
-.user-type {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0;
-  background: rgba(100, 116, 139, 0.1);
-  padding: 2px 8px;
-  border-radius: 10px;
-  display: inline-block;
-}
-
-:root.dark .user-type {
-  color: #94a3b8;
-  background: rgba(148, 163, 184, 0.1);
-}
-
-.sync-status {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 12px;
-  white-space: nowrap;
-}
-
-.sync-status.online {
-  background: rgba(34, 197, 94, 0.2);
-  color: #16a34a;
-}
-
-.sync-status.offline {
-  background: rgba(239, 68, 68, 0.2);
-  color: #dc2626;
-}
-
-/* 分隔符样式 */
-.stylish-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 8px 0 12px;
-  opacity: 0.6;
-}
-
-.divider-line {
-  height: 1px;
-  width: 40px;
-  background: linear-gradient(90deg, transparent, currentColor);
-}
-
-.divider-line:last-child {
-  background: linear-gradient(90deg, currentColor, transparent);
-}
-
-.divider-icon {
-  color: currentColor;
-  display: flex;
-  align-items: center;
-}
-
-:root.dark .stylish-divider {
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.stylish-divider {
-  color: rgba(0, 0, 0, 0.2);
-}
-
 /* 可滚动的内容区域 */
 .scrollable-content-section {
   flex: 1;
@@ -813,7 +637,7 @@ onMounted(() => {
 .content-wrapper {
   max-width: 1000px;
   margin: 0 auto;
-  padding: 0 16px 100px;
+  padding: 0 16px;
 }
 
 /* 同步内容区域 */
@@ -1390,10 +1214,6 @@ onMounted(() => {
 
 /* 移动端优化 */
 @media (max-width: 768px) {
-  .top-container {
-    padding: 0 12px;
-  }
-  
   .content-wrapper {
     padding: 0 12px 80px;
   }

@@ -1,3 +1,4 @@
+<!-- ConfigView.vue -->
 <template>
   <div class="config-view">
     <div class="fixed-top-section">
@@ -10,21 +11,41 @@
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05)'
             }"
           >
-            <!-- 绶带式用户类型标签 - 右上角 -->
-            <div
-              class="ribbon-tag-top"
-              :class="{
-                'ribbon-vip': authStore.userType === 'vip',
-                'ribbon-subscribed': authStore.userType === 'subscribed',
-                'ribbon-free': authStore.userType === 'free'
-              }"
-              :style="{ animation: showRibbonAnimation ? 'ribbonGlow 1s ease-in-out' : 'none' }"
-              @animationend="ribbonAnimationEnd"
-            >
-              <span class="ribbon-content">
-                {{ userTypeDisplay }}
-              </span>
-              <div class="ribbon-tail"></div>
+            <!-- 新颖设计：六边形用户身份徽章 + 渐变光环 -->
+            <div class="user-badge-container">
+              <div
+                class="user-badge"
+                :class="{
+                  'badge-vip': authStore.userType === 'vip',
+                  'badge-subscribed': authStore.userType === 'subscribed',
+                  'badge-free': authStore.userType === 'free'
+                }"
+              >
+                <!-- 光环动画效果 -->
+                <div class="badge-halo" :style="{ animation: showBadgeAnimation ? 'haloPulse 2s ease-in-out infinite' : 'none' }"></div>
+                
+                <!-- 徽章边框 -->
+                <div class="badge-border"></div>
+                
+                <!-- 徽章内容 -->
+                <div class="badge-content">
+                  <div class="badge-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"/>
+                      <circle cx="12" cy="12" r="4" fill="currentColor"/>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- 徽章文字标签（悬浮显示） -->
+                <div class="badge-label">
+                  {{ getUserTypeShort() }}
+                </div>
+              </div>
             </div>
             
             <div class="user-content">
@@ -47,51 +68,58 @@
                       {{ displayName }}
                     </h3>
                     <p class="user-id" v-if="authStore.currentUser?.username">ID: {{ authStore.currentUser.username }}</p>
-                    
-                    <!-- 体验用户状态信息 -->
-                    <div v-if="authStore.userType === 'subscribed' && subscriptionEndDate" class="trial-info">
-                      <div class="trial-item">
-                        <span class="trial-label">到期日:</span>
-                        <span class="trial-value">{{ subscriptionEndDate.date }}</span>
-                      </div>
-                      <div class="trial-item">
-                        <span class="trial-label">状态:</span>
-                        <span class="trial-status" :class="{ 'expired': subscriptionEndDate.isExpired }">
-                          {{ subscriptionEndDate.isExpired ? '已过期' : `剩余${subscriptionEndDate.daysLeft}天` }}
-                        </span>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
               
-              <div class="user-info-footer">
-                <button
-                  class="logout-btn"
-                  @click="handleLogout"
-                  :style="{
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)'
-                  }"
-                >
-                  退出
-                </button>
-              </div>
-              
-              <div class="user-actions">
-                <button
-                  class="upgrade-btn"
-                  @click="handleUpgrade"
-                  v-if="authStore.userType !== 'vip'"
-                  :style="{
-                    backgroundColor: getUserColors().textColor + '1A',
-                    color: getUserColors().textColor
-                  }"
-                >
-                  升级
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </button>
+              <!-- 重新布局的用户信息底部 -->
+              <div class="user-info-footer-new">
+                <!-- 左侧：升级按钮 -->
+                <div class="footer-left">
+                  <button
+                    class="upgrade-btn"
+                    @click="handleUpgrade"
+                    v-if="authStore.userType !== 'vip'"
+                    :style="{
+                      backgroundColor: getUserColors().textColor + '1A',
+                      color: getUserColors().textColor
+                    }"
+                  >
+                    升级
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- 中部：只有体验用户显示到期信息 -->
+                <div class="footer-center" v-if="authStore.userType === 'subscribed' && subscriptionEndDate">
+                  <div class="subscription-info">
+                    <div class="subscription-item">
+                      <span class="subscription-label">到期日:</span>
+                      <span class="subscription-value">{{ subscriptionEndDate.date }}</span>
+                    </div>
+                    <div class="subscription-item">
+                      <span class="subscription-label">状态:</span>
+                      <span class="subscription-status" :class="{ 'expired': subscriptionEndDate.isExpired }">
+                        {{ subscriptionEndDate.isExpired ? '已过期' : `剩余${subscriptionEndDate.daysLeft}天` }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 右侧：退出按钮 -->
+                <div class="footer-right">
+                  <button
+                    class="logout-btn"
+                    @click="handleLogout"
+                    :style="{
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)'
+                    }"
+                  >
+                    退出
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -309,11 +337,16 @@ const router = useRouter()
 const authStore = useAuthStore()
 const dataStore = useDataStore()
 
-// 添加绶带动画控制
-const showRibbonAnimation = ref(true)
+// 徽章动画控制
+const showBadgeAnimation = ref(true)
 
-const ribbonAnimationEnd = () => {
-  showRibbonAnimation.value = false
+const getUserTypeShort = () => {
+  switch (authStore.userType) {
+    case 'vip': return 'VIP'
+    case 'subscribed': return '体验'
+    case 'free': return '基础'
+    default: return '用户'
+  }
 }
 
 const privacyKey = ref(0)
@@ -408,6 +441,13 @@ watch(() => dataStore.isPrivacyMode, (newValue, oldValue) => {
   })
 })
 
+// 修复主题同步问题 - 监听主题变化
+watch(() => dataStore.userPreferences.themeMode, (newTheme) => {
+  selectedTheme.value = newTheme
+  // 强制更新主题到body
+  applyThemeToBody(newTheme)
+})
+
 const displayName = computed(() => {
   return authStore.displayName || '用户'
 })
@@ -446,6 +486,39 @@ const selectedTheme = ref(dataStore.userPreferences.themeMode || 'system')
 
 let isThemeChanging = false
 
+// 应用主题到body元素的函数
+const applyThemeToBody = (themeMode: string) => {
+  const body = document.body
+  const root = document.documentElement
+  
+  // 移除现有的主题类
+  body.classList.remove('dark', 'light')
+  root.classList.remove('dark')
+  
+  if (themeMode === 'system') {
+    // 系统主题：跟随系统偏好
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      body.classList.add('dark')
+      root.classList.add('dark')
+    } else {
+      body.classList.add('light')
+    }
+  } else if (themeMode === 'dark') {
+    body.classList.add('dark')
+    root.classList.add('dark')
+  } else {
+    body.classList.add('light')
+  }
+  
+  // 存储当前主题到localStorage
+  localStorage.setItem('user-theme', themeMode)
+  
+  // 触发全局主题变化事件
+  window.dispatchEvent(new CustomEvent('theme-changed', {
+    detail: { theme: themeMode }
+  }))
+}
+
 const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
   if (isThemeChanging) {
     console.warn('主题切换正在进行中，跳过本次调用')
@@ -460,7 +533,11 @@ const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
   try {
     selectedTheme.value = mode
     
+    // 更新数据存储
     dataStore.updateThemeMode(mode)
+    
+    // 应用主题到页面
+    applyThemeToBody(mode)
     
     const modeName = mode === 'system' ? '系统' : mode === 'light' ? '浅色' : '深色'
     showNotification(`主题已切换为: ${modeName}`, 'success')
@@ -538,11 +615,30 @@ const togglePrivacyMode = (value: boolean) => {
 }
 
 onMounted(() => {
-  // 每次进入页面时重置绶带动画
-  showRibbonAnimation.value = true
+  // 每次进入页面时重置动画
+  showBadgeAnimation.value = true
   
   dataStore.loadData()
   selectedTheme.value = dataStore.userPreferences.themeMode
+  
+  // 初始化应用主题
+  applyThemeToBody(selectedTheme.value)
+  
+  // 监听系统主题变化（仅系统主题模式）
+  if (selectedTheme.value === 'system') {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleSystemThemeChange = () => {
+      if (selectedTheme.value === 'system') {
+        applyThemeToBody('system')
+      }
+    }
+    mediaQuery.addEventListener('change', handleSystemThemeChange)
+    
+    // 清理函数
+    onUnmounted(() => {
+      mediaQuery.removeEventListener('change', handleSystemThemeChange)
+    })
+  }
   
   const disableZoom = () => {
     let metaViewport = document.querySelector('meta[name="viewport"]')
@@ -658,7 +754,7 @@ onUnmounted(() => {
 }
 
 .config-content {
-  padding: 0 0 120px;
+  padding: 0 0 100px;
 }
 
 .user-card-wrapper {
@@ -668,9 +764,9 @@ onUnmounted(() => {
 .user-info-card {
   position: relative;
   border-radius: 20px;
-  overflow: visible;
+  overflow: hidden;
   transition: all 0.3s ease;
-  margin: 12px 0 12px;
+  margin: 8px 0 8px;
 }
 
 :root.dark .user-info-card {
@@ -716,17 +812,17 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .user-content {
-  padding: 20px;
+  padding: 16px;
 }
 
 .avatar-section {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 14px;
   flex: 1;
   margin-right: 12px;
 }
@@ -735,9 +831,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
   background: rgba(255, 255, 255, 0.9);
   border: 2px solid currentColor;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -758,7 +854,7 @@ onUnmounted(() => {
 }
 
 .user-name {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   margin: 0 0 4px 0;
   letter-spacing: -0.3px;
@@ -770,9 +866,9 @@ onUnmounted(() => {
 }
 
 .user-id {
-  font-size: 13px;
+  font-size: 12px;
   color: #666;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
   opacity: 0.8;
   line-height: 1.3;
 }
@@ -781,228 +877,282 @@ onUnmounted(() => {
   color: #9ca3af;
 }
 
-.trial-info {
+/* 新颖的六边形用户身份徽章设计 */
+.user-badge-container {
+  position: absolute;
+  top: -16px;
+  right: 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  background: rgba(0, 0, 0, 0.03);
-  padding: 8px 10px;
-  border-radius: 8px;
-  margin-top: 4px;
-  border-left: 3px solid #4CAF50;
+  align-items: center;
+  z-index: 20;
 }
 
-:root.dark .trial-info {
-  background: rgba(255, 255, 255, 0.05);
-  border-left-color: #4CAF50;
-}
-
-.trial-item {
+.user-badge {
+  position: relative;
+  width: 65px;
+  height: 75px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  z-index: 2;
+  transition: transform 0.3s ease;
+  animation: floatBadge 3s ease-in-out infinite;
 }
 
-.trial-label {
+@keyframes floatBadge {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.user-badge:hover {
+  transform: scale(1.05) translateY(-2px);
+}
+
+/* 基础用户 - 淡蓝色 */
+.badge-free {
+  color: #4A90E2;
+}
+
+/* 体验用户 - 银灰色 */
+.badge-subscribed {
+  color: #A0AEC0;
+}
+
+/* VIP用户 - 金色 */
+.badge-vip {
+  color: #D4AF37;
+}
+
+.badge-halo {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+  border-radius: 50%;
+  opacity: 0.3;
+  filter: blur(10px);
+  z-index: 1;
+  animation: haloPulse 2s ease-in-out infinite;
+}
+
+.badge-free .badge-halo {
+  background: #4A90E2;
+}
+
+.badge-subscribed .badge-halo {
+  background: #A0AEC0;
+}
+
+.badge-vip .badge-halo {
+  background: #D4AF37;
+}
+
+@keyframes haloPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.2;
+  }
+}
+
+.badge-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: inherit;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  opacity: 0.9;
+  z-index: 1;
+}
+
+.badge-free .badge-border {
+  background: linear-gradient(135deg, #4A90E2 0%, #87CEEB 100%);
+}
+
+.badge-subscribed .badge-border {
+  background: linear-gradient(135deg, #A0AEC0 0%, #CBD5E0 100%);
+}
+
+.badge-vip .badge-border {
+  background: linear-gradient(135deg, #D4AF37 0%, #FFD700 100%);
+}
+
+.badge-content {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: iconGlow 2s ease-in-out infinite;
+}
+
+@keyframes iconGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 6px currentColor);
+  }
+}
+
+.badge-label {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  color: #333;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 4;
+}
+
+:root.dark .badge-label {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.user-badge:hover .badge-label {
+  opacity: 1;
+}
+
+/* 重新布局的用户信息底部 */
+.user-info-footer-new {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  flex-wrap: nowrap;
+}
+
+:root.dark .user-info-footer-new {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.footer-left,
+.footer-center,
+.footer-right {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.footer-left {
+  flex: 0 0 auto;
+  justify-content: flex-start;
+}
+
+.footer-center {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.footer-right {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+/* 订阅信息样式 */
+.subscription-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: center;
+}
+
+.subscription-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
+  line-height: 1.2;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.subscription-label {
   color: #666;
   font-weight: 500;
+  flex-shrink: 0;
 }
 
-:root.dark .trial-label {
+:root.dark .subscription-label {
   color: #9ca3af;
 }
 
-.trial-value {
-  font-size: 11px;
-  font-weight: 600;
+.subscription-value {
   color: #333;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
-:root.dark .trial-value {
+:root.dark .subscription-value {
   color: #e5e7eb;
 }
 
-.trial-status {
+.subscription-status {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 6px;
+  padding: 1px 5px;
   border-radius: 4px;
   background: rgba(76, 175, 80, 0.2);
   color: #4caf50;
+  white-space: nowrap;
 }
 
-.trial-status.expired {
+.subscription-status.expired {
   background: rgba(244, 67, 54, 0.2);
   color: #f44336;
-}
-
-.user-info-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: nowrap;
-  gap: 8px;
-  margin-top: 4px;
-  width: 100%;
-}
-
-/* 绶带顶部样式 */
-.ribbon-tag-top {
-  position: absolute;
-  top: 12px;
-  right: -8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  padding: 0 18px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: white;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
-  border-radius: 4px 0 0 4px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-  z-index: 10;
-}
-
-.ribbon-tag-top::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -8px;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 15px 0 15px 8px;
-  border-color: transparent transparent transparent currentColor;
-}
-
-.ribbon-tag-top::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -8px;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 15px 8px 15px 0;
-  border-color: transparent currentColor transparent transparent;
-}
-
-.ribbon-vip {
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-  border-left: 2px solid #FF8C00;
-}
-
-.ribbon-vip::before {
-  border-left-color: #FFD700;
-}
-
-.ribbon-vip::after {
-  border-right-color: #FFD700;
-}
-
-.ribbon-subscribed {
-  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
-  border-left: 2px solid #1B5E20;
-}
-
-.ribbon-subscribed::before {
-  border-left-color: #4CAF50;
-}
-
-.ribbon-subscribed::after {
-  border-right-color: #4CAF50;
-}
-
-.ribbon-free {
-  background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);
-  border-left: 2px solid #1565C0;
-}
-
-.ribbon-free::before {
-  border-left-color: #2196F3;
-}
-
-.ribbon-free::after {
-  border-right-color: #2196F3;
-}
-
-.ribbon-content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 4px;
-}
-
-.ribbon-tail {
-  position: absolute;
-  right: -4px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 6px 0 6px 6px;
-  border-color: transparent transparent transparent rgba(0, 0, 0, 0.3);
-}
-
-@keyframes ribbonGlow {
-  0% {
-    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-    transform: translateX(10px) scale(1);
-    opacity: 0;
-  }
-  30% {
-    opacity: 1;
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
-    transform: translateX(0) scale(1.05);
-  }
-  70% {
-    box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
-  }
-  100% {
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-    transform: translateX(0) scale(1);
-  }
-}
-
-.ribbon-vip {
-  animation: ribbonGlow 1s ease-in-out;
-}
-
-.ribbon-subscribed {
-  animation: ribbonGlow 1s ease-in-out;
-}
-
-.ribbon-free {
-  animation: ribbonGlow 1s ease-in-out;
 }
 
 .logout-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 12px;
+  padding: 5px 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 28px;
+  min-height: 30px;
   -webkit-tap-highlight-color: transparent;
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
   white-space: nowrap;
-  margin-left: auto;
 }
 
 :root.dark .logout-btn {
@@ -1019,34 +1169,21 @@ onUnmounted(() => {
   transform: translateY(0);
 }
 
-.user-actions {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  margin-top: 12px;
-}
-
-:root.dark .user-actions {
-  border-top-color: rgba(255, 255, 255, 0.1);
-}
-
 .upgrade-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 14px;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 600;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 38px;
+  min-height: 30px;
   -webkit-tap-highlight-color: transparent;
-  width: 100%;
+  white-space: nowrap;
 }
 
 .upgrade-btn:hover {
@@ -1059,25 +1196,25 @@ onUnmounted(() => {
 }
 
 .functions-section {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .function-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .function-card {
-  border-radius: 20px;
+  border-radius: 18px;
   border: none;
-  padding: 16px;
+  padding: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  min-height: 110px;
+  min-height: 100px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -1188,8 +1325,8 @@ onUnmounted(() => {
 .card-header {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .card-title-wrapper {
@@ -1198,9 +1335,9 @@ onUnmounted(() => {
 }
 
 .card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1213,13 +1350,13 @@ onUnmounted(() => {
 }
 
 .card-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #333;
   margin: 0 0 4px 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 :root.dark .card-title {
@@ -1227,14 +1364,14 @@ onUnmounted(() => {
 }
 
 .card-subtitle-corner {
-  font-size: 11px;
+  font-size: 10px;
   color: #666;
   margin: 0;
   line-height: 1.3;
   opacity: 0.7;
   position: absolute;
-  bottom: 12px;
-  right: 14px;
+  bottom: 10px;
+  right: 12px;
   text-align: right;
   font-weight: 500;
 }
@@ -1246,9 +1383,9 @@ onUnmounted(() => {
 .vip-badge {
   background: linear-gradient(135deg, #FFD700, #FFA500);
   color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1259,14 +1396,14 @@ onUnmounted(() => {
 
 .privacy-options {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .privacy-option {
   flex: 1;
-  padding: 6px 8px;
-  border-radius: 10px;
-  font-size: 12px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  font-size: 11px;
   font-weight: 600;
   border: 1.5px solid #14B8A6;
   background: transparent;
@@ -1275,7 +1412,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: 32px;
   color: #14B8A6;
 }
 
@@ -1300,14 +1437,14 @@ onUnmounted(() => {
 
 .theme-options {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .theme-option {
   flex: 1;
-  padding: 6px 8px;
-  border-radius: 10px;
-  font-size: 12px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  font-size: 11px;
   font-weight: 600;
   border: 1.5px solid #8B5CF6;
   background: transparent;
@@ -1316,7 +1453,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: 32px;
   color: #8B5CF6;
 }
 
@@ -1336,17 +1473,17 @@ onUnmounted(() => {
 }
 
 .footer-section {
-  margin-top: 30px;
+  margin-top: 20px;
   text-align: center;
   padding: 0 16px;
 }
 
 .footer-text {
-  padding: 16px 0;
+  padding: 12px 0;
 }
 
 .gradient-text {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 300;
   font-style: italic;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1386,217 +1523,146 @@ onUnmounted(() => {
   
   .user-info-card {
     padding: 0;
-    margin: 8px 0 8px;
+    margin: 6px 0 6px;
   }
   
   .user-content {
-    padding: 16px;
+    padding: 14px;
   }
   
   .user-header-row {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   
   .avatar-section {
-    gap: 12px;
+    gap: 10px;
     align-items: flex-start;
   }
   
   .avatar-icon {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     margin-top: 2px;
   }
   
   .user-name {
-    font-size: 17px;
+    font-size: 16px;
     margin-bottom: 2px;
   }
   
   .user-id {
-    font-size: 12px;
-    margin-bottom: 6px;
-  }
-  
-  .trial-info {
-    padding: 6px 8px;
-  }
-  
-  .trial-label {
-    font-size: 10px;
-  }
-  
-  .trial-value {
-    font-size: 10px;
-  }
-  
-  .trial-status {
-    font-size: 10px;
-    padding: 1px 5px;
-  }
-  
-  .user-info-footer {
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 0;
-  }
-  
-  .ribbon-tag-top {
-    top: 8px;
-    right: -6px;
-    height: 26px;
-    padding: 0 14px;
     font-size: 11px;
+    margin-bottom: 4px;
   }
   
-  .ribbon-tag-top::before {
-    border-width: 13px 0 13px 6px;
-    left: -6px;
+  /* 移动端调整徽章位置 */
+  .user-badge-container {
+    top: -14px;
+    right: 14px;
   }
   
-  .ribbon-tag-top::after {
-    border-width: 13px 6px 13px 0;
-    right: -6px;
+  .user-badge {
+    width: 55px;
+    height: 65px;
   }
   
-  .logout-btn {
-    padding: 3px 10px;
-    font-size: 12px;
-    min-height: 26px;
+  .badge-icon svg {
+    width: 16px;
+    height: 16px;
   }
   
-  .user-actions {
-    padding-top: 12px;
-    margin-top: 12px;
-  }
-  
-  .upgrade-btn {
-    min-height: 36px;
-    font-size: 13px;
-  }
-  
-  .function-card {
-    padding: 14px;
-    min-height: 100px;
-  }
-  
-  .card-icon {
-    width: 36px;
-    height: 36px;
-  }
-  
-  .card-title {
-    font-size: 14px;
-  }
-  
-  .card-subtitle-corner {
-    font-size: 10px;
-    bottom: 10px;
-    right: 12px;
-  }
-  
-  .privacy-options,
-  .theme-options {
-    flex-direction: row;
-    gap: 6px;
-  }
-  
-  .privacy-option,
-  .theme-option {
-    padding: 5px 6px;
-    font-size: 11px;
-    min-height: 32px;
-  }
-  
-  .config-content {
-    padding: 0 0 100px;
-  }
-  
-  .footer-section {
-    margin-top: 20px;
-  }
-  
-  .footer-text {
-    padding: 12px 0;
-  }
-  
-  .gradient-text {
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 480px) {
-  .config-content {
-    padding: 0 0 100px;
-  }
-  
-  .user-content {
-    padding: 14px;
-  }
-  
-  .avatar-icon {
-    width: 38px;
-    height: 38px;
-  }
-  
-  .user-name {
-    font-size: 16px;
-  }
-  
-  .user-id {
-    font-size: 11px;
-  }
-  
-  .trial-info {
-    padding: 5px 6px;
-  }
-  
-  .trial-label {
-    font-size: 9px;
-  }
-  
-  .trial-value {
-    font-size: 9px;
-  }
-  
-  .trial-status {
-    font-size: 9px;
+  .badge-label {
+    font-size: 8px;
+    bottom: -18px;
     padding: 1px 4px;
   }
   
-  .ribbon-tag-top {
-    top: 6px;
-    right: -5px;
-    height: 24px;
-    padding: 0 12px;
+  /* 手机端保持左中右布局 */
+  .user-info-footer-new {
+    flex-direction: row !important;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  
+  .footer-left,
+  .footer-center,
+  .footer-right {
+    width: auto;
+    justify-content: center;
+    min-height: 28px;
+  }
+  
+  .footer-left {
+    justify-content: flex-start;
+  }
+  
+  .footer-center {
+    justify-content: center;
+    min-width: 0;
+  }
+  
+  .footer-right {
+    justify-content: flex-end;
+  }
+  
+  .upgrade-btn,
+  .logout-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 28px;
+  }
+  
+  .subscription-info {
+    gap: 2px;
+  }
+  
+  .subscription-item {
     font-size: 10px;
+    gap: 3px;
   }
   
-  .ribbon-tag-top::before {
-    border-width: 12px 0 12px 5px;
-    left: -5px;
-  }
-  
-  .ribbon-tag-top::after {
-    border-width: 12px 5px 12px 0;
-    right: -5px;
+  .subscription-status {
+    font-size: 10px;
+    padding: 1px 4px;
   }
   
   .function-card {
     padding: 12px;
-    min-height: 96px;
+    min-height: 90px;
+    border-radius: 16px;
   }
   
-  .card-header {
-    gap: 10px;
-    margin-bottom: 8px;
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  
+  .card-title {
+    font-size: 13px;
+  }
+  
+  .card-subtitle-corner {
+    font-size: 9px;
+    bottom: 8px;
+    right: 10px;
+  }
+  
+  .privacy-options,
+  .theme-options {
+    gap: 4px;
   }
   
   .privacy-option,
   .theme-option {
     padding: 4px 5px;
     font-size: 10px;
-    min-height: 30px;
+    min-height: 28px;
+  }
+  
+  .config-content {
+    padding: 0 0 80px;
   }
   
   .footer-section {
@@ -1606,11 +1672,91 @@ onUnmounted(() => {
   .footer-text {
     padding: 10px 0;
   }
+  
+  .gradient-text {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .config-content {
+    padding: 0 0 70px;
+  }
+  
+  .user-content {
+    padding: 12px;
+  }
+  
+  .avatar-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .user-name {
+    font-size: 15px;
+  }
+  
+  .user-id {
+    font-size: 10px;
+  }
+  
+  .user-badge-container {
+    top: -12px;
+    right: 12px;
+  }
+  
+  .user-badge {
+    width: 50px;
+    height: 60px;
+  }
+  
+  .badge-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .badge-label {
+    font-size: 7px;
+    bottom: -16px;
+  }
+  
+  .user-info-footer-new {
+    gap: 4px;
+  }
+  
+  .subscription-item {
+    font-size: 9px;
+  }
+  
+  .function-card {
+    padding: 10px;
+    min-height: 85px;
+  }
+  
+  .card-header {
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  
+  .privacy-option,
+  .theme-option {
+    padding: 3px 4px;
+    font-size: 9px;
+    min-height: 26px;
+  }
+  
+  .footer-section {
+    margin-top: 12px;
+  }
+  
+  .footer-text {
+    padding: 8px 0;
+  }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
   .scrollable-content-section {
-    height: calc(100vh - 60px);
+    height: calc(100vh - 50px);
   }
   
   .user-info-card {
@@ -1618,7 +1764,11 @@ onUnmounted(() => {
   }
   
   .user-content {
-    padding: 12px;
+    padding: 10px;
+  }
+  
+  .user-info-footer-new {
+    gap: 6px;
   }
   
   .function-card {
@@ -1626,7 +1776,27 @@ onUnmounted(() => {
   }
   
   .config-content {
-    padding: 0 0 80px;
+    padding: 0 0 60px;
+  }
+  
+  .user-badge-container {
+    top: -10px;
+    right: 10px;
+  }
+  
+  .user-badge {
+    width: 45px;
+    height: 55px;
+  }
+  
+  .badge-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .badge-label {
+    font-size: 6px;
+    bottom: -14px;
   }
 }
 
@@ -1645,11 +1815,15 @@ onUnmounted(() => {
   .upgrade-btn:active {
     transform: scale(0.95);
   }
+  
+  .user-badge:active {
+    transform: scale(0.95) translateY(0);
+  }
 }
 
 @media (display-mode: standalone) {
   .config-content {
-    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
   }
 }
 </style>
