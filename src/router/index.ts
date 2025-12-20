@@ -6,7 +6,8 @@ const ClientView = () => import('@/views/ClientView.vue')
 const TopPerformersView = () => import('@/views/TopPerformersView.vue')
 const ConfigView = () => import('@/views/ConfigView.vue')
 const ActivationView = () => import('@/views/ActivationView.vue')
-const AuthView = () => import('@/views/AuthView.vue')
+const AuthView = () => import('@/views/auth/AuthView.vue')
+const ResetPasswordView = () => import('@/views/auth/ResetPasswordView.vue') 
 const AboutView = () => import('@/views/AboutView.vue')
 const APILogView = () => import('@/views/APILogView.vue')
 const CloudSyncView = () => import('@/views/CloudSyncView.vue')
@@ -28,11 +29,8 @@ const routes: RouteRecordRaw[] = [
       console.log('根路径重定向检查...')
       const token = localStorage.getItem('auth_token')
       const user = localStorage.getItem('auth_user')
-      console.log('token:', token)
-      console.log('user:', user)
       
       const hasValidToken = token && token !== 'null' && token !== 'undefined'
-      console.log('hasValidToken:', hasValidToken)
       
       if (hasValidToken) {
         console.log('有有效token，重定向到 /config')
@@ -50,6 +48,16 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '用户登录',
       requiresAuth: false,
+      showTabBar: false
+    }
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: ResetPasswordView,
+    meta: {
+      title: '重置密码',
+      requiresAuth: false, // 找回密码流程不需要预先登录
       showTabBar: false
     }
   },
@@ -193,7 +201,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/activation',
     name: 'Activation',
-    component: ActivationView,  // 修复：使用变量名而不是 .vue
+    component: ActivationView,
     meta: {
       title: '尊享升级',
       requiresAuth: true,
@@ -221,7 +229,7 @@ const router = createRouter({
   routes
 })
 
-// 简化的路由守卫
+// 路由守卫
 router.beforeEach((to, from, next) => {
   console.log(`\n=== 路由守卫开始 ===`)
   console.log(`从: ${from.path} 到: ${to.path}`)
@@ -234,12 +242,8 @@ router.beforeEach((to, from, next) => {
   const requiresAuth = to.meta.requiresAuth
   const token = localStorage.getItem('auth_token')
   
-  console.log('requiresAuth:', requiresAuth)
-  console.log('token in localStorage:', token)
-  
   // 检查token有效性
   const hasValidToken = token && token !== 'null' && token !== 'undefined'
-  console.log('hasValidToken:', hasValidToken)
   
   // 访问登录页面但已登录，重定向到配置页面
   if (to.path === '/auth' && hasValidToken) {

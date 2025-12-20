@@ -41,7 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string>('')
   const isRegistering = ref(false)
 
-  // 后端API地址 - 【修改】开发和生产环境都使用真实后端
+  // 后端API地址
   const API_BASE_URL = 'https://cfms.crnas.uk/api'
   
   // 验证码相关状态
@@ -153,19 +153,12 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = ''
     
     try {
-      console.log(`登录尝试: ${username}`)
-      console.log(`API地址: ${API_BASE_URL}`)
-
       if (!username || !password) {
         error.value = '请输入用户名和密码'
         return false
       }
 
-      const requestData: any = {
-        username: username,
-        password: password
-      }
-      
+      const requestData: any = { username, password }
       if (captcha_code && captcha_id) {
         requestData.captcha_code = captcha_code
         requestData.captcha_id = captcha_id
@@ -173,9 +166,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData),
         credentials: 'include'
       })
@@ -184,7 +175,6 @@ export const useAuthStore = defineStore('auth', () => {
       
       if (response.ok && data.success) {
         const userData = data.user_info || data.user
-        
         currentUser.value = {
           id: userData.user_id || userData.id,
           username: userData.username,
@@ -202,31 +192,16 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = data.token || ''
         isLoggedIn.value = true
         
-        console.log('登录响应数据:', data)
-        console.log('用户数据:', userData)
-        console.log('登录成功，存储token和用户信息')
-        
         localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
         localStorage.setItem('auth_token', token.value)
-        
-        console.log(`登录成功: ${username} (${currentUser.value.user_type})`)
-        
         return true
       } else {
         error.value = data.error || data.message || '用户名或密码错误'
-        
-        if (data.error && data.error.includes('验证码')) {
-          await getCaptcha()
-        }
-        
+        if (data.error && data.error.includes('验证码')) await getCaptcha()
         return false
       }
-      
     } catch (err: any) {
-      console.error('登录错误:', err)
       error.value = err.message || '登录失败，请检查网络连接'
-      
-      // 开发环境下也使用真实后端，移除模拟登录备用
       return false
     } finally {
       isLoading.value = false
@@ -238,8 +213,6 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = ''
     
     try {
-      console.log(`注册尝试: ${formData.username}`)
-
       if (!formData.username || !formData.password) {
         error.value = '用户名和密码不能为空'
         return false
@@ -252,9 +225,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
         credentials: 'include'
       })
@@ -263,7 +234,6 @@ export const useAuthStore = defineStore('auth', () => {
       
       if (response.ok && data.success) {
         const userData = data.user_info
-        
         currentUser.value = {
           id: userData.user_id,
           username: userData.username,
@@ -280,27 +250,18 @@ export const useAuthStore = defineStore('auth', () => {
         
         token.value = data.token || ''
         isLoggedIn.value = true
-        
         localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
         localStorage.setItem('auth_token', token.value)
-        
-        console.log(`注册并登录成功: ${formData.username} (${currentUser.value.user_type})`)
-        
         resetRegisterForm()
-        
         return true
       } else {
         error.value = data.error || data.message || '注册失败'
-        
         if (data.error && (data.error.includes('验证码') || data.error.includes('captcha'))) {
           await getCaptcha()
         }
-        
         return false
       }
-      
     } catch (err: any) {
-      console.error('注册错误:', err)
       error.value = err.message || '注册失败，请检查网络连接'
       return false
     } finally {
@@ -308,14 +269,136 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function resetRegisterForm() {
-    registerForm.value = {
-      username: '',
-      password: '',
-      email: '',
-      captcha_code: '',
-      captcha_id: ''
+  // ========== 密码找回相关方法 ==========
+
+  async function forgotPassword(username: string, email: string): Promise<boolean> {
+    isLoading.value = true
+    error.value = ''
+    
+    try {
+      console.log(`密码找回请求: ${username}, ${email}`)
+      if (!username || !email) {
+        error.value = '用户名和邮箱不能为空'
+        return false
+      }
+
+      const response = await fetch(`${API_BASE_URL}/password/forgot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email }),
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+      
+      // 更详细的错误处理
+      if (response.ok && data.success) {
+        error.value = data.message || '重置链接已发送到您的邮箱'
+        return true
+      } else {
+        // 优先使用后端返回的错误信息
+        let errorMsg = data.error || data.message
+        
+        // 如果没有特定错误信息，根据状态码提供通用错误
+        if (!errorMsg) {
+          if (response.status === 500) {
+            errorMsg = '服务器内部错误，请稍后重试'
+          } else if (response.status === 404) {
+            errorMsg = '用户不存在或邮箱不匹配'
+          } else if (response.status === 429) {
+            errorMsg = '请求过于频繁，请稍后重试'
+          } else {
+            errorMsg = '密码找回失败，请检查输入信息'
+          }
+        }
+        
+        error.value = errorMsg
+        return false
+      }
+    } catch (err: any) {
+      console.error('密码找回错误:', err)
+      
+      // 网络错误处理
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        error.value = '网络连接失败，请检查网络设置'
+      } else {
+        error.value = err.message || '密码找回失败，请检查网络连接'
+      }
+      
+      return false
+    } finally {
+      isLoading.value = false
     }
+  }
+
+  async function resetPassword(tokenStr: string, newPassword: string): Promise<boolean> {
+    isLoading.value = true
+    error.value = ''
+    
+    try {
+      if (!tokenStr || !newPassword) {
+        error.value = '令牌和新密码不能为空'
+        return false
+      }
+
+      if (newPassword.length < 6) {
+        error.value = '密码长度至少6位'
+        return false
+      }
+
+      const response = await fetch(`${API_BASE_URL}/password/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tokenStr, new_password: newPassword }),
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+      
+      if (response.ok && data.success) {
+        error.value = data.message || '密码重置成功'
+        return true
+      } else {
+        error.value = data.error || data.message || '密码重置失败'
+        return false
+      }
+    } catch (err: any) {
+      console.error('密码重置错误:', err)
+      error.value = err.message || '密码重置失败，请检查网络连接'
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function validateResetToken(tokenStr: string): Promise<{ valid: boolean; username?: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/password/validate-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tokenStr }),
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+      if (response.ok && data.success) {
+        return {
+          valid: data.valid || false,
+          username: data.username
+        }
+      } else {
+        return { valid: false }
+      }
+    } catch (err: any) {
+      console.error('验证重置令牌错误:', err)
+      return { valid: false }
+    }
+  }
+
+  // ========== 辅助与持久化方法 ==========
+
+  function resetRegisterForm() {
+    registerForm.value = { username: '', password: '', email: '', captcha_code: '', captcha_id: '' }
     captchaCode.value = ''
     captchaImage.value = ''
     captchaId.value = ''
@@ -324,43 +407,30 @@ export const useAuthStore = defineStore('auth', () => {
   function toggleRegisterMode() {
     isRegistering.value = !isRegistering.value
     error.value = ''
-    
-    if (isRegistering.value) {
-      getCaptcha()
-    }
+    if (isRegistering.value) getCaptcha()
   }
-
-  // 移除了 mockLogin 方法
 
   async function checkDatabaseConnection(): Promise<boolean> {
     try {
       const response = await fetch(`${API_BASE_URL}/health`)
       return response.ok
     } catch (error) {
-      console.error('数据库连接检查失败:', error)
       return false
     }
   }
 
   async function fetchUserProfile(): Promise<void> {
     if (!currentUser.value || !token.value) return
-    
     try {
       const response = await fetch(`${API_BASE_URL}/profile`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token.value}`
-        },
+        headers: { 'Authorization': `Bearer ${token.value}` },
         credentials: 'include'
       })
-      
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          currentUser.value = {
-            ...currentUser.value,
-            ...data.user
-          }
+          currentUser.value = { ...currentUser.value, ...data.user }
           localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
         }
       }
@@ -370,53 +440,31 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
-    console.log('用户退出登录')
-    
     isLoggedIn.value = false
     currentUser.value = null
     token.value = ''
     localStorage.removeItem('auth_user')
     localStorage.removeItem('auth_token')
     
-    console.log('清除登录状态完成，正在跳转到登录页...')
-    
-    // 直接使用 window.location 跳转
     setTimeout(() => {
       window.location.hash = '#/auth'
-      setTimeout(() => {
-        window.location.reload()
-      }, 100)
+      setTimeout(() => window.location.reload(), 100)
     }, 100)
   }
 
   function autoLogin() {
     try {
-      console.log('尝试自动登录...')
       const savedUser = localStorage.getItem('auth_user')
       const savedToken = localStorage.getItem('auth_token')
-      
-      console.log('保存的用户:', savedUser)
-      console.log('保存的token:', savedToken)
-      
       if (savedUser && savedToken) {
-        const userData = JSON.parse(savedUser)
-        currentUser.value = userData
+        currentUser.value = JSON.parse(savedUser)
         token.value = savedToken
         isLoggedIn.value = true
-        
-        console.log('自动登录成功:', userData.username)
-        console.log('当前登录状态:', isLoggedIn.value)
-        
-        // 获取用户信息
         fetchUserProfile()
-        
         return true
-      } else {
-        console.log('没有保存的登录信息，需要手动登录')
-        return false
       }
+      return false
     } catch (error) {
-      console.error('自动登录失败:', error)
       logout()
       return false
     }
@@ -424,35 +472,22 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function validateToken(): Promise<boolean> {
     if (!token.value) return false
-    
     try {
       const response = await fetch(`${API_BASE_URL}/validate-token`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token.value}`
-        },
+        headers: { 'Authorization': `Bearer ${token.value}` },
         credentials: 'include'
       })
-      
       return response.ok
     } catch (error) {
-      console.error('Token验证失败:', error)
       return false
     }
   }
 
   function hasPermission(requiredType: UserType): boolean {
     if (!currentUser.value) return false
-    
-    const userLevel = userType.value
-    
-    const levelValue = {
-      [UserType.VIP]: 3,
-      [UserType.SUBSCRIBED]: 2,
-      [UserType.FREE]: 1
-    }
-    
-    return levelValue[userLevel] >= levelValue[requiredType]
+    const levelValue = { [UserType.VIP]: 3, [UserType.SUBSCRIBED]: 2, [UserType.FREE]: 1 }
+    return levelValue[userType.value] >= levelValue[requiredType]
   }
 
   return {
@@ -466,16 +501,17 @@ export const useAuthStore = defineStore('auth', () => {
     captchaId,
     captchaCode,
     registerForm,
-    
     userType,
     userTypeString,
     userTypeDisplay,
     displayName,
     isSubscriptionValid,
     subscriptionDaysLeft,
-    
     login,
     register,
+    forgotPassword,
+    resetPassword,
+    validateResetToken,
     resetRegisterForm,
     toggleRegisterMode,
     getCaptcha,

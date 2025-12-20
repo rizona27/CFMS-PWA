@@ -433,3 +433,17 @@ html, body {
     color: black;
   }
 }
+
+/* 认证页面特定样式，避免冲突 */
+.auth-view * {
+  box-sizing: border-box;
+}
+
+.auth-view .card,
+.auth-view .btn,
+.auth-view .input,
+.auth-view .select {
+  /* 重置全局样式，避免冲突 */
+  all: unset;
+  box-sizing: border-box;
+}
