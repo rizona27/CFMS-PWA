@@ -1,6 +1,6 @@
 <template>
   <div class="auth-form">
-    <div class="form-content" :style="{ minHeight: step === 1 ? '180px' : '240px' }">
+    <div class="form-content" :style="{ minHeight: step === 1 ? '180px' : '220px', padding: '10px 0' }">
       <div class="auth-steps-container" :class="{ 'two-steps-active': step === 2 }">
         <div class="auth-step step-one" :class="{ 'slide-left': step === 2 }">
           <div class="form-group with-icon" :class="{
@@ -81,18 +81,6 @@
           </div>
         </div>
       </div>
-      
-      <div class="errors-container" :class="{ 'has-errors': hasErrors }">
-        <div v-if="step === 1 && errors.username" class="error-message">
-          {{ errors.username }}
-        </div>
-        <div v-if="step === 1 && errors.email" class="error-message">
-          {{ errors.email }}
-        </div>
-        <div v-if="step === 1 && error" class="error-message">
-          {{ error }}
-        </div>
-      </div>
     </div>
     
     <div class="auth-button-area">
@@ -110,7 +98,7 @@
             type="button"
             class="auth-button gradient-button"
             @click="handleSubmit"
-            :disabled="isLoading || hasErrors || !isFormValid"
+            :disabled="isLoading || !isFormValid"
           >
             <span class="button-text">{{ isLoading ? '发送中...' : '发送重置链接' }}</span>
             <div v-if="isLoading" class="button-loading">
@@ -136,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
 
 interface Props {
   isLoading?: boolean
@@ -145,6 +133,8 @@ interface Props {
 interface Emits {
   (e: 'submit', form: any): void
   (e: 'back'): void
+  (e: 'check-username', username: string): void
+  (e: 'clear-global-error'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -154,7 +144,6 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const step = ref(1)
-const error = ref('')
 const isUsernameFocused = ref(false)
 const isEmailFocused = ref(false)
 
@@ -166,10 +155,6 @@ const form = reactive({
 const errors = reactive({
   username: '',
   email: ''
-})
-
-const hasErrors = computed(() => {
-  return !!errors.username || !!errors.email || !!error.value
 })
 
 const isFormValid = computed(() => {
@@ -185,25 +170,25 @@ const validateEmailFormat = (email: string): boolean => {
 const validateUsername = () => {
   const username = form.username
   if (!username) {
-    errors.username = '请输入用户名'
+    errors.username = ''
   } else if (username.length < 3) {
-    errors.username = '用户名至少需要3个字符'
+    errors.username = ''
   } else {
     errors.username = ''
   }
-  error.value = ''
+  emit('clear-global-error')
 }
 
 const validateEmail = () => {
   const email = form.email
   if (!email) {
-    errors.email = '请输入邮箱'
+    errors.email = ''
   } else if (!validateEmailFormat(email)) {
-    errors.email = '邮箱格式不正确'
+    errors.email = ''
   } else {
     errors.email = ''
   }
-  error.value = ''
+  emit('clear-global-error')
 }
 
 const handleInputFocus = (event?: Event) => {
@@ -220,6 +205,18 @@ const handleInputBlur = (event?: Event) => {
   }
 }
 
+// 添加用户名检查
+watch(() => form.username, (newUsername) => {
+  if (newUsername && newUsername.length >= 3) {
+    // 延迟检查，避免频繁请求
+    const timer = setTimeout(() => {
+      emit('check-username', newUsername)
+    }, 500)
+    return () => clearTimeout(timer)
+  }
+  emit('clear-global-error')
+})
+
 const handleSubmit = async () => {
   validateUsername()
   validateEmail()
@@ -232,12 +229,18 @@ const handleSubmit = async () => {
     await emit('submit', form)
     step.value = 2
   } catch (err: any) {
-    error.value = err.message || '发送失败'
+    console.error('提交失败:', err)
   }
 }
 </script>
 
 <style scoped>
+.form-content {
+  padding: 10px 0 !important;
+  min-height: 180px;
+  position: relative;
+}
+
 .form-group.with-icon {
   position: relative;
   z-index: 1;
@@ -245,15 +248,52 @@ const handleSubmit = async () => {
 }
 
 .form-group.with-icon.focused {
-  z-index: 10;
+  z-index: 100;
   position: relative;
   transform: translateZ(0);
   box-shadow: 0 0 0 2px var(--primary-color);
 }
 
+.auth-steps-container {
+  position: relative;
+  min-height: 140px;
+  transition: min-height 0.3s ease;
+}
+
+.auth-step.step-two {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--card-bg);
+  border-radius: 12px;
+  z-index: 5;
+}
+
+.auth-step.step-two.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-step.step-two.slide-in {
+  display: flex;
+}
+
+.auth-step.step-one.slide-left {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.auth-step {
+  transition: all 0.3s ease;
+}
+
 .success-message {
   text-align: center;
-  padding: 20px 0;
+  padding: 20px;
 }
 
 .success-icon {
@@ -289,50 +329,31 @@ const handleSubmit = async () => {
   color: #94a3b8;
 }
 
-.auth-step.step-two {
-  display: none;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: var(--card-bg);
-  border-radius: 12px;
-  z-index: 5;
+.auth-button-area {
+  margin-top: 0 !important; /* 移除冗余间距，由父容器控制 */
 }
 
-.auth-step.step-two.active {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-step.step-two.slide-in {
-  display: flex;
-}
-
-.auth-form .form-content {
-  transition: min-height 0.3s ease;
-  position: relative;
-}
-
-.auth-steps-container {
-  position: relative;
-  min-height: 160px;
-}
-
-.auth-step.step-one.slide-left {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
-.auth-step {
-  transition: all 0.3s ease;
-}
-
-/* 确保父容器有足够空间 */
-.form-content {
-  padding: 10px 0;
+/* 移动端适配 */
+@media (max-width: 480px) {
+  .button-group.two-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .back-button, .gradient-button {
+    flex: 1;
+    min-width: auto;
+  }
+  
+  .form-content {
+    min-height: 160px;
+  }
+  
+  .auth-steps-container {
+    min-height: 120px;
+  }
 }
 </style>
 

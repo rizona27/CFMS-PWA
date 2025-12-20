@@ -16,10 +16,10 @@ export interface VersionConfig {
 
 // 版本配置数据 - 按时间顺序排列，越新的越在后面
 export const versionConfig: VersionConfig = {
-  currentVersion: '3.0.3',
+  currentVersion: '3.0.5',
   author: 'rizona',
   year: '2025',
-  copyright: 'CFMS v3.0.3 © 2025 rizona',
+  copyright: 'CFMS v3.0.5 © 2025 rizona',
   updateLogs: [
     {
       version: 'Version 1.0.0',
@@ -40,22 +40,10 @@ export const versionConfig: VersionConfig = {
       description: '在CFMS基础上构建PWA版本。\n支持多端同步。'
     },
     {
-      version: 'Version 3.0.1',
-      displayName: 'Version 3.0.1',
+      version: 'Version 3.1.0',
+      displayName: 'Version 3.1.0',
       updateDate: '2025-12-17',
-      description: '重新构建Login登录校验前后端。'
-    },
-    {
-      version: 'Version 3.0.2',
-      displayName: 'Version 3.0.2',
-      updateDate: '2025-12-18',
-      description: 'About页面卡片统一样式。'
-    },
-    {
-      version: 'Version 3.0.3',
-      displayName: 'Version 3.0.3',
-      updateDate: '2025-12-20',
-      description: '密码重置系统及后端构建。'
+      description: '重新构建Login登录校验前后端。\nAbout页面卡片统一样式。\n密码重置系统及后端构建。'
     }
   ]
 };

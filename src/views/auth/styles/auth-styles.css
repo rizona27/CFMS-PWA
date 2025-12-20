@@ -271,11 +271,57 @@
   border: 1px solid rgba(167, 139, 250, 0.3);
 }
 
-/* 表单容器 - 减少高度和空白 */
+/* 统一表单容器高度 - 新增 */
 .auth-form-wrapper {
+  min-height: 260px; /* 固定表单区域高度 */
+  position: relative;
+  margin-bottom: 16px;
   display: flex;
   flex-direction: column;
   flex: 1;
+}
+
+/* 全局状态提示区域 - 新增 */
+.status-hint-area {
+  height: 40px; /* 固定高度，避免布局跳动 */
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.global-error-message {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+  width: 100%;
+}
+
+.global-success-message {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+  width: 100%;
+}
+
+.theme-dark .global-error-message {
+  background-color: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.theme-dark .global-success-message {
+  background-color: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.3);
 }
 
 .auth-form {
@@ -398,6 +444,38 @@
 .theme-dark .form-group.with-icon:focus-within {
   background-color: rgba(40, 51, 69, 0.95);
   border-color: #8b5cf6;
+}
+
+/* 用户名状态指示器 - 新增 */
+.username-status-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.username-status-indicator.available {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.username-status-indicator.taken {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.theme-dark .username-status-indicator.available {
+  background-color: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+}
+
+.theme-dark .username-status-indicator.taken {
+  background-color: rgba(248, 113, 113, 0.2);
+  color: #f87171;
 }
 
 /* 输入框图标 */
@@ -978,31 +1056,130 @@
   color: #cbd5e1;
 }
 
-/* 响应式设计 */
-@media (max-height: 700px) {
-  .auth-card { padding: 24px 20px; } /* 进一步减少内边距 */
-  .auth-title { font-size: 22px; margin-bottom: 16px; }
-  .mode-tabs { margin-bottom: 16px; }
+/* ================= 新增样式 ================= */
+/* 统一表单内容区域 */
+.form-content {
+  position: relative;
+  padding: 10px 0;
+  min-height: 160px;
 }
 
+/* 确保表单步骤容器有足够空间 */
+.auth-steps-container {
+  position: relative;
+  min-height: 140px;
+}
+
+/* 移除冗余间距 */
+.auth-button-area {
+  margin-top: 0 !important;
+}
+
+/* 移动端适配 - 新增 */
 @media (max-width: 480px) {
-  .auth-container { padding: 16px; max-width: 100%; }
-  .auth-card { padding: 24px 20px; } /* 减少内边距 */
-  .auth-title { font-size: 22px; }
-  .mode-tab { font-size: 13px; padding: 8px; }
-  .button-group.two-buttons {
-    flex-direction: column;
-    gap: 6px;
-    height: auto;
+  .auth-container {
+    padding: 16px;
+    max-width: 100%;
   }
+  
+  .auth-card {
+    padding: 24px 20px;
+  }
+  
+  .auth-title {
+    font-size: 22px;
+  }
+  
+  .mode-tab {
+    font-size: 13px;
+    padding: 8px;
+  }
+  
+  .auth-form-wrapper {
+    min-height: 240px; /* 移动端稍小的高度 */
+  }
+  
+  .status-hint-area {
+    height: 36px;
+    margin-bottom: 12px;
+  }
+  
+  /* 强制两按钮水平排列 */
+  .button-group.two-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .back-button, .gradient-button {
+    flex: 1;
+    min-width: auto;
+  }
+  
+  /* 注册页面特殊布局 */
+  .auth-view:has(.register-form) .button-group.two-buttons {
+    display: grid;
+    grid-template-columns: 1fr 2fr; /* 返回按钮小一点，注册按钮大一点 */
+    gap: 10px;
+  }
+  
+  .back-button {
+    min-width: auto;
+  }
+  
+  .gradient-button {
+    min-width: auto;
+  }
+  
+  .form-content {
+    min-height: 140px;
+  }
+  
+  .auth-steps-container {
+    min-height: 120px;
+  }
+  
   .button-group.two-buttons .auth-button {
     height: 38px; /* 减小高度 */
   }
 }
 
+@media (max-height: 700px) {
+  .auth-card {
+    padding: 24px 20px; /* 进一步减少内边距 */
+  }
+  
+  .auth-title {
+    font-size: 22px;
+    margin-bottom: 16px;
+  }
+  
+  .mode-tabs {
+    margin-bottom: 16px;
+  }
+}
+
 @media (max-height: 500px) and (orientation: landscape) {
-  .auth-scroll-container { align-items: flex-start; padding-top: 10px; }
-  .auth-card { padding: 20px 16px; } /* 大幅减少内边距 */
-  .auth-title { font-size: 20px; margin-bottom: 12px; }
-  .auth-button-area { margin-top: 12px; }
+  .auth-scroll-container {
+    align-items: flex-start;
+    padding-top: 10px;
+  }
+  
+  .auth-card {
+    padding: 20px 16px; /* 大幅减少内边距 */
+  }
+  
+  .auth-title {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+  
+  .auth-button-area {
+    margin-top: 12px;
+  }
+  
+  .auth-form-wrapper {
+    min-height: 220px; /* 横屏时进一步减小高度 */
+  }
 }

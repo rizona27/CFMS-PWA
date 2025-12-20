@@ -32,6 +32,13 @@ export interface RegisterForm {
   captcha_id?: string
 }
 
+// 登录响应类型
+interface LoginResponse {
+  success: boolean
+  reason?: 'user_missing' | 'password_error' | 'network_error' | 'captcha_error' | 'account_locked'
+  message?: string
+}
+
 export const useAuthStore = defineStore('auth', () => {
   // 状态
   const isLoggedIn = ref(false)
@@ -148,14 +155,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   // ========== 登录注册方法 ==========
 
-  async function login(username: string, password: string, captcha_code?: string, captcha_id?: string): Promise<boolean> {
+  async function login(username: string, password: string, captcha_code?: string, captcha_id?: string): Promise<LoginResponse> {
     isLoading.value = true
     error.value = ''
     
     try {
       if (!username || !password) {
         error.value = '请输入用户名和密码'
-        return false
+        return { success: false, reason: 'network_error', message: '请输入用户名和密码' }
       }
 
       const requestData: any = { username, password }
@@ -194,15 +201,34 @@ export const useAuthStore = defineStore('auth', () => {
         
         localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
         localStorage.setItem('auth_token', token.value)
-        return true
+        return { success: true }
       } else {
         error.value = data.error || data.message || '用户名或密码错误'
-        if (data.error && data.error.includes('验证码')) await getCaptcha()
-        return false
+        
+        // 根据错误信息判断失败原因
+        let reason: LoginResponse['reason'] = 'password_error'
+        
+        if (data.error?.includes('验证码') || data.error?.includes('captcha')) {
+          reason = 'captcha_error'
+          await getCaptcha()
+        } else if (data.error?.includes('锁定')) {
+          reason = 'account_locked'
+        } else if (data.error?.includes('不存在') || data.message?.includes('不存在')) {
+          reason = 'user_missing'
+        } else if (response.status === 401) {
+          // 401通常是用户名或密码错误，但我们不确定是哪个
+          reason = 'password_error'
+        }
+        
+        return {
+          success: false,
+          reason,
+          message: error.value
+        }
       }
     } catch (err: any) {
       error.value = err.message || '登录失败，请检查网络连接'
-      return false
+      return { success: false, reason: 'network_error', message: error.value }
     } finally {
       isLoading.value = false
     }
@@ -405,6 +431,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   // ========== 辅助与持久化方法 ==========
 
+  function clearError() {
+    error.value = ''
+  }
+
   function resetRegisterForm() {
     registerForm.value = { username: '', password: '', email: '', captcha_code: '', captcha_id: '' }
     captchaCode.value = ''
@@ -520,6 +550,7 @@ export const useAuthStore = defineStore('auth', () => {
     forgotPassword,
     resetPassword,
     validateResetToken,
+    clearError,
     resetRegisterForm,
     toggleRegisterMode,
     getCaptcha,

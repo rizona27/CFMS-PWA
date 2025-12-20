@@ -19,9 +19,19 @@
             <h1 class="auth-title">CFMS · 重置密码</h1>
           </div>
           
+          <!-- 全局状态提示区域 -->
+          <div class="status-hint-area">
+            <div v-if="globalError" class="global-error-message">
+              {{ globalError }}
+            </div>
+            <div v-if="globalSuccess" class="global-success-message">
+              {{ globalSuccess }}
+            </div>
+          </div>
+          
           <div v-if="!isValidating && !validationError && !success">
             <div class="auth-form">
-              <div class="form-content" style="min-height: 320px">
+              <div class="form-content" style="min-height: 280px">
                 <div class="auth-steps-container single-step-active">
                   <div class="auth-step single-step">
                     <div v-if="username" class="user-info">
@@ -129,18 +139,6 @@
                     </div>
                   </div>
                 </div>
-                
-                <div class="errors-container" :class="{ 'has-errors': hasErrors }">
-                  <div v-if="errors.password" class="error-message">
-                    {{ errors.password }}
-                  </div>
-                  <div v-if="errors.confirmPassword" class="error-message">
-                    {{ errors.confirmPassword }}
-                  </div>
-                  <div v-if="error" class="error-message">
-                    {{ error }}
-                  </div>
-                </div>
               </div>
               
               <div class="auth-button-area">
@@ -157,7 +155,7 @@
                       type="button"
                       class="auth-button gradient-button"
                       @click="handleReset"
-                      :disabled="isLoading || hasErrors || !isFormValid"
+                      :disabled="isLoading || !isFormValid"
                     >
                       <span class="button-text">{{ isLoading ? '重置中...' : '重置密码' }}</span>
                       <div v-if="isLoading" class="button-loading">
@@ -236,7 +234,8 @@ const isValidating = ref(true)
 const validationError = ref('')
 const success = ref(false)
 const isLoading = ref(false)
-const error = ref('')
+const globalError = ref('')
+const globalSuccess = ref('')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const isPasswordFocused = ref(false)
@@ -264,10 +263,6 @@ const themeClass = computed(() => {
   return 'theme-system'
 })
 
-const hasErrors = computed(() => {
-  return !!errors.password || !!errors.confirmPassword || !!error.value
-})
-
 const isFormValid = computed(() => {
   return form.password.length >= 6 &&
          form.confirmPassword === form.password
@@ -292,28 +287,28 @@ const handleInputBlur = (event?: Event) => {
 const validatePassword = () => {
   const password = form.password
   if (!password) {
-    errors.password = '请输入新密码'
+    errors.password = ''
   } else if (password.length < 6) {
-    errors.password = '密码至少需要6个字符'
+    errors.password = ''
   } else if (password.length > 20) {
-    errors.password = '密码不能超过20个字符'
+    errors.password = ''
   } else {
     errors.password = ''
   }
-  error.value = ''
+  globalError.value = ''
 }
 
 const validateConfirmPassword = () => {
   const confirm = form.confirmPassword
   const password = form.password
   if (!confirm) {
-    errors.confirmPassword = '请确认新密码'
+    errors.confirmPassword = ''
   } else if (password !== confirm) {
-    errors.confirmPassword = '两次输入的密码不一致'
+    errors.confirmPassword = ''
   } else {
     errors.confirmPassword = ''
   }
-  error.value = ''
+  globalError.value = ''
 }
 
 const goToAuth = () => {
@@ -328,22 +323,34 @@ const handleReset = async () => {
     return
   }
   
+  if (form.password.length < 6) {
+    globalError.value = '密码至少需要6个字符'
+    return
+  }
+  
+  if (form.password !== form.confirmPassword) {
+    globalError.value = '两次输入的密码不一致'
+    return
+  }
+  
   isLoading.value = true
-  error.value = ''
+  globalError.value = ''
+  globalSuccess.value = ''
   
   try {
     const successResult = await authStore.resetPassword(token.value, form.password)
     
     if (successResult) {
       success.value = true
+      globalSuccess.value = '密码重置成功！正在跳转到登录页面...'
       setTimeout(() => {
         router.push('/auth')
       }, 2000)
     } else {
-      error.value = authStore.error || '密码重置失败'
+      globalError.value = authStore.error || '密码重置失败'
     }
   } catch (err: any) {
-    error.value = err.message || '密码重置失败'
+    globalError.value = err.message || '密码重置失败'
   } finally {
     isLoading.value = false
   }
@@ -429,6 +436,73 @@ onMounted(async () => {
 
 .success-state .actions {
   margin-top: 30px;
+}
+
+/* 全局状态提示区域 */
+.status-hint-area {
+  height: 40px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.global-error-message {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+  width: 100%;
+}
+
+.global-success-message {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+  width: 100%;
+}
+
+.theme-dark .global-error-message {
+  background-color: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.theme-dark .global-success-message {
+  background-color: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+  .button-group.two-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .back-button, .gradient-button {
+    flex: 1;
+    min-width: auto;
+  }
+  
+  .form-content {
+    min-height: 240px;
+  }
+  
+  .status-hint-area {
+    height: 36px;
+    margin-bottom: 12px;
+  }
 }
 </style>
 
