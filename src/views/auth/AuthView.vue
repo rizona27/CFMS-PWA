@@ -296,10 +296,11 @@ const clearSpecificAttempts = (isRegister: boolean) => {
   }
 }
 
-// 检查用户名是否存在
+// 检查用户名是否存在 - ✅ 修复：使用完整的后端地址
 const checkUsernameExists = async (username: string): Promise<boolean> => {
   try {
-    const response = await fetch('/api/check_user_exists', {
+    // ✅ 修改：使用完整的后端API地址
+    const response = await fetch('https://cfms.crnas.uk/api/check_user_exists', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

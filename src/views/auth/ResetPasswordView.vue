@@ -223,8 +223,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/authStore'
-import { getCopyright } from '../Version'
+import { useAuthStore } from '../../stores/authStore'
+import { getCopyright } from '../../Version'
 
 const route = useRoute()
 const router = useRouter()

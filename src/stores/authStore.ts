@@ -371,7 +371,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function validateResetToken(tokenStr: string): Promise<{ valid: boolean; username?: string }> {
+  async function validateResetToken(tokenStr: string): Promise<{ valid: boolean; username?: string; message?: string }> {
     try {
       const response = await fetch(`${API_BASE_URL}/password/validate-token`, {
         method: 'POST',
@@ -387,11 +387,19 @@ export const useAuthStore = defineStore('auth', () => {
           username: data.username
         }
       } else {
-        return { valid: false }
+        // 将后端返回的错误信息传递出去
+        return {
+          valid: false,
+          message: data.message || data.error || '重置链接无效'
+        }
       }
     } catch (err: any) {
       console.error('验证重置令牌错误:', err)
-      return { valid: false }
+      // 将网络错误信息传递出去
+      return {
+        valid: false,
+        message: err.message || '网络连接失败'
+      }
     }
   }
 
