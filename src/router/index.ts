@@ -8,6 +8,7 @@ const ConfigView = () => import('@/views/ConfigView.vue')
 const ActivationView = () => import('@/views/ActivationView.vue')
 const AuthView = () => import('@/views/auth/AuthView.vue')
 const ResetPasswordView = () => import('@/views/auth/ResetPasswordView.vue') 
+const ForgotPasswordView = () => import('@/views/auth/ForgotPasswordView.vue') 
 const AboutView = () => import('@/views/AboutView.vue')
 const APILogView = () => import('@/views/APILogView.vue')
 const CloudSyncView = () => import('@/views/CloudSyncView.vue')
@@ -57,10 +58,19 @@ const routes: RouteRecordRaw[] = [
     component: ResetPasswordView,
     meta: {
       title: '重置密码',
-      requiresAuth: false, // 找回密码流程不需要预先登录
+      requiresAuth: false,
       showTabBar: false,
-      // 添加特殊标志，让路由守卫知道这是密码重置页面
       isPasswordReset: true
+    }
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: ForgotPasswordView,
+    meta: {
+      title: '找回密码',
+      requiresAuth: false,
+      showTabBar: false
     }
   },
   {
@@ -269,6 +279,13 @@ router.beforeEach((to, from, next) => {
   if (requiresAuth && !hasValidToken) {
     console.log('需要认证但未登录，重定向到 /auth')
     next('/auth')
+    return
+  }
+  
+  // 特殊处理：忘记密码页面不需要认证
+  if (to.path === '/forgot-password') {
+    console.log('访问忘记密码页面，允许访问')
+    next()
     return
   }
   

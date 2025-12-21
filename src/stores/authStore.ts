@@ -37,6 +37,13 @@ interface LoginResponse {
   success: boolean
   reason?: 'user_missing' | 'password_error' | 'network_error' | 'captcha_error' | 'account_locked'
   message?: string
+  attempts?: number
+}
+
+// 忘记密码响应类型
+interface ForgotPasswordResponse {
+  success: boolean
+  message?: string
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -46,25 +53,17 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string>('')
   const isLoading = ref(false)
   const error = ref<string>('')
-  const isRegistering = ref(false)
-
+  
+  // 错误尝试计数（按用户名）
+  const errorAttempts = ref<Record<string, number>>({})
+  
   // 后端API地址
   const API_BASE_URL = 'https://cfms.crnas.uk/api'
   
   // 验证码相关状态
   const captchaImage = ref<string>('')
   const captchaId = ref<string>('')
-  const captchaCode = ref<string>('')
   
-  // 注册表单状态
-  const registerForm = ref<RegisterForm>({
-    username: '',
-    password: '',
-    email: '',
-    captcha_code: '',
-    captcha_id: ''
-  })
-
   // 计算属性
   const userType = computed(() => {
     if (!currentUser.value) return UserType.FREE
@@ -139,7 +138,6 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.ok && data.success) {
         captchaImage.value = `data:image/png;base64,${data.image_base64}`
         captchaId.value = data.captcha_id
-        registerForm.value.captcha_id = data.captcha_id
         return true
       } else {
         error.value = data.error || '获取验证码失败'
@@ -165,6 +163,19 @@ export const useAuthStore = defineStore('auth', () => {
         return { success: false, reason: 'network_error', message: '请输入用户名和密码' }
       }
 
+      // 获取当前用户的错误尝试次数
+      const attempts = errorAttempts.value[username] || 0
+      
+      // 如果需要验证码但未提供验证码
+      if (attempts >= 3 && !captcha_id) {
+        return { 
+          success: false, 
+          reason: 'captcha_error', 
+          message: '请输入验证码',
+          attempts
+        }
+      }
+
       const requestData: any = { username, password }
       if (captcha_code && captcha_id) {
         requestData.captcha_code = captcha_code
@@ -181,6 +192,9 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await response.json()
       
       if (response.ok && data.success) {
+        // 登录成功，重置错误计数
+        errorAttempts.value[username] = 0
+        
         const userData = data.user_info || data.user
         currentUser.value = {
           id: userData.user_id || userData.id,
@@ -203,27 +217,55 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('auth_token', token.value)
         return { success: true }
       } else {
-        error.value = data.error || data.message || '用户名或密码错误'
-        
-        // 根据错误信息判断失败原因
-        let reason: LoginResponse['reason'] = 'password_error'
-        
+        // 处理不同类型的错误
         if (data.error?.includes('验证码') || data.error?.includes('captcha')) {
-          reason = 'captcha_error'
-          await getCaptcha()
-        } else if (data.error?.includes('锁定')) {
-          reason = 'account_locked'
+          // 验证码错误，不增加错误计数
+          return {
+            success: false,
+            reason: 'captcha_error',
+            message: data.error || '验证码错误',
+            attempts
+          }
         } else if (data.error?.includes('不存在') || data.message?.includes('不存在')) {
-          reason = 'user_missing'
-        } else if (response.status === 401) {
-          // 401通常是用户名或密码错误，但我们不确定是哪个
-          reason = 'password_error'
-        }
-        
-        return {
-          success: false,
-          reason,
-          message: error.value
+          // 用户不存在
+          return {
+            success: false,
+            reason: 'user_missing',
+            message: data.error || '用户不存在',
+            attempts: 0
+          }
+        } else if (data.error?.includes('锁定')) {
+          // 账户已锁定
+          errorAttempts.value[username] = 5
+          return {
+            success: false,
+            reason: 'account_locked',
+            message: data.error || '账户已被锁定',
+            attempts: 5
+          }
+        } else {
+          // 密码错误，增加错误计数
+          const newAttempts = attempts + 1
+          errorAttempts.value[username] = newAttempts
+          
+          let reason: LoginResponse['reason'] = 'password_error'
+          let message = data.error || '用户名或密码错误'
+          
+          if (newAttempts >= 5) {
+            reason = 'account_locked'
+            message = '密码错误次数过多，账户已被锁定'
+          } else if (newAttempts >= 3) {
+            message = `用户名或密码错误，剩余尝试次数: ${5 - newAttempts}，需要验证码`
+          } else {
+            message = `用户名或密码错误，剩余尝试次数: ${5 - newAttempts}`
+          }
+          
+          return {
+            success: false,
+            reason,
+            message,
+            attempts: newAttempts
+          }
         }
       }
     } catch (err: any) {
@@ -278,7 +320,6 @@ export const useAuthStore = defineStore('auth', () => {
         isLoggedIn.value = true
         localStorage.setItem('auth_user', JSON.stringify(currentUser.value))
         localStorage.setItem('auth_token', token.value)
-        resetRegisterForm()
         return true
       } else {
         error.value = data.error || data.message || '注册失败'
@@ -297,7 +338,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // ========== 密码找回相关方法 ==========
 
-  async function forgotPassword(username: string, email: string): Promise<boolean> {
+  async function forgotPassword(username: string, email: string): Promise<ForgotPasswordResponse> {
     isLoading.value = true
     error.value = ''
     
@@ -305,7 +346,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.log(`密码找回请求: ${username}, ${email}`)
       if (!username || !email) {
         error.value = '用户名和邮箱不能为空'
-        return false
+        return { success: false, message: '用户名和邮箱不能为空' }
       }
 
       const response = await fetch(`${API_BASE_URL}/password/forgot`, {
@@ -317,41 +358,28 @@ export const useAuthStore = defineStore('auth', () => {
 
       const data = await response.json()
       
-      // 更详细的错误处理
       if (response.ok && data.success) {
         error.value = data.message || '重置链接已发送到您的邮箱'
-        return true
-      } else {
-        // 优先使用后端返回的错误信息
-        let errorMsg = data.error || data.message
-        
-        // 如果没有特定错误信息，根据状态码提供通用错误
-        if (!errorMsg) {
-          if (response.status === 500) {
-            errorMsg = '服务器内部错误，请稍后重试'
-          } else if (response.status === 404) {
-            errorMsg = '用户不存在或邮箱不匹配'
-          } else if (response.status === 429) {
-            errorMsg = '请求过于频繁，请稍后重试'
-          } else {
-            errorMsg = '密码找回失败，请检查输入信息'
-          }
+        return { 
+          success: true, 
+          message: data.message || '重置链接已发送到您的邮箱，请查收邮件' 
         }
-        
+      } else {
+        const errorMsg = data.error || data.message || '密码找回失败，请检查输入信息'
         error.value = errorMsg
-        return false
+        return { 
+          success: false, 
+          message: errorMsg 
+        }
       }
     } catch (err: any) {
       console.error('密码找回错误:', err)
-      
-      // 网络错误处理
-      if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        error.value = '网络连接失败，请检查网络设置'
-      } else {
-        error.value = err.message || '密码找回失败，请检查网络连接'
+      const errorMsg = err.message || '密码找回失败，请检查网络连接'
+      error.value = errorMsg
+      return { 
+        success: false, 
+        message: errorMsg 
       }
-      
-      return false
     } finally {
       isLoading.value = false
     }
@@ -413,7 +441,6 @@ export const useAuthStore = defineStore('auth', () => {
           username: data.username
         }
       } else {
-        // 将后端返回的错误信息传递出去
         return {
           valid: false,
           message: data.message || data.error || '重置链接无效'
@@ -421,7 +448,6 @@ export const useAuthStore = defineStore('auth', () => {
       }
     } catch (err: any) {
       console.error('验证重置令牌错误:', err)
-      // 将网络错误信息传递出去
       return {
         valid: false,
         message: err.message || '网络连接失败'
@@ -435,17 +461,14 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = ''
   }
 
-  function resetRegisterForm() {
-    registerForm.value = { username: '', password: '', email: '', captcha_code: '', captcha_id: '' }
-    captchaCode.value = ''
-    captchaImage.value = ''
-    captchaId.value = ''
+  function resetErrorAttempts(username: string) {
+    if (errorAttempts.value[username]) {
+      delete errorAttempts.value[username]
+    }
   }
 
-  function toggleRegisterMode() {
-    isRegistering.value = !isRegistering.value
-    error.value = ''
-    if (isRegistering.value) getCaptcha()
+  function getErrorAttempts(username: string): number {
+    return errorAttempts.value[username] || 0
   }
 
   async function checkDatabaseConnection(): Promise<boolean> {
@@ -481,6 +504,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn.value = false
     currentUser.value = null
     token.value = ''
+    errorAttempts.value = {}
     localStorage.removeItem('auth_user')
     localStorage.removeItem('auth_token')
     
@@ -528,17 +552,43 @@ export const useAuthStore = defineStore('auth', () => {
     return levelValue[userType.value] >= levelValue[requiredType]
   }
 
+  // 新增：检查用户名是否存在（用于注册时的实时验证）
+  async function checkUsernameExists(username: string): Promise<{ exists: boolean; is_locked?: boolean }> {
+    try {
+      if (!username || username.length < 3) {
+        return { exists: false }
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/check_user_exists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+        credentials: 'include'
+      })
+      
+      const data = await response.json()
+      if (response.ok && data.success) {
+        return {
+          exists: data.exists || false,
+          is_locked: data.is_locked || false
+        }
+      } else {
+        return { exists: false }
+      }
+    } catch (err) {
+      console.error('检查用户名存在错误:', err)
+      return { exists: false }
+    }
+  }
+
   return {
     isLoggedIn,
     currentUser,
     token,
     isLoading,
     error,
-    isRegistering,
     captchaImage,
     captchaId,
-    captchaCode,
-    registerForm,
     userType,
     userTypeString,
     userTypeDisplay,
@@ -551,14 +601,15 @@ export const useAuthStore = defineStore('auth', () => {
     resetPassword,
     validateResetToken,
     clearError,
-    resetRegisterForm,
-    toggleRegisterMode,
+    resetErrorAttempts,
+    getErrorAttempts,
     getCaptcha,
     checkDatabaseConnection,
     fetchUserProfile,
     logout,
     autoLogin,
     validateToken,
-    hasPermission
+    hasPermission,
+    checkUsernameExists
   }
 })

@@ -57,8 +57,8 @@
                     </div>
                     
                     <div class="form-group with-icon password-group" :class="{
-                      'has-error': errors.password,
-                      'has-success': form.password && !errors.password,
+                      'has-error': passwordError,
+                      'has-success': form.password && !passwordError,
                       'focused': isPasswordFocused
                     }">
                       <div class="icon-container">
@@ -76,8 +76,8 @@
                         class="icon-input password-input"
                         maxlength="20"
                         @input="validatePassword"
-                        @focus="() => { isPasswordFocused = true; handleInputFocus() }"
-                        @blur="() => { isPasswordFocused = false; handleInputBlur() }"
+                        @focus="() => { isPasswordFocused = true; }"
+                        @blur="() => { isPasswordFocused = false; }"
                       />
                       <div class="input-actions">
                         <button
@@ -110,8 +110,8 @@
                     </div>
                     
                     <div class="form-group with-icon password-group" :class="{
-                      'has-error': errors.confirmPassword,
-                      'has-success': form.confirmPassword && !errors.confirmPassword,
+                      'has-error': confirmPasswordError,
+                      'has-success': form.confirmPassword && !confirmPasswordError,
                       'focused': isConfirmPasswordFocused
                     }">
                       <div class="icon-container">
@@ -129,8 +129,8 @@
                         class="icon-input password-input"
                         maxlength="20"
                         @input="validateConfirmPassword"
-                        @focus="() => { isConfirmPasswordFocused = true; handleInputFocus() }"
-                        @blur="() => { isConfirmPasswordFocused = false; handleInputBlur() }"
+                        @focus="() => { isConfirmPasswordFocused = true; }"
+                        @blur="() => { isConfirmPasswordFocused = false; }"
                       />
                       <div class="input-actions">
                         <button
@@ -273,13 +273,10 @@ const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const isPasswordFocused = ref(false)
 const isConfirmPasswordFocused = ref(false)
+const passwordError = ref(false)
+const confirmPasswordError = ref(false)
 
 const form = reactive({
-  password: '',
-  confirmPassword: ''
-})
-
-const errors = reactive({
   password: '',
   confirmPassword: ''
 })
@@ -298,35 +295,23 @@ const themeClass = computed(() => {
 
 const isFormValid = computed(() => {
   return form.password.length >= 6 &&
-         form.confirmPassword === form.password
+         form.confirmPassword === form.password &&
+         !passwordError.value &&
+         !confirmPasswordError.value
 })
 
 const copyrightInfo = ref(getCopyright())
 
-const handleInputFocus = (event?: Event) => {
-  if (event) {
-    const input = event.target as HTMLElement
-    input.parentElement?.classList.add('focused')
-  }
-}
-
-const handleInputBlur = (event?: Event) => {
-  if (event) {
-    const input = event.target as HTMLElement
-    input.parentElement?.classList.remove('focused')
-  }
-}
-
 const validatePassword = () => {
   const password = form.password
   if (!password) {
-    errors.password = ''
+    passwordError.value = false
   } else if (password.length < 6) {
-    errors.password = ''
+    passwordError.value = true
   } else if (password.length > 20) {
-    errors.password = ''
+    passwordError.value = true
   } else {
-    errors.password = ''
+    passwordError.value = false
   }
   globalError.value = ''
 }
@@ -335,11 +320,11 @@ const validateConfirmPassword = () => {
   const confirm = form.confirmPassword
   const password = form.password
   if (!confirm) {
-    errors.confirmPassword = ''
+    confirmPasswordError.value = false
   } else if (password !== confirm) {
-    errors.confirmPassword = ''
+    confirmPasswordError.value = true
   } else {
-    errors.confirmPassword = ''
+    confirmPasswordError.value = false
   }
   globalError.value = ''
 }
@@ -352,7 +337,8 @@ const handleReset = async () => {
   validatePassword()
   validateConfirmPassword()
   
-  if (errors.password || errors.confirmPassword) {
+  if (passwordError.value || confirmPasswordError.value) {
+    globalError.value = '请填写正确的密码信息'
     return
   }
   
@@ -668,106 +654,6 @@ onMounted(async () => {
 .theme-dark .loading-state .loading-spinner.large {
   border-top-color: var(--border-primary);
   border-color: var(--border-primary);
-}
-
-/* 统一状态提示区域 */
-.form-error-area-simple {
-  height: 20px;
-  margin: 4px 0 8px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  overflow: hidden;
-  animation: fadeIn 0.2s ease;
-}
-
-.error-text-simple {
-  color: var(--error-color);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.success-text-simple {
-  color: var(--success-color);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.error-text-simple svg,
-.success-text-simple svg {
-  flex-shrink: 0;
-}
-
-/* 统一按钮区域 */
-.form-actions {
-  margin-top: 12px;
-  width: 100%;
-}
-
-.auth-button {
-  height: 44px;
-  width: 100%;
-}
-
-.button-group.two-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 12px;
-  width: 100%;
-}
-
-/* 链接区域 */
-.hint-area {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.mode-switch {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.mode-switch a {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.2s;
-  position: relative;
-}
-
-.mode-switch a:hover {
-  color: var(--secondary-color);
-}
-
-/* 页脚样式 */
-.auth-footer {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-primary);
-  text-align: center;
-}
-
-.version-info {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  opacity: 0.7;
-}
-
-/* 加载动画 */
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 </style>
 

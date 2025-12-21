@@ -16,10 +16,10 @@ export interface VersionConfig {
 
 // 版本配置数据 - 按时间顺序排列，越新的越在后面
 export const versionConfig: VersionConfig = {
-  currentVersion: '3.0.5',
+  currentVersion: '3.1.0',
   author: 'rizona',
   year: '2025',
-  copyright: 'CFMS v3.0.5 © 2025 rizona',
+  copyright: 'CFMS v3.1.0 © 2025 rizona',
   updateLogs: [
     {
       version: 'Version 1.0.0',

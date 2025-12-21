@@ -4,8 +4,8 @@
       <div class="auth-steps-container single-step-active">
         <div class="auth-step single-step">
           <div class="form-group with-icon" :class="{
-            'has-error': errors.username,
-            'has-success': form.username && !errors.username,
+            'has-error': usernameError,
+            'has-success': form.username && !usernameError,
             'focused': isUsernameFocused
           }">
             <div class="icon-container">
@@ -24,7 +24,7 @@
               maxlength="10"
               @input="validateUsername"
               @blur="handleUsernameBlur"
-              @focus="() => { isUsernameFocused = true; handleInputFocus() }"
+              @focus="() => { isUsernameFocused = true; }"
             />
             <div class="input-actions">
               <button
@@ -42,8 +42,8 @@
           </div>
           
           <div class="form-group with-icon password-group" :class="{
-            'has-error': errors.password,
-            'has-success': form.password && !errors.password,
+            'has-error': passwordError,
+            'has-success': form.password && !passwordError,
             'focused': isPasswordFocused
           }">
             <div class="icon-container">
@@ -61,7 +61,7 @@
               class="icon-input password-input"
               maxlength="20"
               @input="validatePassword"
-              @blur="() => { isPasswordFocused = false; handleInputBlur() }"
+              @blur="() => { isPasswordFocused = false; }"
               @focus="handlePasswordFocus"
             />
             <div class="input-actions">
@@ -228,6 +228,8 @@ const emit = defineEmits<Emits>()
 const showPassword = ref(false)
 const isUsernameFocused = ref(false)
 const isPasswordFocused = ref(false)
+const usernameError = ref(false)
+const passwordError = ref(false)
 
 const form = reactive({
   username: '',
@@ -236,13 +238,8 @@ const form = reactive({
   captcha_id: ''
 })
 
-const errors = reactive({
-  username: '',
-  password: ''
-})
-
 const hasErrors = computed(() => {
-  return !!errors.username || !!errors.password
+  return usernameError.value || passwordError.value
 })
 
 const isFormValid = computed(() => {
@@ -254,62 +251,40 @@ const isFormValid = computed(() => {
 const validateUsername = () => {
   const username = form.username
   if (!username) {
-    errors.username = ''
+    usernameError.value = false
   } else if (username.length < 3) {
-    errors.username = ''
+    usernameError.value = true
   } else if (username.length > 10) {
-    errors.username = ''
+    usernameError.value = true
   } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-    errors.username = ''
+    usernameError.value = true
   } else {
-    errors.username = ''
+    usernameError.value = false
   }
 }
 
 const validatePassword = () => {
   const password = form.password
   if (!password) {
-    errors.password = ''
+    passwordError.value = false
   } else if (password.length < 6) {
-    errors.password = ''
+    passwordError.value = true
   } else if (password.length > 20) {
-    errors.password = ''
+    passwordError.value = true
   } else {
-    errors.password = ''
+    passwordError.value = false
   }
 }
 
-const handleInputFocus = (event?: Event) => {
-  if (event) {
-    const input = event.target as HTMLElement
-    input.parentElement?.classList.add('focused')
-  }
-}
-
-const handleInputBlur = (event?: Event) => {
-  if (event) {
-    const input = event.target as HTMLElement
-    input.parentElement?.classList.remove('focused')
-  }
-}
-
-const handleUsernameBlur = (event?: Event) => {
-  if (event) {
-    const input = event.target as HTMLElement
-    input.parentElement?.classList.remove('focused')
-  }
+const handleUsernameBlur = () => {
   if (form.username) {
     emit('username-blur', form.username)
   }
 }
 
-const handlePasswordFocus = (event?: Event) => {
-  if (event) {
-    const input = event.target as HTMLElement
-    input.parentElement?.classList.add('focused')
-    if (form.username) {
-      emit('password-focus', form.username)
-    }
+const handlePasswordFocus = () => {
+  if (form.username) {
+    emit('password-focus', form.username)
   }
 }
 
@@ -320,9 +295,17 @@ const handleCaptchaInput = () => {
 }
 
 const handleSubmit = () => {
+  validateUsername()
+  validatePassword()
+  
+  if (usernameError.value || passwordError.value) {
+    return
+  }
+  
   if (!form.username || form.username.length < 3) return
   if (!form.password || form.password.length < 6) return
   if (props.showCaptcha && (!form.captcha_code || form.captcha_code.length < 4)) return
+  
   emit('submit', form)
 }
 
@@ -522,11 +505,5 @@ watch(() => form.username, (newUsername) => {
 
 .theme-dark .captcha-placeholder {
   color: var(--text-tertiary);
-}
-
-/* 移除原来的错误提示样式 */
-.form-error-area,
-.attempt-hint {
-  display: none;
 }
 </style>

@@ -5,7 +5,7 @@
         <!-- 第一步：用户名和密码 -->
         <div class="auth-step step-one" :class="{ 'slide-left': step === 2 }">
           <div class="form-group with-icon" :class="{
-            'has-error': usernameStatus === 'taken',
+            'has-error': usernameError || usernameStatus === 'taken',
             'has-success': form.username && usernameStatus === 'available',
             'focused': isUsernameFocused
           }">
@@ -24,8 +24,8 @@
               class="icon-input"
               maxlength="10"
               @input="validateUsername"
-              @focus="() => { isUsernameFocused = true; handleInputFocus() }"
-              @blur="() => { isUsernameFocused = false; handleInputBlur() }"
+              @focus="() => { isUsernameFocused = true; }"
+              @blur="() => { isUsernameFocused = false; }"
             />
             <div class="input-actions">
               <div v-if="usernameStatus === 'available'" class="username-status-indicator available">
@@ -53,8 +53,8 @@
           </div>
           
           <div class="form-group with-icon password-group" :class="{
-            'has-error': errors.password,
-            'has-success': form.password && !errors.password,
+            'has-error': passwordError,
+            'has-success': form.password && !passwordError,
             'focused': isPasswordFocused
           }">
             <div class="icon-container">
@@ -72,8 +72,8 @@
               class="icon-input password-input"
               maxlength="20"
               @input="validatePassword"
-              @focus="() => { isPasswordFocused = true; handleInputFocus() }"
-              @blur="() => { isPasswordFocused = false; handleInputBlur() }"
+              @focus="() => { isPasswordFocused = true; }"
+              @blur="() => { isPasswordFocused = false; }"
             />
             <div class="input-actions">
               <button
@@ -109,7 +109,7 @@
         <!-- 第二步：确认密码和邮箱 -->
         <div class="auth-step step-two" :class="{ 'slide-in': step === 2, 'active': step === 2 }">
           <div class="form-group with-icon password-group" :class="{
-            'has-error': form.confirmPassword && form.password !== form.confirmPassword,
+            'has-error': confirmPasswordError || (form.confirmPassword && form.password !== form.confirmPassword),
             'has-success': form.confirmPassword && form.password === form.confirmPassword,
             'focused': isConfirmPasswordFocused
           }">
@@ -128,8 +128,8 @@
               class="icon-input password-input"
               maxlength="20"
               @input="validateConfirmPassword"
-              @focus="() => { isConfirmPasswordFocused = true; handleInputFocus() }"
-              @blur="() => { isConfirmPasswordFocused = false; handleInputBlur() }"
+              @focus="() => { isConfirmPasswordFocused = true; }"
+              @blur="() => { isConfirmPasswordFocused = false; }"
             />
             <div class="input-actions">
               <button
@@ -162,13 +162,13 @@
           </div>
           
           <div class="form-group with-icon" :class="{
-            'has-error': emailStatus === 'taken',
-            'has-success': form.email && emailStatus === 'available',
+            'has-error': emailError,
+            'has-success': form.email && !emailError,
             'focused': isEmailFocused
           }">
             <div class="icon-container">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-11.9-2 2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
@@ -180,25 +180,15 @@
               autocomplete="email"
               class="icon-input"
               @input="validateEmail"
-              @focus="() => { isEmailFocused = true; handleInputFocus() }"
-              @blur="() => { isEmailFocused = false; handleInputBlur() }"
+              @focus="() => { isEmailFocused = true; }"
+              @blur="() => { isEmailFocused = false; }"
             />
             <div class="input-actions">
-              <div v-if="emailStatus === 'available'" class="email-status-indicator available">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div v-else-if="emailStatus === 'taken'" class="email-status-indicator taken">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
               <button
                 v-if="form.email"
                 type="button"
                 class="clear-button"
-                @click="form.email = ''; validateEmail(); emailStatus = ''"
+                @click="form.email = ''; validateEmail();"
                 title="清除"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -267,7 +257,7 @@
           </svg>
           注册失败 {{ attempts }} 次，{{ 3 - attempts }} 次后将需要验证码
         </div>
-        <div v-if="showPasswordMismatch && form.confirmPassword && form.password !== form.confirmPassword" class="error-text-simple">
+        <div v-if="confirmPasswordError && form.confirmPassword && form.password !== form.confirmPassword" class="error-text-simple">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -304,7 +294,7 @@
           type="button"
           class="auth-button gradient-button"
           @click="$emit('submit', form)"
-          :disabled="isLoading || hasStep2Errors || !isStep2Valid || emailStatus === 'taken' || showPasswordMismatch"
+          :disabled="isLoading || hasStep2Errors || !isStep2Valid"
         >
           <span class="button-text">{{ isLoading ? '注册中...' : '注册' }}</span>
           <div v-if="isLoading" class="button-loading">
@@ -317,7 +307,6 @@
 </template>
 
 <script setup lang="ts">
-import './styles/auth-styles.css'
 import { ref, computed, reactive, watch } from 'vue'
 
 interface Props {
@@ -331,7 +320,6 @@ interface Emits {
   (e: 'submit', form: any): void
   (e: 'refresh-captcha'): void
   (e: 'check-username', username: string): void
-  (e: 'check-email', email: string): void
   (e: 'clear-global-error'): void
 }
 
@@ -352,8 +340,10 @@ const isPasswordFocused = ref(false)
 const isConfirmPasswordFocused = ref(false)
 const isEmailFocused = ref(false)
 const usernameStatus = ref('')
-const emailStatus = ref('')
-const showPasswordMismatch = ref(false)
+const usernameError = ref(false)
+const passwordError = ref(false)
+const confirmPasswordError = ref(false)
+const emailError = ref(false)
 
 const form = reactive({
   username: '',
@@ -364,19 +354,12 @@ const form = reactive({
   captcha_id: ''
 })
 
-const errors = reactive({
-  username: '',
-  password: '',
-  confirmPassword: '',
-  email: ''
-})
-
 const hasStep1Errors = computed(() => {
-  return !!errors.username || !!errors.password
+  return usernameError.value || passwordError.value
 })
 
 const hasStep2Errors = computed(() => {
-  return !!errors.confirmPassword || !!errors.email
+  return confirmPasswordError.value || emailError.value
 })
 
 const isStep1Valid = computed(() => {
@@ -398,19 +381,19 @@ const validateEmailFormat = (email: string): boolean => {
 const validateUsername = () => {
   const username = form.username
   if (!username) {
-    errors.username = ''
+    usernameError.value = false
     usernameStatus.value = ''
   } else if (username.length < 3) {
-    errors.username = ''
+    usernameError.value = true
     usernameStatus.value = ''
   } else if (username.length > 10) {
-    errors.username = ''
+    usernameError.value = true
     usernameStatus.value = ''
   } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-    errors.username = ''
+    usernameError.value = true
     usernameStatus.value = ''
   } else {
-    errors.username = ''
+    usernameError.value = false
   }
   emit('clear-global-error')
 }
@@ -418,13 +401,13 @@ const validateUsername = () => {
 const validatePassword = () => {
   const password = form.password
   if (!password) {
-    errors.password = ''
+    passwordError.value = false
   } else if (password.length < 6) {
-    errors.password = ''
+    passwordError.value = true
   } else if (password.length > 20) {
-    errors.password = ''
+    passwordError.value = true
   } else {
-    errors.password = ''
+    passwordError.value = false
   }
   emit('clear-global-error')
 }
@@ -434,14 +417,11 @@ const validateConfirmPassword = () => {
   const password = form.password
   
   if (!confirm) {
-    errors.confirmPassword = ''
-    showPasswordMismatch.value = false
+    confirmPasswordError.value = false
   } else if (password !== confirm) {
-    errors.confirmPassword = '密码不一致'
-    showPasswordMismatch.value = true
+    confirmPasswordError.value = true
   } else {
-    errors.confirmPassword = ''
-    showPasswordMismatch.value = false
+    confirmPasswordError.value = false
   }
   emit('clear-global-error')
 }
@@ -449,36 +429,24 @@ const validateConfirmPassword = () => {
 const validateEmail = () => {
   const email = form.email
   if (!email) {
-    errors.email = ''
-    emailStatus.value = ''
+    emailError.value = false
   } else if (!validateEmailFormat(email)) {
-    errors.email = ''
-    emailStatus.value = ''
+    emailError.value = true
   } else {
-    errors.email = ''
+    emailError.value = false
   }
   emit('clear-global-error')
-}
-
-const handleInputFocus = (event?: Event) => {
-  if (event) {
-    const input = event.target as HTMLElement
-    input.parentElement?.classList.add('focused')
-  }
-}
-
-const handleInputBlur = (event?: Event) => {
-  if (event) {
-    const input = event.target as HTMLElement
-    input.parentElement?.classList.remove('focused')
-  }
 }
 
 const handleNextStep = () => {
   validateUsername()
   validatePassword()
   
-  if (errors.username || errors.password) {
+  if (usernameError.value || passwordError.value) {
+    return
+  }
+  
+  if (usernameStatus.value === 'taken') {
     return
   }
   
@@ -504,23 +472,9 @@ watch(() => form.username, (newUsername) => {
   emit('clear-global-error')
 })
 
-watch(() => form.email, (newEmail) => {
-  if (newEmail && validateEmailFormat(newEmail)) {
-    const timer = setTimeout(() => {
-      emit('check-email', newEmail)
-    }, 500)
-    return () => clearTimeout(timer)
-  } else {
-    emailStatus.value = ''
-  }
-  emit('clear-global-error')
-})
-
 watch(() => form.confirmPassword, (newConfirm) => {
   if (newConfirm && form.password) {
     validateConfirmPassword()
-  } else {
-    showPasswordMismatch.value = false
   }
 })
 
@@ -540,19 +494,8 @@ const handleUsernameCheckResult = (result: {exists?: boolean, message?: string})
   }
 }
 
-const handleEmailCheckResult = (result: {exists?: boolean, message?: string}) => {
-  if (result.exists === true) {
-    emailStatus.value = 'taken'
-  } else if (result.exists === false) {
-    emailStatus.value = 'available'
-  } else {
-    emailStatus.value = ''
-  }
-}
-
 defineExpose({
-  handleUsernameCheckResult,
-  handleEmailCheckResult
+  handleUsernameCheckResult
 })
 </script>
 
@@ -561,24 +504,28 @@ defineExpose({
 .register-form .form-content {
   display: flex;
   flex-direction: column;
-  min-height: 240px; /* 增加最小高度以容纳所有状态 */
+  min-height: 240px;
   position: relative;
   width: 100%;
   flex: 1;
 }
 
-/* 统一注册页步进容器高度，使用固定高度确保对齐 */
+/* 统一注册页步进容器高度 */
 .register-form .auth-steps-container {
   position: relative;
-  height: 176px; /* 固定为第二步的高度，确保空间足够 */
+  height: 176px;
   margin-bottom: 4px;
   transition: height 0.3s ease;
   overflow: visible;
-  flex-shrink: 0; /* 防止被压缩 */
+  flex-shrink: 0;
 }
 
 .register-form .auth-steps-container.two-steps-active {
-  height: 176px; /* 保持相同高度 */
+  height: 176px;
+}
+
+.register-form .auth-steps-container.two-steps-active.has-captcha {
+  height: 240px;
 }
 
 /* 步骤容器统一定位 */
@@ -593,14 +540,14 @@ defineExpose({
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 第一步初始状态 - 垂直居中显示 */
+/* 第一步初始状态 */
 .auth-step.step-one {
   opacity: 1;
   visibility: visible;
   transform: translateX(0);
   z-index: 2;
   display: flex;
-  justify-content: center; /* 垂直居中 */
+  justify-content: center;
 }
 
 /* 第一步离开动画 */
@@ -612,14 +559,14 @@ defineExpose({
   z-index: 1;
 }
 
-/* 第二步初始状态 - 垂直居中显示 */
+/* 第二步初始状态 */
 .auth-step.step-two {
-  display: flex; /* 覆盖原有的 display: none */
+  display: flex;
   opacity: 0;
   visibility: hidden;
   transform: translateX(100%);
   z-index: 1;
-  justify-content: center; /* 垂直居中 */
+  justify-content: center;
 }
 
 /* 第二步进入动画 */
@@ -631,8 +578,7 @@ defineExpose({
 }
 
 /* 状态指示器样式 */
-.username-status-indicator,
-.email-status-indicator {
+.username-status-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -643,20 +589,17 @@ defineExpose({
   box-sizing: border-box;
 }
 
-.username-status-indicator.available,
-.email-status-indicator.available {
+.username-status-indicator.available {
   background: var(--success-light);
   color: var(--success-color);
 }
 
-.username-status-indicator.taken,
-.email-status-indicator.taken {
+.username-status-indicator.taken {
   background: var(--error-light);
   color: var(--error-color);
 }
 
-.username-status-indicator svg,
-.email-status-indicator svg {
+.username-status-indicator svg {
   width: 10px;
   height: 10px;
 }
@@ -671,12 +614,12 @@ defineExpose({
   width: 100%;
   transition: all 0.2s ease;
   overflow: hidden;
-  flex-shrink: 0; /* 防止被压缩 */
+  flex-shrink: 0;
   animation: fadeIn 0.2s ease;
 }
 
 .form-error-area-simple.has-attempts {
-  height: 24px; /* 固定高度 */
+  height: 24px;
 }
 
 .error-text-simple {
@@ -704,12 +647,12 @@ defineExpose({
   flex-shrink: 0;
 }
 
-/* 统一按钮区域 - 关键修改 */
+/* 统一按钮区域 */
 .form-actions {
-  margin-top: auto; /* 关键：自动推到底部 */
-  padding-top: 0; /* 移除顶部padding */
+  margin-top: auto;
+  padding-top: 0;
   width: 100%;
-  flex-shrink: 0; /* 防止被压缩 */
+  flex-shrink: 0;
 }
 
 .auth-button {
@@ -722,38 +665,40 @@ defineExpose({
   grid-template-columns: 1fr 1.5fr;
   gap: 12px;
   width: 100%;
-  height: 44px; /* 固定高度 */
+  height: 44px;
 }
 
 /* 移动端适配 */
 @media (max-width: 480px) {
   .register-form .auth-steps-container {
-    height: 176px; /* 保持相同高度 */
+    height: 176px;
     margin-bottom: 4px;
   }
   
   .register-form .auth-steps-container.two-steps-active {
-    height: 176px; /* 保持相同高度 */
+    height: 176px;
+  }
+  
+  .register-form .auth-steps-container.two-steps-active.has-captcha {
+    height: 240px;
   }
   
   .auth-step {
-    gap: 12px; /* 缩小输入框间距 */
+    gap: 12px;
   }
   
   .register-form .button-group.two-buttons {
     grid-template-columns: 1fr 1.5fr;
     gap: 10px;
-    height: 44px; /* 固定高度 */
+    height: 44px;
   }
   
-  .username-status-indicator,
-  .email-status-indicator {
+  .username-status-indicator {
     width: 16px;
     height: 16px;
   }
   
-  .username-status-indicator svg,
-  .email-status-indicator svg {
+  .username-status-indicator svg {
     width: 8px;
     height: 8px;
   }
@@ -791,20 +736,9 @@ defineExpose({
     align-items: center;
   }
   
-  /* 当需要显示验证码时，增加容器高度 */
-  .register-form .auth-steps-container.two-steps-active.has-captcha {
-    height: 220px; /* 增加高度以容纳验证码 */
-  }
-  
   .form-actions {
     padding-top: 0;
   }
-}
-
-/* 移除原来的错误提示样式 */
-.form-error-area,
-.attempt-hint {
-  display: none;
 }
 
 @keyframes fadeIn {
