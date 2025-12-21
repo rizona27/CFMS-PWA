@@ -637,10 +637,50 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.auth-form-wrapper {
-  min-height: 260px; /* 固定表单区域高度 */
+/* 主容器样式 - 调整位置更靠上 */
+.auth-view {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start; /* 改为顶部对齐 */
+  justify-content: center;
   position: relative;
-  margin-bottom: 16px;
+  overflow: auto; /* 改为auto以支持滚动 */
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 20px;
+  padding-top: 40px; /* 增加顶部内边距 */
+}
+
+.theme-light .auth-view {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* 滚动容器 */
+.auth-scroll-container {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  align-items: flex-start; /* 改为顶部对齐 */
+  justify-content: center;
+  padding: 20px;
+  padding-top: 0; /* 移除顶部内边距 */
+  overflow-y: auto;
+}
+
+/* 卡片容器 */
+.auth-container {
+  display: flex;
+  align-items: flex-start; /* 改为顶部对齐 */
+  justify-content: center;
+  width: 100%;
+  max-width: 420px;
+  margin-top: 0;
+}
+
+/* 表单区域 */
+.auth-form-wrapper {
+  min-height: 200px; /* 减少最小高度 */
+  position: relative;
+  margin-bottom: 12px; /* 减少下边距 */
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -648,25 +688,303 @@ onUnmounted(() => {
 
 /* 移动端适配 */
 @media (max-width: 480px) {
+  .auth-view {
+    padding: 16px;
+    padding-top: 30px; /* 移动端减少顶部内边距 */
+    align-items: flex-start;
+    min-height: calc(100vh - 16px);
+  }
+  
+  .auth-scroll-container {
+    padding: 0;
+    align-items: flex-start;
+    min-height: auto;
+  }
+  
+  .auth-container {
+    max-width: 100%;
+    margin-top: 0;
+  }
+  
   .auth-card {
-    padding: 20px;
-    margin: 10px;
+    padding: 24px 20px;
+    margin: 0;
+    border-radius: 16px;
   }
   
   .auth-form-wrapper {
-    min-height: 240px; /* 移动端稍小的高度 */
+    min-height: 180px; /* 移动端进一步减少高度 */
+    margin-bottom: 10px;
   }
   
   .mode-tabs {
-    margin-bottom: 12px;
-    padding: 3px;
+    margin-bottom: 20px;
+    padding: 2px;
   }
   
   .mode-tab {
-    padding: 8px;
+    padding: 8px 12px;
     font-size: 13px;
+  }
+  
+  .auth-title {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+  
+  .hint-area {
+    margin-top: 16px;
+  }
+  
+  .auth-footer {
+    margin-top: 20px;
+    padding-top: 14px;
+  }
+}
+
+/* 平板适配 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .auth-card {
+    padding: 28px 24px;
+    max-width: 400px;
+  }
+  
+  .auth-title {
+    font-size: 22px;
+  }
+  
+  .auth-view {
+    padding-top: 60px;
+  }
+}
+
+/* 大屏幕适配 */
+@media (min-width: 1440px) {
+  .auth-card {
+    max-width: 440px;
+    padding: 32px 28px;
+  }
+  
+  .auth-title {
+    font-size: 26px;
+  }
+  
+  .mode-tab {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  
+  .auth-view {
+    padding-top: 80px;
+  }
+}
+
+/* 减少运动偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-down,
+  .auth-card,
+  .form-group.with-icon,
+  .auth-button,
+  .shape,
+  .captcha-image {
+    animation: none;
+    transition: none;
+  }
+  
+  .gradient-button::before {
+    display: none;
+  }
+}
+
+/* 悬停设备适配 */
+@media (hover: hover) and (pointer: fine) {
+  .auth-card:hover {
+    transform: translateY(-3px);
+  }
+  
+  .form-group.with-icon:hover {
+    transform: translateY(-1px);
+  }
+  
+  .auth-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+
+/* 触摸设备适配 */
+@media (hover: none) and (pointer: coarse) {
+  .auth-card:active {
+    transform: scale(0.98);
+  }
+  
+  .form-group.with-icon:active {
+    border-color: var(--border-focus);
+  }
+  
+  .auth-button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
+/* 深色模式优化 */
+.theme-dark .auth-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.theme-dark .form-group.with-icon {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+}
+
+/* 性能优化 */
+.auth-card,
+.form-group.with-icon,
+.auth-button {
+  will-change: transform;
+  contain: layout style;
+}
+
+/* 标签页样式覆盖 */
+.mode-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-primary);
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mode-tab.active {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--primary-color);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-dark .mode-tab.active {
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.mode-tab:not(.active):hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: var(--text-primary);
+}
+
+.theme-dark .mode-tab:not(.active):hover {
+  background: rgba(30, 41, 59, 0.3);
+}
+
+/* 链接和提示区域 */
+.hint-area {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.mode-switch {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mode-switch a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.mode-switch a:hover {
+  color: var(--secondary-color);
+}
+
+/* 页脚样式 */
+.auth-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-primary);
+  text-align: center;
+}
+
+.version-info {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+/* 高DPI屏幕优化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .auth-card,
+  .mode-tabs {
+    border-width: 0.5px;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .background-fx,
+  .floating-shapes,
+  .gradient-overlay {
+    display: none;
+  }
+  
+  .auth-card {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    background: white;
+  }
+  
+  .auth-title {
+    -webkit-text-fill-color: #333;
+    background: none;
+  }
+}
+
+/* 修复移动端高度问题 */
+@media (max-height: 700px) {
+  .auth-view {
+    padding-top: 20px;
+    align-items: flex-start;
+  }
+  
+  .auth-scroll-container {
+    padding-top: 0;
+  }
+  
+  .auth-card {
+    margin-top: 10px;
+  }
+}
+
+/* 超小屏幕高度适配 */
+@media (max-height: 600px) {
+  .auth-form-wrapper {
+    min-height: 160px;
+  }
+  
+  .form-group.with-icon {
+    margin-bottom: 12px;
+    height: 42px;
+  }
+  
+  .auth-button-area {
+    margin-top: 14px;
   }
 }
 </style>
-
-<style scoped src="./styles/auth-styles.css"></style>

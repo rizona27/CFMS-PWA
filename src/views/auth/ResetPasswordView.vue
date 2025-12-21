@@ -31,11 +31,16 @@
           
           <div v-if="!isValidating && !validationError && !success">
             <div class="auth-form">
-              <div class="form-content" style="min-height: 280px">
+              <div class="form-content" style="min-height: 240px">
                 <div class="auth-steps-container single-step-active">
                   <div class="auth-step single-step">
                     <div v-if="username" class="user-info">
-                      <div class="user-icon">👤</div>
+                      <div class="user-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </div>
                       <div class="user-details">
                         <div class="username">{{ username }}</div>
                         <div class="hint">请输入您的新密码</div>
@@ -48,7 +53,10 @@
                       'focused': isPasswordFocused
                     }">
                       <div class="icon-container">
-                        <span class="input-icon">🔒</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                       </div>
                       <input
                         v-model="form.password"
@@ -70,7 +78,9 @@
                           @click="form.password = ''; validatePassword()"
                           title="清除"
                         >
-                          ✕
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
                         </button>
                         <button
                           type="button"
@@ -79,12 +89,12 @@
                           :aria-label="showPassword ? '隐藏密码' : '显示密码'"
                         >
                           <svg v-if="showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                           </svg>
                           <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                           </svg>
                         </button>
                       </div>
@@ -96,7 +106,10 @@
                       'focused': isConfirmPasswordFocused
                     }">
                       <div class="icon-container">
-                        <span class="input-icon">🔒</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                       </div>
                       <input
                         v-model="form.confirmPassword"
@@ -118,7 +131,9 @@
                           @click="form.confirmPassword = ''; validateConfirmPassword()"
                           title="清除"
                         >
-                          ✕
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
                         </button>
                         <button
                           type="button"
@@ -127,12 +142,12 @@
                           :aria-label="showConfirmPassword ? '隐藏密码' : '显示密码'"
                         >
                           <svg v-if="showConfirmPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                           </svg>
                           <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                           </svg>
                         </button>
                       </div>
@@ -178,7 +193,12 @@
           </div>
           
           <div v-else-if="success" class="success-state">
-            <div class="success-icon">✅</div>
+            <div class="success-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
             <div class="success-text">
               <h3>密码重置成功</h3>
               <p>您的密码已成功重置</p>
@@ -192,7 +212,12 @@
           </div>
           
           <div v-else-if="validationError" class="error-state">
-            <div class="error-icon">❌</div>
+            <div class="error-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
             <div class="error-text">
               <h3>重置链接无效</h3>
               <p>{{ validationError }}</p>
@@ -385,7 +410,57 @@ onMounted(async () => {
 <style scoped>
 /* 重置密码页面特殊样式 */
 .form-content {
-  min-height: 280px !important;
+  min-height: 240px !important;
+}
+
+/* 用户信息卡片 */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--primary-light);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--form-spacing);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.user-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 50%;
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.user-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.username {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 /* 成功和错误状态页面 */
@@ -393,55 +468,91 @@ onMounted(async () => {
 .error-state,
 .loading-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: 32px 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .success-icon {
-  font-size: 48px;
   margin-bottom: 20px;
-}
-
-.success-text h3 {
-  margin: 0 0 10px 0;
   color: var(--success-color);
 }
 
+.success-icon svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+  margin: 0 auto;
+}
+
+.success-text h3 {
+  margin: 0 0 12px 0;
+  color: var(--success-color);
+  font-size: 18px;
+  font-weight: 600;
+}
+
 .success-text p {
-  margin: 8px 0;
+  margin: 6px 0;
   color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .success-text .tips {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-tertiary);
-  margin-top: 15px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-primary);
 }
 
 .error-state .error-icon {
-  font-size: 48px;
   margin-bottom: 20px;
   color: var(--error-color);
+}
+
+.error-icon svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+  margin: 0 auto;
 }
 
 .error-text h3 {
   margin: 0 0 12px 0;
   color: var(--error-color);
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .error-text p {
-  margin: 0 0 16px 0;
+  margin: 0 0 20px 0;
   color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .actions {
-  margin-top: 30px;
+  margin-top: 24px;
+}
+
+.actions .auth-button {
+  min-width: 160px;
 }
 
 .loading-state .loading-spinner.large {
   width: 40px;
   height: 40px;
-  margin: 0 auto 20px;
-  border: 3px solid var(--border-primary);
+  margin: 0 auto 16px;
+  border: 2px solid var(--border-primary);
   border-top-color: var(--primary-color);
   animation: spin 1s linear infinite;
 }
@@ -449,24 +560,48 @@ onMounted(async () => {
 .loading-state p {
   color: var(--text-secondary);
   margin: 0;
+  font-size: 14px;
 }
 
 /* 移动端适配 */
 @media (max-width: 480px) {
   .form-content {
-    min-height: 240px !important;
+    min-height: 220px !important;
+  }
+  
+  .user-info {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .user-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .user-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .username {
+    font-size: 13px;
+  }
+  
+  .hint {
+    font-size: 11px;
   }
   
   .success-state,
   .error-state,
   .loading-state {
-    padding: 30px 16px;
+    padding: 24px 16px;
   }
   
-  .success-icon,
-  .error-icon {
-    font-size: 36px;
-    margin-bottom: 16px;
+  .success-icon svg,
+  .error-icon svg {
+    width: 40px;
+    height: 40px;
   }
   
   .success-text h3,
@@ -479,15 +614,149 @@ onMounted(async () => {
     font-size: 13px;
   }
   
+  .success-text .tips {
+    font-size: 12px;
+    margin-top: 14px;
+    padding-top: 10px;
+  }
+  
   .actions {
     margin-top: 20px;
+  }
+  
+  .actions .auth-button {
+    min-width: 140px;
   }
   
   .loading-state .loading-spinner.large {
     width: 32px;
     height: 32px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
+  
+  .loading-state p {
+    font-size: 13px;
+  }
+  
+  /* 修复移动端输入框光标位置 */
+  .icon-input {
+    line-height: 1.2;
+    height: 100%;
+    padding-top: 0;
+    padding-bottom: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  .form-group.with-icon {
+    align-items: center;
+  }
+}
+
+/* 平板适配 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .success-state,
+  .error-state,
+  .loading-state {
+    padding: 28px 24px;
+  }
+}
+
+/* 深色模式优化 */
+.theme-dark .user-info {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(129, 140, 248, 0.1);
+}
+
+.theme-dark .user-icon {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.theme-dark .success-text .tips,
+.theme-dark .loading-state .loading-spinner.large {
+  border-top-color: var(--border-primary);
+  border-color: var(--border-primary);
+}
+
+/* 状态提示区域 */
+.status-hint-area {
+  margin-bottom: var(--form-spacing);
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.global-error-message {
+  background: var(--error-light);
+  color: var(--error-color);
+  border: 1px solid var(--border-error);
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  text-align: center;
+  width: 100%;
+  backdrop-filter: blur(8px);
+}
+
+.global-success-message {
+  background: var(--success-light);
+  color: var(--success-color);
+  border: 1px solid var(--border-success);
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  font-size: 12px;
+  text-align: center;
+  width: 100%;
+  backdrop-filter: blur(8px);
+}
+
+/* 链接区域 */
+.hint-area {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.mode-switch {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mode-switch a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.mode-switch a:hover {
+  color: var(--secondary-color);
+}
+
+/* 页脚样式 */
+.auth-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-primary);
+  text-align: center;
+}
+
+.version-info {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+/* 加载动画 */
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
 
