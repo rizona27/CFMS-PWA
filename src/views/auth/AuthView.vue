@@ -338,13 +338,21 @@ const clearGlobalError = () => {
   // 空实现
 }
 
-// const setGlobalError = (message: string) => {
-//   // 不再设置全局错误
-// }
-
-// const setSuccessMessage = (message: string) => {
-//   // 不再设置全局成功消息
-// }
+// 检查邮件中的token参数，如果是邮件跳转，直接跳转到重置密码页面
+const checkEmailToken = () => {
+  const urlParams = new URLSearchParams(window.location.search)
+  const token = urlParams.get('token')
+  
+  if (token && window.location.pathname === '/auth') {
+    console.log('检测到邮件中的token参数，跳转到重置密码页面')
+    // 清除URL中的token参数
+    const newUrl = window.location.pathname
+    window.history.replaceState({}, document.title, newUrl)
+    
+    // 跳转到重置密码页面
+    router.push(`/reset-password?token=${token}`)
+  }
+}
 
 // 检查用户名是否存在（用于注册）
 const checkUsernameExists = async (username: string): Promise<boolean> => {
@@ -600,6 +608,9 @@ const handleForgotPasswordSubmit = async (form: any) => {
 }
 
 onMounted(() => {
+  // 检查是否有邮件跳转的token
+  checkEmailToken()
+  
   if (window.location.pathname === '/404' || window.location.pathname === '/auth') {
     if (window.location.pathname !== '/auth') {
       history.replaceState(null, '', '/auth')

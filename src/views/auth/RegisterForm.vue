@@ -495,10 +495,12 @@ defineExpose({
 </script>
 
 <style scoped>
+/* 统一表单容器样式 - 与登录页保持一致 */
 .form-content {
   position: relative;
   padding: 10px 0;
   min-height: 180px;
+  width: 100%;
 }
 
 .auth-steps-container {
@@ -507,27 +509,29 @@ defineExpose({
   transition: min-height 0.3s ease;
 }
 
+/* 统一输入框组样式 - 与登录页完全一致 */
 .form-group.with-icon {
   position: relative;
   z-index: 1;
   transition: all 0.3s ease;
-  margin-bottom: 0;
+  margin-bottom: 16px;
   border-radius: 8px;
-  overflow: visible; /* 确保描边不被截断 */
-  border: 1px solid var(--border-color); /* 添加默认边框 */
+  overflow: visible;
+  border: 1px solid var(--border-color);
   background-color: var(--input-bg);
-  height: 48px; /* 固定高度，与登录页保持一致 */
+  height: 48px;
   display: flex;
   align-items: center;
-  box-sizing: border-box; /* 确保边框计算在内 */
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .form-group.with-icon.focused {
-  z-index: 10; /* 确保激活的框体在最上层 */
+  z-index: 10;
   position: relative;
   transform: translateZ(0);
   box-shadow: 0 0 0 2px var(--primary-color);
-  border-color: var(--primary-color); /* 添加边框颜色增强视觉效果 */
+  border-color: var(--primary-color);
 }
 
 .form-group.with-icon.has-error.focused {
@@ -540,6 +544,7 @@ defineExpose({
   border-color: var(--success-color);
 }
 
+/* 统一输入框样式 */
 .icon-input {
   flex: 1;
   height: 100%;
@@ -549,7 +554,8 @@ defineExpose({
   font-size: 14px;
   color: var(--text-color);
   outline: none;
-  box-sizing: border-box; /* 确保内边距计算在内 */
+  box-sizing: border-box;
+  text-align: left;
 }
 
 .icon-container {
@@ -617,7 +623,7 @@ defineExpose({
 }
 
 .auth-button-area {
-  margin-top: 0 !important; /* 移除冗余间距，由父容器控制 */
+  margin-top: 0 !important;
 }
 
 /* 用户名状态指示器 */
@@ -664,21 +670,23 @@ defineExpose({
   transition: height 0.3s ease;
   margin-top: 4px;
   margin-bottom: 8px;
+  width: 100%;
 }
 
 .form-error-area.has-error {
-  height: 40px; /* 统一高度，与登录页保持一致 */
+  height: 40px;
 }
 
 .attempt-hint {
-  padding: 10px 12px; /* 统一内边距，与登录页保持一致 */
+  padding: 10px 12px;
   background-color: rgba(239, 68, 68, 0.1);
   color: #ef4444;
   border-radius: 6px;
-  font-size: 13px; /* 统一字体大小 */
+  font-size: 13px;
   text-align: center;
   border: 1px solid rgba(239, 68, 68, 0.2);
-  line-height: 1.4; /* 增加行高 */
+  line-height: 1.4;
+  width: 100%;
 }
 
 .theme-dark .attempt-hint {
@@ -687,15 +695,201 @@ defineExpose({
   border-color: rgba(248, 113, 113, 0.3);
 }
 
+/* 验证码样式 */
+.captcha-group {
+  margin-top: 16px;
+}
+
+.captcha-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.captcha-input-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background-color: var(--input-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.captcha-image-container {
+  flex-shrink: 0;
+}
+
+.captcha-image {
+  width: 100px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.captcha-image:hover {
+  border-color: var(--primary-color);
+}
+
+.captcha-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.captcha-placeholder {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* 按钮区域统一 */
+.button-container {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.button-group.single-button {
+  gap: 0;
+}
+
+.button-group.two-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.auth-button {
+  flex: 1;
+  height: 48px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-sizing: border-box;
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  min-width: 0;
+}
+
+.back-button {
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.gradient-button {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.theme-dark .back-button {
+  background: rgba(99, 102, 241, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.theme-dark .gradient-button {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+.auth-button:hover:not(:disabled),
+.back-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);
+}
+
+.gradient-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.3);
+}
+
+.theme-dark .gradient-button:hover:not(:disabled) {
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.4);
+}
+
+.auth-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.button-text {
+  position: relative;
+  z-index: 2;
+}
+
+.button-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: inherit;
+  border-radius: inherit;
+}
+
+.loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+.back-button .loading-spinner {
+  border-top-color: #6366f1;
+}
+
+.theme-dark .back-button .loading-spinner {
+  border-top-color: #a78bfa;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* 移动端适配 */
 @media (max-width: 480px) {
   .form-group.with-icon {
-    height: 44px; /* 移动端稍小的高度，与登录页保持一致 */
+    height: 44px;
   }
   
   .button-group.two-buttons {
     display: grid;
-    grid-template-columns: 1fr 2fr; /* 返回按钮小一点，注册按钮大一点 */
+    grid-template-columns: 1fr 2fr;
     gap: 10px;
   }
   
@@ -708,14 +902,28 @@ defineExpose({
   }
   
   .form-error-area.has-error {
-    height: 38px; /* 移动端稍小的高度 */
+    height: 38px;
   }
   
   .attempt-hint {
     padding: 8px 10px;
     font-size: 12px;
   }
+  
+  .captcha-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .captcha-image {
+    width: 100%;
+    height: 44px;
+  }
+  
+  .captcha-input-group {
+    width: 100%;
+  }
 }
-</style>
+</script>
 
 <style scoped src="./styles/auth-styles.css"></style>

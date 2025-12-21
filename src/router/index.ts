@@ -58,7 +58,9 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '重置密码',
       requiresAuth: false, // 找回密码流程不需要预先登录
-      showTabBar: false
+      showTabBar: false,
+      // 添加特殊标志，让路由守卫知道这是密码重置页面
+      isPasswordReset: true
     }
   },
   {
@@ -233,10 +235,14 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   console.log(`\n=== 路由守卫开始 ===`)
   console.log(`从: ${from.path} 到: ${to.path}`)
+  console.log('完整路径:', to.fullPath)
   
   // 设置页面标题
   const title = to.meta.title as string || 'CFMS · 基金管理系统'
   document.title = title
+  
+  // 检查是否是密码重置页面
+  const isPasswordReset = to.meta.isPasswordReset === true
   
   // 检查是否需要认证
   const requiresAuth = to.meta.requiresAuth
@@ -244,6 +250,13 @@ router.beforeEach((to, from, next) => {
   
   // 检查token有效性
   const hasValidToken = token && token !== 'null' && token !== 'undefined'
+  
+  // 特殊处理：密码重置页面，无论是否有token都允许访问
+  if (isPasswordReset) {
+    console.log('访问密码重置页面，允许访问')
+    next()
+    return
+  }
   
   // 访问登录页面但已登录，重定向到配置页面
   if (to.path === '/auth' && hasValidToken) {

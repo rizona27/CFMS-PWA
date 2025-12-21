@@ -1,6 +1,6 @@
 <template>
   <div class="auth-form">
-    <div class="form-content" :style="{ minHeight: step === 1 ? '180px' : '220px', padding: '10px 0' }">
+    <div class="form-content">
       <div class="auth-steps-container" :class="{ 'two-steps-active': step === 2 }">
         <div class="auth-step step-one" :class="{ 'slide-left': step === 2 }">
           <div class="form-group with-icon" :class="{
@@ -235,16 +235,29 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
+/* 统一表单容器样式 */
 .form-content {
   padding: 10px 0 !important;
   min-height: 180px;
   position: relative;
+  width: 100%;
 }
 
+/* 统一输入框组样式 */
 .form-group.with-icon {
   position: relative;
   z-index: 1;
   transition: all 0.3s ease;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: visible;
+  border: 1px solid var(--border-color);
+  background-color: var(--input-bg);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .form-group.with-icon.focused {
@@ -252,12 +265,15 @@ const handleSubmit = async () => {
   position: relative;
   transform: translateZ(0);
   box-shadow: 0 0 0 2px var(--primary-color);
+  border-color: var(--primary-color);
 }
 
+/* 统一步骤容器 */
 .auth-steps-container {
   position: relative;
   min-height: 140px;
   transition: min-height 0.3s ease;
+  width: 100%;
 }
 
 .auth-step.step-two {
@@ -289,11 +305,14 @@ const handleSubmit = async () => {
 
 .auth-step {
   transition: all 0.3s ease;
+  width: 100%;
 }
 
+/* 成功消息样式 */
 .success-message {
   text-align: center;
   padding: 20px;
+  width: 100%;
 }
 
 .success-icon {
@@ -304,15 +323,17 @@ const handleSubmit = async () => {
 .success-text h3 {
   margin: 0 0 10px 0;
   color: #10b981;
+  font-size: 18px;
 }
 
 .success-text p {
   margin: 8px 0;
   color: #64748b;
+  font-size: 14px;
 }
 
 .success-text .tips {
-  font-size: 14px;
+  font-size: 13px;
   color: #94a3b8;
   margin-top: 15px;
 }
@@ -329,8 +350,178 @@ const handleSubmit = async () => {
   color: #94a3b8;
 }
 
+/* 统一按钮区域 */
 .auth-button-area {
-  margin-top: 0 !important; /* 移除冗余间距，由父容器控制 */
+  margin-top: 0 !important;
+  width: 100%;
+}
+
+.button-container {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.button-group.single-button {
+  gap: 0;
+}
+
+.button-group.two-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.auth-button {
+  flex: 1;
+  height: 48px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-sizing: border-box;
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  min-width: 0;
+}
+
+.back-button {
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.gradient-button {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.theme-dark .back-button {
+  background: rgba(99, 102, 241, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.theme-dark .gradient-button {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+.auth-button:hover:not(:disabled),
+.back-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);
+}
+
+.gradient-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.3);
+}
+
+.theme-dark .gradient-button:hover:not(:disabled) {
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.4);
+}
+
+.auth-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.button-text {
+  position: relative;
+  z-index: 2;
+}
+
+.button-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: inherit;
+  border-radius: inherit;
+}
+
+.loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 统一输入框样式 */
+.icon-input {
+  flex: 1;
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text-color);
+  outline: none;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+  gap: 4px;
+}
+
+.clear-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+  padding: 4px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.clear-button:hover {
+  color: var(--text-color);
 }
 
 /* 移动端适配 */
@@ -354,7 +545,27 @@ const handleSubmit = async () => {
   .auth-steps-container {
     min-height: 120px;
   }
+  
+  .form-group.with-icon {
+    height: 44px;
+  }
+  
+  .button-group.two-buttons .auth-button {
+    height: 44px;
+  }
+  
+  .success-icon {
+    font-size: 36px;
+  }
+  
+  .success-text h3 {
+    font-size: 16px;
+  }
+  
+  .success-text p {
+    font-size: 13px;
+  }
 }
-</style>
+</script>
 
 <style scoped src="./styles/auth-styles.css"></style>
