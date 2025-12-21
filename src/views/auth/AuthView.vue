@@ -638,12 +638,13 @@ onUnmounted(() => {
 
 <style scoped>
 .auth-form-wrapper {
-  min-height: 240px; /* 减小高度，因为移除了全局提示区域 */
+  min-height: 260px; /* 固定表单区域高度 */
   position: relative;
   margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
-
-/* 移除全局状态提示区域的样式 */
 
 /* 移动端适配 */
 @media (max-width: 480px) {
@@ -653,7 +654,17 @@ onUnmounted(() => {
   }
   
   .auth-form-wrapper {
-    min-height: 220px; /* 移动端稍小的高度 */
+    min-height: 240px; /* 移动端稍小的高度 */
+  }
+  
+  .mode-tabs {
+    margin-bottom: 12px;
+    padding: 3px;
+  }
+  
+  .mode-tab {
+    padding: 8px;
+    font-size: 13px;
   }
 }
 </style>

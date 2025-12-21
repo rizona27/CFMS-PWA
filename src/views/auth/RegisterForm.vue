@@ -1,5 +1,5 @@
 <template>
-  <div class="auth-form">
+  <div class="auth-form register-form">
     <div class="form-content">
       <div class="auth-steps-container" :class="{ 'two-steps-active': step === 2 }">
         <div class="auth-step step-one" :class="{ 'slide-left': step === 2 }">
@@ -24,7 +24,6 @@
               @blur="() => { isUsernameFocused = false; handleInputBlur() }"
             />
             <div class="input-actions">
-              <!-- 用户名状态指示器 -->
               <div v-if="usernameStatus === 'available'" class="username-status-indicator available">
                 ✓
               </div>
@@ -161,7 +160,6 @@
               @blur="() => { isEmailFocused = false; handleInputBlur() }"
             />
             <div class="input-actions">
-              <!-- 邮箱状态指示器 -->
               <div v-if="emailStatus === 'available'" class="email-status-indicator available">
                 ✓
               </div>
@@ -218,7 +216,6 @@
         </div>
       </div>
       
-      <!-- 统一错误提示区域 -->
       <div class="form-error-area" :class="{ 'has-error': attempts > 0 && attempts < 3 }">
         <div v-if="attempts > 0 && attempts < 3" class="attempt-hint">
           <span class="hint-text">注册失败 {{ attempts }} 次，{{ 3 - attempts }} 次后将需要验证码</span>
@@ -268,6 +265,7 @@
 </template>
 
 <script setup lang="ts">
+import './styles/auth-styles.css'
 import { ref, computed, reactive, watch } from 'vue'
 
 interface Props {
@@ -301,8 +299,8 @@ const isUsernameFocused = ref(false)
 const isPasswordFocused = ref(false)
 const isConfirmPasswordFocused = ref(false)
 const isEmailFocused = ref(false)
-const usernameStatus = ref('') // 'available' | 'taken' | ''
-const emailStatus = ref('') // 'available' | 'taken' | ''
+const usernameStatus = ref('')
+const emailStatus = ref('')
 
 const form = reactive({
   username: '',
@@ -437,10 +435,8 @@ const handleCaptchaInput = () => {
   emit('clear-global-error')
 }
 
-// 用户名存在性检查
 watch(() => form.username, (newUsername) => {
   if (newUsername && newUsername.length >= 3 && newUsername.length <= 10 && /^[a-zA-Z0-9_]+$/.test(newUsername)) {
-    // 延迟检查，避免频繁请求
     const timer = setTimeout(() => {
       emit('check-username', newUsername)
     }, 500)
@@ -451,10 +447,8 @@ watch(() => form.username, (newUsername) => {
   emit('clear-global-error')
 })
 
-// 邮箱存在性检查
 watch(() => form.email, (newEmail) => {
   if (newEmail && validateEmailFormat(newEmail)) {
-    // 延迟检查，避免频繁请求
     const timer = setTimeout(() => {
       emit('check-email', newEmail)
     }, 500)
@@ -465,7 +459,6 @@ watch(() => form.email, (newEmail) => {
   emit('clear-global-error')
 })
 
-// 接收用户名检查结果
 const handleUsernameCheckResult = (result: {exists?: boolean, message?: string}) => {
   if (result.exists === true) {
     usernameStatus.value = 'taken'
@@ -476,7 +469,6 @@ const handleUsernameCheckResult = (result: {exists?: boolean, message?: string})
   }
 }
 
-// 接收邮箱检查结果
 const handleEmailCheckResult = (result: {exists?: boolean, message?: string}) => {
   if (result.exists === true) {
     emailStatus.value = 'taken'
@@ -487,7 +479,6 @@ const handleEmailCheckResult = (result: {exists?: boolean, message?: string}) =>
   }
 }
 
-// 暴露方法给父组件
 defineExpose({
   handleUsernameCheckResult,
   handleEmailCheckResult
@@ -495,435 +486,5 @@ defineExpose({
 </script>
 
 <style scoped>
-/* 统一表单容器样式 - 与登录页保持一致 */
-.form-content {
-  position: relative;
-  padding: 10px 0;
-  min-height: 180px;
-  width: 100%;
-}
-
-.auth-steps-container {
-  position: relative;
-  min-height: 160px;
-  transition: min-height 0.3s ease;
-}
-
-/* 统一输入框组样式 - 与登录页完全一致 */
-.form-group.with-icon {
-  position: relative;
-  z-index: 1;
-  transition: all 0.3s ease;
-  margin-bottom: 16px;
-  border-radius: 8px;
-  overflow: visible;
-  border: 1px solid var(--border-color);
-  background-color: var(--input-bg);
-  height: 48px;
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-  width: 100%;
-}
-
-.form-group.with-icon.focused {
-  z-index: 10;
-  position: relative;
-  transform: translateZ(0);
-  box-shadow: 0 0 0 2px var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.form-group.with-icon.has-error.focused {
-  box-shadow: 0 0 0 2px var(--error-color);
-  border-color: var(--error-color);
-}
-
-.form-group.with-icon.has-success.focused {
-  box-shadow: 0 0 0 2px var(--success-color);
-  border-color: var(--success-color);
-}
-
-/* 统一输入框样式 */
-.icon-input {
-  flex: 1;
-  height: 100%;
-  padding: 0 12px;
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  color: var(--text-color);
-  outline: none;
-  box-sizing: border-box;
-  text-align: left;
-}
-
-.icon-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 100%;
-  flex-shrink: 0;
-}
-
-.input-actions {
-  display: flex;
-  align-items: center;
-  padding-right: 8px;
-  gap: 4px;
-}
-
-.clear-button, .password-toggle {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  transition: color 0.2s;
-  padding: 4px;
-  min-width: 24px;
-  min-height: 24px;
-}
-
-.clear-button:hover, .password-toggle:hover {
-  color: var(--text-color);
-}
-
-.auth-step.step-two {
-  display: none;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s ease;
-}
-
-.auth-step.step-two.active {
-  display: block;
-  visibility: visible;
-  opacity: 1;
-}
-
-.auth-step.step-two.slide-in {
-  display: block;
-}
-
-.auth-step.step-one.slide-left {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
-.auth-step {
-  transition: all 0.3s ease;
-}
-
-.auth-button-area {
-  margin-top: 0 !important;
-}
-
-/* 用户名状态指示器 */
-.username-status-indicator,
-.email-status-indicator {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  margin-right: 4px;
-}
-
-.username-status-indicator.available,
-.email-status-indicator.available {
-  background-color: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-}
-
-.username-status-indicator.taken,
-.email-status-indicator.taken {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-.theme-dark .username-status-indicator.available,
-.theme-dark .email-status-indicator.available {
-  background-color: rgba(52, 211, 153, 0.2);
-  color: #34d399;
-}
-
-.theme-dark .username-status-indicator.taken,
-.theme-dark .email-status-indicator.taken {
-  background-color: rgba(248, 113, 113, 0.2);
-  color: #f87171;
-}
-
-/* 统一错误提示区域 */
-.form-error-area {
-  height: 0;
-  overflow: hidden;
-  transition: height 0.3s ease;
-  margin-top: 4px;
-  margin-bottom: 8px;
-  width: 100%;
-}
-
-.form-error-area.has-error {
-  height: 40px;
-}
-
-.attempt-hint {
-  padding: 10px 12px;
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-radius: 6px;
-  font-size: 13px;
-  text-align: center;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  line-height: 1.4;
-  width: 100%;
-}
-
-.theme-dark .attempt-hint {
-  background-color: rgba(248, 113, 113, 0.1);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.3);
-}
-
-/* 验证码样式 */
-.captcha-group {
-  margin-top: 16px;
-}
-
-.captcha-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  width: 100%;
-}
-
-.captcha-input-group {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background-color: var(--input-bg);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  height: 48px;
-  box-sizing: border-box;
-}
-
-.captcha-image-container {
-  flex-shrink: 0;
-}
-
-.captcha-image {
-  width: 100px;
-  height: 48px;
-  border-radius: 6px;
-  overflow: hidden;
-  cursor: pointer;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-}
-
-.captcha-image:hover {
-  border-color: var(--primary-color);
-}
-
-.captcha-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.captcha-placeholder {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-/* 按钮区域统一 */
-.button-container {
-  width: 100%;
-  display: flex;
-  align-items: stretch;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.button-group {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  margin-top: 20px;
-}
-
-.button-group.single-button {
-  gap: 0;
-}
-
-.button-group.two-buttons {
-  display: flex;
-  gap: 12px;
-}
-
-.auth-button {
-  flex: 1;
-  height: 48px;
-  padding: 0 24px;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-sizing: border-box;
-  letter-spacing: 0.3px;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-  min-width: 0;
-}
-
-.back-button {
-  background: rgba(99, 102, 241, 0.08);
-  color: #6366f1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-}
-
-.gradient-button {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.theme-dark .back-button {
-  background: rgba(99, 102, 241, 0.12);
-  color: #a78bfa;
-  border: 1px solid rgba(167, 139, 250, 0.2);
-}
-
-.theme-dark .gradient-button {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
-}
-
-.auth-button:hover:not(:disabled),
-.back-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);
-}
-
-.gradient-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.3);
-}
-
-.theme-dark .gradient-button:hover:not(:disabled) {
-  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.4);
-}
-
-.auth-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.button-text {
-  position: relative;
-  z-index: 2;
-}
-
-.button-loading {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: inherit;
-  border-radius: inherit;
-}
-
-.loading-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s linear infinite;
-}
-
-.back-button .loading-spinner {
-  border-top-color: #6366f1;
-}
-
-.theme-dark .back-button .loading-spinner {
-  border-top-color: #a78bfa;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* 移动端适配 */
-@media (max-width: 480px) {
-  .form-group.with-icon {
-    height: 44px;
-  }
-  
-  .button-group.two-buttons {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 10px;
-  }
-  
-  .back-button {
-    min-width: auto;
-  }
-  
-  .gradient-button {
-    min-width: auto;
-  }
-  
-  .form-error-area.has-error {
-    height: 38px;
-  }
-  
-  .attempt-hint {
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-  
-  .captcha-row {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .captcha-image {
-    width: 100%;
-    height: 44px;
-  }
-  
-  .captcha-input-group {
-    width: 100%;
-  }
-}
-</script>
-
-<style scoped src="./styles/auth-styles.css"></style>
+/* 移除所有内部样式，使用统一的 auth-styles.css */
+</style>

@@ -383,20 +383,15 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.form-group.with-icon {
-  position: relative;
-  z-index: 1;
-  transition: all 0.3s ease;
+/* 重置密码页面特殊样式 */
+.form-content {
+  min-height: 280px !important;
 }
 
-.form-group.with-icon.focused {
-  z-index: 10;
-  position: relative;
-  transform: translateZ(0);
-  box-shadow: 0 0 0 2px var(--primary-color);
-}
-
-.success-state {
+/* 成功和错误状态页面 */
+.success-state,
+.error-state,
+.loading-state {
   text-align: center;
   padding: 40px 20px;
 }
@@ -408,100 +403,90 @@ onMounted(async () => {
 
 .success-text h3 {
   margin: 0 0 10px 0;
-  color: #10b981;
+  color: var(--success-color);
 }
 
 .success-text p {
   margin: 8px 0;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .success-text .tips {
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   margin-top: 15px;
 }
 
-.theme-dark .success-text h3 {
-  color: #34d399;
+.error-state .error-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+  color: var(--error-color);
 }
 
-.theme-dark .success-text p {
-  color: #cbd5e1;
+.error-text h3 {
+  margin: 0 0 12px 0;
+  color: var(--error-color);
 }
 
-.theme-dark .success-text .tips {
-  color: #94a3b8;
+.error-text p {
+  margin: 0 0 16px 0;
+  color: var(--text-secondary);
 }
 
-.success-state .actions {
+.actions {
   margin-top: 30px;
 }
 
-/* 全局状态提示区域 */
-.status-hint-area {
+.loading-state .loading-spinner.large {
+  width: 40px;
   height: 40px;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin: 0 auto 20px;
+  border: 3px solid var(--border-primary);
+  border-top-color: var(--primary-color);
+  animation: spin 1s linear infinite;
 }
 
-.global-error-message {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  text-align: center;
-  width: 100%;
-}
-
-.global-success-message {
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  text-align: center;
-  width: 100%;
-}
-
-.theme-dark .global-error-message {
-  background-color: rgba(248, 113, 113, 0.1);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.3);
-}
-
-.theme-dark .global-success-message {
-  background-color: rgba(52, 211, 153, 0.1);
-  color: #34d399;
-  border-color: rgba(52, 211, 153, 0.3);
+.loading-state p {
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 /* 移动端适配 */
 @media (max-width: 480px) {
-  .button-group.two-buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 12px;
-    width: 100%;
-  }
-  
-  .back-button, .gradient-button {
-    flex: 1;
-    min-width: auto;
-  }
-  
   .form-content {
-    min-height: 240px;
+    min-height: 240px !important;
   }
   
-  .status-hint-area {
-    height: 36px;
-    margin-bottom: 12px;
+  .success-state,
+  .error-state,
+  .loading-state {
+    padding: 30px 16px;
+  }
+  
+  .success-icon,
+  .error-icon {
+    font-size: 36px;
+    margin-bottom: 16px;
+  }
+  
+  .success-text h3,
+  .error-text h3 {
+    font-size: 16px;
+  }
+  
+  .success-text p,
+  .error-text p {
+    font-size: 13px;
+  }
+  
+  .actions {
+    margin-top: 20px;
+  }
+  
+  .loading-state .loading-spinner.large {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 16px;
   }
 }
 </style>
