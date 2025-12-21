@@ -1339,3 +1339,157 @@ body, .auth-form, .auth-card, .auth-button, .icon-input {
     display: none;
   }
 }
+
+/* ================= 统一表单布局 ================= */
+/* 为所有表单内容区域添加统一的flex布局 */
+.auth-form .form-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px; /* 统一最小高度 */
+  position: relative;
+  width: 100%;
+  flex: 1;
+}
+
+/* 统一错误提示区域 */
+.form-error-area-simple {
+  height: 20px;
+  margin: 4px 0 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  overflow: hidden;
+  flex-shrink: 0; /* 防止被压缩 */
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.error-text-simple {
+  color: var(--error-color);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.success-text-simple {
+  color: var(--success-color);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.error-text-simple svg,
+.success-text-simple svg {
+  flex-shrink: 0;
+}
+
+/* 统一按钮区域 */
+.form-actions {
+  margin-top: auto; /* 关键：自动推到底部 */
+  padding-top: 12px;
+  width: 100%;
+  flex-shrink: 0; /* 防止被压缩 */
+}
+
+.auth-button {
+  height: 44px;
+  width: 100%;
+}
+
+.button-group.two-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 12px;
+  width: 100%;
+  height: var(--button-height); /* 强制高度统一 */
+}
+
+.button-group.single-button {
+  width: 100%;
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+  .form-error-area-simple {
+    height: 20px;
+    margin: 4px 0 8px 0;
+  }
+  
+  .error-text-simple,
+  .success-text-simple {
+    font-size: 11px;
+  }
+  
+  .error-text-simple svg,
+  .success-text-simple svg {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .button-group.two-buttons {
+    gap: 10px;
+  }
+}
+
+/* 为登录页输入容器设置统一高度 */
+.auth-form .auth-steps-container:not(.register-form .auth-steps-container) {
+  height: 128px; /* 确保登录页也是128px */
+  margin-bottom: 4px;
+  position: relative;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+/* ================= 强制统一所有表单高度 ================= */
+/* 为登录表单设置固定高度容器 */
+.auth-form:not(.register-form) .auth-steps-container {
+  height: 112px; /* 登录表单：2个输入框 + 1个间距 */
+  margin-bottom: 4px;
+  position: relative;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+/* 为登录表单设置统一的flex布局 */
+.auth-form:not(.register-form) .form-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  position: relative;
+  width: 100%;
+  flex: 1;
+}
+
+/* 强制所有表单的按钮区域在底部对齐 */
+.auth-form .form-actions {
+  margin-top: auto;
+  padding-top: 0;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+/* 确保登录表单单按钮高度与注册表单双按钮总高度一致 */
+.auth-form .button-group.single-button {
+  height: 44px; /* 与注册表单的双按钮容器高度一致 */
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+  .auth-form:not(.register-form) .auth-steps-container {
+    height: 110px; /* 移动端稍小 */
+    margin-bottom: 4px;
+  }
+  
+  .auth-form .form-content {
+    min-height: 180px; /* 移动端稍小 */
+  }
+}

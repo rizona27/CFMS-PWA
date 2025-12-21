@@ -19,13 +19,22 @@
             <h1 class="auth-title">CFMS · 重置密码</h1>
           </div>
           
-          <!-- 全局状态提示区域 -->
-          <div class="status-hint-area">
-            <div v-if="globalError" class="global-error-message">
-              {{ globalError }}
+          <!-- 统一状态提示区域 -->
+          <div class="form-error-area-simple">
+            <div v-if="globalError" class="error-text-simple">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>{{ globalError }}</span>
             </div>
-            <div v-if="globalSuccess" class="global-success-message">
-              {{ globalSuccess }}
+            <div v-if="globalSuccess" class="success-text-simple">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>{{ globalSuccess }}</span>
             </div>
           </div>
           
@@ -156,28 +165,27 @@
                 </div>
               </div>
               
-              <div class="auth-button-area">
-                <div class="button-container">
-                  <div class="button-group two-buttons">
-                    <button
-                      type="button"
-                      class="auth-button back-button"
-                      @click="goToAuth"
-                    >
-                      <span class="button-text">返回</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="auth-button gradient-button"
-                      @click="handleReset"
-                      :disabled="isLoading || !isFormValid"
-                    >
-                      <span class="button-text">{{ isLoading ? '重置中...' : '重置密码' }}</span>
-                      <div v-if="isLoading" class="button-loading">
-                        <div class="loading-spinner"></div>
-                      </div>
-                    </button>
-                  </div>
+              <!-- 统一按钮区域 -->
+              <div class="form-actions">
+                <div class="button-group two-buttons">
+                  <button
+                    type="button"
+                    class="auth-button back-button"
+                    @click="goToAuth"
+                  >
+                    <span class="button-text">返回</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="auth-button gradient-button"
+                    @click="handleReset"
+                    :disabled="isLoading || !isFormValid"
+                  >
+                    <span class="button-text">{{ isLoading ? '重置中...' : '重置密码' }}</span>
+                    <div v-if="isLoading" class="button-loading">
+                      <div class="loading-spinner"></div>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
@@ -204,7 +212,7 @@
               <p>您的密码已成功重置</p>
               <p class="tips">即将跳转到登录页面...</p>
             </div>
-            <div class="actions">
+            <div class="form-actions">
               <button class="auth-button gradient-button" @click="goToAuth">
                 立即登录
               </button>
@@ -221,7 +229,7 @@
             <div class="error-text">
               <h3>重置链接无效</h3>
               <p>{{ validationError }}</p>
-              <div class="actions">
+              <div class="form-actions">
                 <button class="auth-button gradient-button" @click="goToAuth">
                   返回登录页面
                 </button>
@@ -540,14 +548,6 @@ onMounted(async () => {
   margin-right: auto;
 }
 
-.actions {
-  margin-top: 24px;
-}
-
-.actions .auth-button {
-  min-width: 160px;
-}
-
 .loading-state .loading-spinner.large {
   width: 40px;
   height: 40px;
@@ -620,14 +620,6 @@ onMounted(async () => {
     padding-top: 10px;
   }
   
-  .actions {
-    margin-top: 20px;
-  }
-  
-  .actions .auth-button {
-    min-width: 140px;
-  }
-  
   .loading-state .loading-spinner.large {
     width: 32px;
     height: 32px;
@@ -678,43 +670,57 @@ onMounted(async () => {
   border-color: var(--border-primary);
 }
 
-/* 状态提示区域 */
-.status-hint-area {
-  margin-bottom: var(--form-spacing);
-  min-height: 36px;
+/* 统一状态提示区域 */
+.form-error-area-simple {
+  height: 20px;
+  margin: 4px 0 8px 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: slideDown 0.2s ease;
+  font-size: 12px;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.global-error-message {
-  background: var(--error-light);
+.error-text-simple {
   color: var(--error-color);
-  border: 1px solid var(--border-error);
-  padding: 8px 12px;
-  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
-  text-align: center;
-  width: 100%;
-  backdrop-filter: blur(8px);
+  font-weight: 500;
 }
 
-.global-success-message {
-  background: var(--success-light);
+.success-text-simple {
   color: var(--success-color);
-  border: 1px solid var(--border-success);
-  padding: 8px 12px;
-  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
-  text-align: center;
+  font-weight: 500;
+}
+
+.error-text-simple svg,
+.success-text-simple svg {
+  flex-shrink: 0;
+}
+
+/* 统一按钮区域 */
+.form-actions {
+  margin-top: 12px;
   width: 100%;
-  backdrop-filter: blur(8px);
+}
+
+.auth-button {
+  height: 44px;
+  width: 100%;
+}
+
+.button-group.two-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 12px;
+  width: 100%;
 }
 
 /* 链接区域 */
@@ -757,6 +763,11 @@ onMounted(async () => {
 /* 加载动画 */
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
 

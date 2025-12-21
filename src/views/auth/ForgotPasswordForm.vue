@@ -102,41 +102,50 @@
       </div>
     </div>
     
-    <div class="auth-button-area">
-      <div v-if="step === 1" class="button-container">
-        <div class="button-group two-buttons">
-          <button
-            type="button"
-            class="auth-button back-button"
-            @click="$emit('back')"
-            :disabled="isLoading"
-          >
-            <span class="button-text">返回</span>
-          </button>
-          <button
-            type="button"
-            class="auth-button gradient-button"
-            @click="handleSubmit"
-            :disabled="isLoading || !isFormValid"
-          >
-            <span class="button-text">{{ isLoading ? '发送中...' : '发送重置链接' }}</span>
-            <div v-if="isLoading" class="button-loading">
-              <div class="loading-spinner"></div>
-            </div>
-          </button>
-        </div>
+    <!-- 统一错误提示区域 -->
+    <div class="form-error-area-simple" v-if="step === 1">
+      <div v-if="error" class="error-text-simple">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>{{ error }}</span>
+      </div>
+    </div>
+    
+    <!-- 统一按钮区域 -->
+    <div class="form-actions">
+      <div v-if="step === 1" class="button-group two-buttons">
+        <button
+          type="button"
+          class="auth-button back-button"
+          @click="$emit('back')"
+          :disabled="isLoading"
+        >
+          <span class="button-text">返回</span>
+        </button>
+        <button
+          type="button"
+          class="auth-button gradient-button"
+          @click="handleSubmit"
+          :disabled="isLoading || !isFormValid"
+        >
+          <span class="button-text">{{ isLoading ? '发送中...' : '发送重置链接' }}</span>
+          <div v-if="isLoading" class="button-loading">
+            <div class="loading-spinner"></div>
+          </div>
+        </button>
       </div>
       
-      <div v-else class="button-container">
-        <div class="button-group single-button">
-          <button
-            type="button"
-            class="auth-button gradient-button"
-            @click="$emit('back')"
-          >
-            <span class="button-text">返回登录</span>
-          </button>
-        </div>
+      <div v-else class="button-group single-button">
+        <button
+          type="button"
+          class="auth-button gradient-button"
+          @click="$emit('back')"
+        >
+          <span class="button-text">返回登录</span>
+        </button>
       </div>
     </div>
   </div>
@@ -166,6 +175,7 @@ const emit = defineEmits<Emits>()
 const step = ref(1)
 const isUsernameFocused = ref(false)
 const isEmailFocused = ref(false)
+const error = ref('')
 
 const form = reactive({
   username: '',
@@ -248,6 +258,7 @@ const handleSubmit = async () => {
     step.value = 2
   } catch (err: any) {
     console.error('提交失败:', err)
+    error.value = err.message || '发送失败，请重试'
   }
 }
 </script>
@@ -303,6 +314,52 @@ const handleSubmit = async () => {
   margin: 4px 0;
 }
 
+/* 统一错误提示 */
+.form-error-area-simple {
+  height: 20px;
+  margin: 4px 0 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.error-text-simple {
+  color: var(--error-color);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.error-text-simple svg {
+  flex-shrink: 0;
+}
+
+/* 统一按钮区域 */
+.form-actions {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.auth-button {
+  height: 44px;
+  width: 100%;
+}
+
+.button-group.two-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.button-group.single-button {
+  width: 100%;
+}
+
 /* 移动端适配 */
 @media (max-width: 480px) {
   .success-message {
@@ -329,6 +386,15 @@ const handleSubmit = async () => {
   }
   
   .success-text .tips p {
+    font-size: 11px;
+  }
+  
+  .form-error-area-simple {
+    height: 20px;
+    margin: 2px 0 6px 0;
+  }
+  
+  .error-text-simple {
     font-size: 11px;
   }
   

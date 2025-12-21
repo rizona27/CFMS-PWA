@@ -1,12 +1,12 @@
 <template>
   <div class="auth-form register-form">
     <div class="form-content">
-      <div class="auth-steps-container" :class="{ 'two-steps-active': step === 2 }">
+      <div class="auth-steps-container" :class="{ 'two-steps-active': step === 2, 'has-captcha': showCaptcha && attempts >= 3 }">
         <!-- 第一步：用户名和密码 -->
         <div class="auth-step step-one" :class="{ 'slide-left': step === 2 }">
           <div class="form-group with-icon" :class="{
-            'has-error': errors.username,
-            'has-success': form.username && !errors.username && usernameStatus !== 'taken',
+            'has-error': usernameStatus === 'taken',
+            'has-success': form.username && usernameStatus === 'available',
             'focused': isUsernameFocused
           }">
             <div class="icon-container">
@@ -109,8 +109,8 @@
         <!-- 第二步：确认密码和邮箱 -->
         <div class="auth-step step-two" :class="{ 'slide-in': step === 2, 'active': step === 2 }">
           <div class="form-group with-icon password-group" :class="{
-            'has-error': errors.confirmPassword,
-            'has-success': form.confirmPassword && !errors.confirmPassword,
+            'has-error': form.confirmPassword && form.password !== form.confirmPassword,
+            'has-success': form.confirmPassword && form.password === form.confirmPassword,
             'focused': isConfirmPasswordFocused
           }">
             <div class="icon-container">
@@ -162,13 +162,13 @@
           </div>
           
           <div class="form-group with-icon" :class="{
-            'has-error': errors.email,
-            'has-success': form.email && !errors.email && emailStatus !== 'taken',
+            'has-error': emailStatus === 'taken',
+            'has-success': form.email && emailStatus === 'available',
             'focused': isEmailFocused
           }">
             <div class="icon-container">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-11.9-2 2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 <polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
@@ -257,49 +257,60 @@
         </div>
       </div>
       
-      <div class="form-error-area" :class="{ 'has-error': attempts > 0 && attempts < 3 }">
-        <div v-if="attempts > 0 && attempts < 3" class="attempt-hint">
-          <span class="hint-text">注册失败 {{ attempts }} 次，{{ 3 - attempts }} 次后将需要验证码</span>
+      <!-- 统一错误提示区域 -->
+      <div class="form-error-area-simple" :class="{ 'has-attempts': attempts > 0 && attempts < 3 }">
+        <div v-if="attempts > 0 && attempts < 3" class="error-text-simple">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          注册失败 {{ attempts }} 次，{{ 3 - attempts }} 次后将需要验证码
+        </div>
+        <div v-if="showPasswordMismatch && form.confirmPassword && form.password !== form.confirmPassword" class="error-text-simple">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          两次输入的密码不一致
         </div>
       </div>
     </div>
     
-    <div class="auth-button-area">
-      <div v-if="step === 1" class="button-container">
-        <div class="button-group single-button">
-          <button
-            type="button"
-            class="auth-button gradient-button"
-            @click="handleNextStep"
-            :disabled="isLoading || hasStep1Errors || !isStep1Valid || usernameStatus === 'taken'"
-          >
-            <span class="button-text">下一步</span>
-          </button>
-        </div>
+    <!-- 统一按钮区域 -->
+    <div class="form-actions">
+      <div v-if="step === 1">
+        <button
+          type="button"
+          class="auth-button gradient-button"
+          @click="handleNextStep"
+          :disabled="isLoading || hasStep1Errors || !isStep1Valid || usernameStatus === 'taken'"
+        >
+          <span class="button-text">下一步</span>
+        </button>
       </div>
       
-      <div v-else class="button-container">
-        <div class="button-group two-buttons">
-          <button
-            type="button"
-            class="auth-button back-button"
-            @click="step = 1"
-            :disabled="isLoading"
-          >
-            <span class="button-text">返回</span>
-          </button>
-          <button
-            type="button"
-            class="auth-button gradient-button"
-            @click="$emit('submit', form)"
-            :disabled="isLoading || hasStep2Errors || !isStep2Valid || emailStatus === 'taken'"
-          >
-            <span class="button-text">{{ isLoading ? '注册中...' : '注册' }}</span>
-            <div v-if="isLoading" class="button-loading">
-              <div class="loading-spinner"></div>
-            </div>
-          </button>
-        </div>
+      <div v-else class="button-group two-buttons">
+        <button
+          type="button"
+          class="auth-button back-button"
+          @click="step = 1"
+          :disabled="isLoading"
+        >
+          <span class="button-text">返回</span>
+        </button>
+        <button
+          type="button"
+          class="auth-button gradient-button"
+          @click="$emit('submit', form)"
+          :disabled="isLoading || hasStep2Errors || !isStep2Valid || emailStatus === 'taken' || showPasswordMismatch"
+        >
+          <span class="button-text">{{ isLoading ? '注册中...' : '注册' }}</span>
+          <div v-if="isLoading" class="button-loading">
+            <div class="loading-spinner"></div>
+          </div>
+        </button>
       </div>
     </div>
   </div>
@@ -342,6 +353,7 @@ const isConfirmPasswordFocused = ref(false)
 const isEmailFocused = ref(false)
 const usernameStatus = ref('')
 const emailStatus = ref('')
+const showPasswordMismatch = ref(false)
 
 const form = reactive({
   username: '',
@@ -420,12 +432,16 @@ const validatePassword = () => {
 const validateConfirmPassword = () => {
   const confirm = form.confirmPassword
   const password = form.password
+  
   if (!confirm) {
     errors.confirmPassword = ''
+    showPasswordMismatch.value = false
   } else if (password !== confirm) {
-    errors.confirmPassword = ''
+    errors.confirmPassword = '密码不一致'
+    showPasswordMismatch.value = true
   } else {
     errors.confirmPassword = ''
+    showPasswordMismatch.value = false
   }
   emit('clear-global-error')
 }
@@ -500,6 +516,20 @@ watch(() => form.email, (newEmail) => {
   emit('clear-global-error')
 })
 
+watch(() => form.confirmPassword, (newConfirm) => {
+  if (newConfirm && form.password) {
+    validateConfirmPassword()
+  } else {
+    showPasswordMismatch.value = false
+  }
+})
+
+watch(() => form.password, () => {
+  if (form.confirmPassword) {
+    validateConfirmPassword()
+  }
+})
+
 const handleUsernameCheckResult = (result: {exists?: boolean, message?: string}) => {
   if (result.exists === true) {
     usernameStatus.value = 'taken'
@@ -528,8 +558,76 @@ defineExpose({
 
 <style scoped>
 /* 注册表单特殊样式 */
+.register-form .form-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 240px; /* 增加最小高度以容纳所有状态 */
+  position: relative;
+  width: 100%;
+  flex: 1;
+}
+
+/* 统一注册页步进容器高度，使用固定高度确保对齐 */
+.register-form .auth-steps-container {
+  position: relative;
+  height: 176px; /* 固定为第二步的高度，确保空间足够 */
+  margin-bottom: 4px;
+  transition: height 0.3s ease;
+  overflow: visible;
+  flex-shrink: 0; /* 防止被压缩 */
+}
+
 .register-form .auth-steps-container.two-steps-active {
-  min-height: calc(var(--input-height) * 2 + var(--form-spacing));
+  height: 176px; /* 保持相同高度 */
+}
+
+/* 步骤容器统一定位 */
+.auth-step {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-spacing, 16px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 第一步初始状态 - 垂直居中显示 */
+.auth-step.step-one {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+  z-index: 2;
+  display: flex;
+  justify-content: center; /* 垂直居中 */
+}
+
+/* 第一步离开动画 */
+.auth-step.step-one.slide-left {
+  transform: translateX(-100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 第二步初始状态 - 垂直居中显示 */
+.auth-step.step-two {
+  display: flex; /* 覆盖原有的 display: none */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(100%);
+  z-index: 1;
+  justify-content: center; /* 垂直居中 */
+}
+
+/* 第二步进入动画 */
+.auth-step.step-two.slide-in {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+  z-index: 2;
 }
 
 /* 状态指示器样式 */
@@ -563,18 +661,89 @@ defineExpose({
   height: 10px;
 }
 
-/* 按钮组特殊布局 */
-.register-form .button-group.two-buttons {
+/* 统一错误提示 */
+.form-error-area-simple {
+  height: 24px;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  flex-shrink: 0; /* 防止被压缩 */
+  animation: fadeIn 0.2s ease;
+}
+
+.form-error-area-simple.has-attempts {
+  height: 24px; /* 固定高度 */
+}
+
+.error-text-simple {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+  padding: 2px 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.form-error-area-simple.has-attempts .error-text-simple {
+  color: var(--warning-color);
+}
+
+.error-text-simple {
+  color: var(--error-color);
+}
+
+.error-text-simple svg {
+  flex-shrink: 0;
+}
+
+/* 统一按钮区域 - 关键修改 */
+.form-actions {
+  margin-top: auto; /* 关键：自动推到底部 */
+  padding-top: 0; /* 移除顶部padding */
+  width: 100%;
+  flex-shrink: 0; /* 防止被压缩 */
+}
+
+.auth-button {
+  height: 44px;
+  width: 100%;
+}
+
+.button-group.two-buttons {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: var(--form-spacing);
+  grid-template-columns: 1fr 1.5fr;
+  gap: 12px;
+  width: 100%;
+  height: 44px; /* 固定高度 */
 }
 
 /* 移动端适配 */
 @media (max-width: 480px) {
+  .register-form .auth-steps-container {
+    height: 176px; /* 保持相同高度 */
+    margin-bottom: 4px;
+  }
+  
+  .register-form .auth-steps-container.two-steps-active {
+    height: 176px; /* 保持相同高度 */
+  }
+  
+  .auth-step {
+    gap: 12px; /* 缩小输入框间距 */
+  }
+  
   .register-form .button-group.two-buttons {
     grid-template-columns: 1fr 1.5fr;
     gap: 10px;
+    height: 44px; /* 固定高度 */
   }
   
   .username-status-indicator,
@@ -587,6 +756,25 @@ defineExpose({
   .email-status-indicator svg {
     width: 8px;
     height: 8px;
+  }
+  
+  .error-text-simple {
+    font-size: 11px;
+  }
+  
+  .error-text-simple svg {
+    width: 10px;
+    height: 10px;
+    margin-right: 3px;
+  }
+  
+  .form-error-area-simple {
+    height: 20px;
+    margin: 4px 0;
+  }
+  
+  .form-error-area-simple.has-attempts {
+    height: 20px;
   }
   
   /* 修复移动端输入框光标位置 */
@@ -602,37 +790,25 @@ defineExpose({
   .form-group.with-icon {
     align-items: center;
   }
-}
-
-/* 平板适配 */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .register-form .button-group.two-buttons {
-    grid-template-columns: 1fr 2fr;
+  
+  /* 当需要显示验证码时，增加容器高度 */
+  .register-form .auth-steps-container.two-steps-active.has-captcha {
+    height: 220px; /* 增加高度以容纳验证码 */
+  }
+  
+  .form-actions {
+    padding-top: 0;
   }
 }
 
-/* 步骤切换动画 */
-.auth-step.step-one.slide-left {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
-.auth-step.step-two {
+/* 移除原来的错误提示样式 */
+.form-error-area,
+.attempt-hint {
   display: none;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  opacity: 0;
-  visibility: hidden;
 }
 
-.auth-step.step-two.slide-in {
-  display: block;
-}
-
-.auth-step.step-two.active {
-  visibility: visible;
-  opacity: 1;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
