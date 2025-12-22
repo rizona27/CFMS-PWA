@@ -189,51 +189,46 @@
                 </div>
               </div>
             </div>
-            
-            <div class="hint-area">
-              <div class="mode-switch">
-                <p>
-                  记起密码了？
-                  <a href="#" @click.prevent="goToAuth">返回登录</a>
-                </p>
-              </div>
-            </div>
           </div>
           
           <div v-else-if="success" class="success-state">
-            <div class="success-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
             <div class="success-text">
-              <h3>密码重置成功</h3>
-              <p>您的密码已成功重置</p>
-              <p class="tips">即将跳转到登录页面...</p>
+              <div class="success-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h3 class="success-title">密码重置成功</h3>
+              <p class="success-message">您的密码已成功重置</p>
+              <div class="tips">
+                <p>将在 <span class="countdown-number">{{ countdown }}</span> 秒后自动跳转到登录页面</p>
+              </div>
             </div>
+            
             <div class="form-actions">
-              <button class="auth-button gradient-button" @click="goToAuth">
+              <button class="auth-button gradient-button single-button" @click="goToAuth">
                 立即登录
               </button>
             </div>
           </div>
           
           <div v-else-if="validationError" class="error-state">
-            <div class="error-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
             <div class="error-text">
-              <h3>重置链接无效</h3>
-              <p>{{ validationError }}</p>
-              <div class="form-actions">
-                <button class="auth-button gradient-button" @click="goToAuth">
-                  返回登录页面
-                </button>
+              <div class="error-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+                  <line x1="8" y1="8" x2="16" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="16" y1="8" x2="8" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
               </div>
+              <p>{{ validationError }}</p>
+            </div>
+            
+            <div class="form-actions">
+              <button class="auth-button gradient-button single-button" @click="goToAuth">
+                返回登录页面
+              </button>
             </div>
           </div>
           
@@ -252,7 +247,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/authStore'
 import { getCopyright } from '../../Version'
@@ -275,6 +270,8 @@ const isPasswordFocused = ref(false)
 const isConfirmPasswordFocused = ref(false)
 const passwordError = ref(false)
 const confirmPasswordError = ref(false)
+const countdown = ref(5)
+const countdownTimer = ref<number | null>(null)
 
 const form = reactive({
   password: '',
@@ -333,6 +330,24 @@ const goToAuth = () => {
   router.push('/auth')
 }
 
+const startCountdown = () => {
+  if (countdownTimer.value) {
+    clearInterval(countdownTimer.value)
+  }
+  
+  countdownTimer.value = window.setInterval(() => {
+    if (countdown.value > 1) {
+      countdown.value--
+    } else {
+      if (countdownTimer.value) {
+        clearInterval(countdownTimer.value)
+        countdownTimer.value = null
+      }
+      goToAuth()
+    }
+  }, 1000)
+}
+
 const handleReset = async () => {
   validatePassword()
   validateConfirmPassword()
@@ -361,10 +376,8 @@ const handleReset = async () => {
     
     if (successResult) {
       success.value = true
-      globalSuccess.value = '密码重置成功！正在跳转到登录页面...'
-      setTimeout(() => {
-        router.push('/auth')
-      }, 2000)
+      globalSuccess.value = '密码重置成功！'
+      startCountdown()
     } else {
       globalError.value = authStore.error || '密码重置失败'
     }
@@ -376,6 +389,14 @@ const handleReset = async () => {
 }
 
 onMounted(async () => {
+  // 检测系统主题
+  const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  systemTheme.value = darkModeMediaQuery.matches ? 'dark' : 'light'
+  
+  darkModeMediaQuery.addEventListener('change', (e) => {
+    systemTheme.value = e.matches ? 'dark' : 'light'
+  })
+  
   token.value = route.query.token as string || ''
   
   if (!token.value) {
@@ -397,6 +418,13 @@ onMounted(async () => {
   } catch (err: any) {
     validationError.value = '验证失败：' + (err.message || '未知错误')
     isValidating.value = false
+  }
+})
+
+onUnmounted(() => {
+  if (countdownTimer.value) {
+    clearInterval(countdownTimer.value)
+    countdownTimer.value = null
   }
 })
 </script>
@@ -457,12 +485,12 @@ onMounted(async () => {
   color: var(--text-secondary);
 }
 
-/* 成功和错误状态页面 */
+/* 成功和错误状态页面 - 重新设计 */
 .success-state,
 .error-state,
 .loading-state {
   text-align: center;
-  padding: 32px 20px;
+  padding: 32px 20px 24px;
   animation: fadeIn 0.3s ease;
 }
 
@@ -471,8 +499,14 @@ onMounted(async () => {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.success-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 .success-icon {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   color: var(--success-color);
 }
 
@@ -483,30 +517,52 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-.success-text h3 {
-  margin: 0 0 12px 0;
+.success-title {
+  margin: 0 0 8px 0;
   color: var(--success-color);
   font-size: 18px;
   font-weight: 600;
 }
 
-.success-text p {
-  margin: 6px 0;
+.success-message {
+  margin: 0 0 20px 0;
   color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.4;
 }
 
 .success-text .tips {
-  font-size: 13px;
-  color: var(--text-tertiary);
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
   border-top: 1px solid var(--border-primary);
 }
 
-.error-state .error-icon {
-  margin-bottom: 20px;
+.success-text .tips p {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 6px 0;
+}
+
+.countdown-number {
+  font-weight: 600;
+  color: var(--primary-color);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* 修改后的错误状态样式 - 增加红色图标 */
+.error-state {
+  text-align: center;
+  padding: 32px 20px 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+.error-icon {
+  margin-bottom: 16px;
   color: var(--error-color);
 }
 
@@ -517,18 +573,11 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-.error-text h3 {
-  margin: 0 0 12px 0;
-  color: var(--error-color);
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.error-text p {
-  margin: 0 0 20px 0;
+.error-state .error-text p {
+  margin: 0 0 24px 0;
   color: var(--text-secondary);
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
   max-width: 320px;
   margin-left: auto;
   margin-right: auto;
@@ -547,6 +596,18 @@ onMounted(async () => {
   color: var(--text-secondary);
   margin: 0;
   font-size: 14px;
+}
+
+/* 按钮组样式 */
+.button-group.two-buttons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.button-group.two-buttons .auth-button {
+  flex: 1;
+  height: 44px;
 }
 
 /* 移动端适配 */
@@ -581,7 +642,7 @@ onMounted(async () => {
   .success-state,
   .error-state,
   .loading-state {
-    padding: 24px 16px;
+    padding: 20px 16px 16px;
   }
   
   .success-icon svg,
@@ -590,20 +651,17 @@ onMounted(async () => {
     height: 40px;
   }
   
-  .success-text h3,
-  .error-text h3 {
+  .success-title {
     font-size: 16px;
   }
   
-  .success-text p,
-  .error-text p {
+  .success-message,
+  .error-state .error-text p {
     font-size: 13px;
   }
   
-  .success-text .tips {
+  .success-text .tips p {
     font-size: 12px;
-    margin-top: 14px;
-    padding-top: 10px;
   }
   
   .loading-state .loading-spinner.large {
@@ -613,6 +671,15 @@ onMounted(async () => {
   }
   
   .loading-state p {
+    font-size: 13px;
+  }
+  
+  .button-group.two-buttons {
+    gap: 8px;
+  }
+  
+  .button-group.two-buttons .auth-button {
+    height: 44px;
     font-size: 13px;
   }
   
@@ -636,7 +703,7 @@ onMounted(async () => {
   .success-state,
   .error-state,
   .loading-state {
-    padding: 28px 24px;
+    padding: 28px 24px 20px;
   }
 }
 
@@ -650,11 +717,456 @@ onMounted(async () => {
   background: rgba(99, 102, 241, 0.15);
 }
 
-.theme-dark .success-text .tips,
 .theme-dark .loading-state .loading-spinner.large {
-  border-top-color: var(--border-primary);
   border-color: var(--border-primary);
+}
+
+.theme-dark .success-text {
+  color: var(--text-secondary);
+}
+
+.theme-dark .success-text .tips {
+  border-top-color: var(--border-primary);
+}
+
+.theme-dark .success-text .tips p {
+  color: var(--text-tertiary);
 }
 </style>
 
-<style scoped src="./styles/auth-styles.css"></style>
+<style scoped>
+/* 添加基础主题样式 */
+.auth-view {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* 主题颜色定义 */
+.theme-light {
+  --primary-color: #6366f1;
+  --primary-light: rgba(99, 102, 241, 0.1);
+  --secondary-color: #8b5cf6;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --input-bg: rgba(255, 255, 255, 0.8);
+  --border-primary: #e5e7eb;
+  --border-focus: #6366f1;
+  --error-color: #ef4444;
+  --error-light: rgba(239, 68, 68, 0.1);
+  --success-color: #10b981;
+  --success-light: rgba(16, 185, 129, 0.1);
+  --warning-color: #f59e0b;
+  --info-color: #3b82f6;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.theme-dark {
+  --primary-color: #8b5cf6;
+  --primary-light: rgba(139, 92, 246, 0.15);
+  --secondary-color: #a78bfa;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --input-bg: rgba(31, 41, 55, 0.8);
+  --border-primary: #374151;
+  --border-focus: #8b5cf6;
+  --error-color: #f87171;
+  --error-light: rgba(248, 113, 113, 0.15);
+  --success-color: #34d399;
+  --success-light: rgba(52, 211, 153, 0.15);
+  --warning-color: #fbbf24;
+  --info-color: #60a5fa;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+/* 背景效果 */
+.background-fx {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.geometric-grid {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  background-image:
+    linear-gradient(var(--border-primary) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-primary) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.1;
+  transform: rotate(15deg) translate(-25%, -25%);
+  animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+  0% { transform: rotate(15deg) translate(-25%, -25%); }
+  100% { transform: rotate(15deg) translate(-15%, -15%); }
+}
+
+.floating-shapes {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.shape {
+  position: absolute;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  opacity: 0.1;
+  filter: blur(20px);
+  animation: float 15s infinite ease-in-out;
+}
+
+.shape-1 { width: 200px; height: 200px; top: 10%; left: 5%; animation-delay: 0s; }
+.shape-2 { width: 150px; height: 150px; top: 20%; right: 10%; animation-delay: -3s; }
+.shape-3 { width: 250px; height: 250px; bottom: 15%; left: 15%; animation-delay: -6s; }
+.shape-4 { width: 100px; height: 100px; bottom: 30%; right: 20%; animation-delay: -9s; }
+.shape-5 { width: 180px; height: 180px; top: 50%; left: 50%; transform: translate(-50%, -50%); animation-delay: -12s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+
+.gradient-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.05) 0%,
+    rgba(139, 92, 246, 0.05) 50%,
+    rgba(16, 185, 129, 0.05) 100%);
+}
+
+.auth-scroll-container {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.auth-card {
+  background: rgba(var(--bg-primary), 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(var(--border-primary), 0.2);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+}
+
+.fade-in-down {
+  animation: fadeInDown 0.6s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logo-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 表单通用样式 */
+.form-group {
+  position: relative;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.form-group.with-icon {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 0 12px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.form-group.with-icon.focused {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.form-group.with-icon.has-error {
+  border-color: var(--error-color);
+}
+
+.form-group.with-icon.has-success {
+  border-color: var(--success-color);
+}
+
+.icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.form-group.with-icon.focused .icon-container {
+  color: var(--primary-color);
+}
+
+.form-group.with-icon.has-error .icon-container {
+  color: var(--error-color);
+}
+
+.form-group.with-icon.has-success .icon-container {
+  color: var(--success-color);
+}
+
+.icon-input {
+  flex: 1;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+}
+
+.icon-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.clear-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.clear-button:hover {
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.password-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.password-toggle:hover {
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* 按钮样式 */
+.auth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  outline: none;
+}
+
+.auth-button.gradient-button {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.auth-button.gradient-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+}
+
+.auth-button.gradient-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth-button.gradient-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* 单一按钮样式 */
+.auth-button.single-button {
+  width: 100%;
+  height: 48px;
+}
+
+.back-button {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+}
+
+.back-button:hover:not(:disabled) {
+  background: var(--border-primary);
+  color: var(--text-primary);
+}
+
+.button-text {
+  position: relative;
+  z-index: 1;
+}
+
+.button-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: inherit;
+  border-radius: inherit;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 表单操作区域 */
+.form-actions {
+  margin-top: 12px;
+  width: 100%;
+}
+
+/* 页脚 */
+.auth-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.version-info {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+/* 成功/错误文本 */
+.success-text-simple {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--success-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.error-text-simple {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--error-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+</style>
