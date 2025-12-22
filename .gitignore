@@ -34,3 +34,6 @@ coverage
 
 # Vitest
 __screenshots__/
+dev-dist/registerSW.js
+dev-dist/sw.js
+dev-dist/workbox-ca84f546.js

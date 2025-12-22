@@ -40,126 +40,128 @@
           
           <div v-if="!isValidating && !validationError && !success">
             <div class="auth-form">
-              <div class="form-content" style="min-height: 240px">
-                <div class="auth-steps-container single-step-active">
-                  <div class="auth-step single-step">
-                    <div v-if="username" class="user-info">
-                      <div class="user-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </div>
-                      <div class="user-details">
-                        <div class="username">{{ username }}</div>
-                        <div class="hint">请输入您的新密码</div>
-                      </div>
+              <div class="form-content">
+                <!-- 用户信息区域 - 使用统一圆角框体 -->
+                <div v-if="username" class="user-info-container">
+                  <div class="user-info-header">
+                    <div class="user-avatar">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
                     </div>
-                    
-                    <div class="form-group with-icon password-group" :class="{
-                      'has-error': passwordError,
-                      'has-success': form.password && !passwordError,
-                      'focused': isPasswordFocused
-                    }">
-                      <div class="icon-container">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                      </div>
-                      <input
-                        v-model="form.password"
-                        :type="showPassword ? 'text' : 'password'"
-                        placeholder="新密码"
-                        required
-                        autocomplete="new-password"
-                        class="icon-input password-input"
-                        maxlength="20"
-                        @input="validatePassword"
-                        @focus="() => { isPasswordFocused = true; }"
-                        @blur="() => { isPasswordFocused = false; }"
-                      />
-                      <div class="input-actions">
-                        <button
-                          v-if="form.password"
-                          type="button"
-                          class="clear-button"
-                          @click="form.password = ''; validatePassword()"
-                          title="清除"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          class="password-toggle"
-                          @click="showPassword = !showPassword"
-                          :aria-label="showPassword ? '隐藏密码' : '显示密码'"
-                        >
-                          <svg v-if="showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                        </button>
-                      </div>
+                    <div class="user-details">
+                      <div class="username">{{ username }}</div>
+                      <div class="hint">请输入您的新密码</div>
                     </div>
-                    
-                    <div class="form-group with-icon password-group" :class="{
-                      'has-error': confirmPasswordError,
-                      'has-success': form.confirmPassword && !confirmPasswordError,
-                      'focused': isConfirmPasswordFocused
-                    }">
-                      <div class="icon-container">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </div>
+                </div>
+                
+                <!-- 密码输入区域 -->
+                <div class="password-inputs">
+                  <div class="form-group with-icon password-group" :class="{
+                    'has-error': passwordError,
+                    'has-success': form.password && !passwordError,
+                    'focused': isPasswordFocused
+                  }">
+                    <div class="icon-container">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <input
+                      v-model="form.password"
+                      :type="showPassword ? 'text' : 'password'"
+                      placeholder="新密码"
+                      required
+                      autocomplete="new-password"
+                      class="icon-input password-input"
+                      maxlength="20"
+                      @input="validatePassword"
+                      @focus="() => { isPasswordFocused = true; }"
+                      @blur="() => { isPasswordFocused = false; }"
+                    />
+                    <div class="input-actions">
+                      <button
+                        v-if="form.password"
+                        type="button"
+                        class="clear-button"
+                        @click="form.password = ''; validatePassword()"
+                        title="清除"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                      </div>
-                      <input
-                        v-model="form.confirmPassword"
-                        :type="showConfirmPassword ? 'text' : 'password'"
-                        placeholder="确认新密码"
-                        required
-                        autocomplete="new-password"
-                        class="icon-input password-input"
-                        maxlength="20"
-                        @input="validateConfirmPassword"
-                        @focus="() => { isConfirmPasswordFocused = true; }"
-                        @blur="() => { isConfirmPasswordFocused = false; }"
-                      />
-                      <div class="input-actions">
-                        <button
-                          v-if="form.confirmPassword"
-                          type="button"
-                          class="clear-button"
-                          @click="form.confirmPassword = ''; validateConfirmPassword()"
-                          title="清除"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          class="password-toggle"
-                          @click="showConfirmPassword = !showConfirmPassword"
-                          :aria-label="showConfirmPassword ? '隐藏密码' : '显示密码'"
-                        >
-                          <svg v-if="showConfirmPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                        </button>
-                      </div>
+                      </button>
+                      <button
+                        type="button"
+                        class="password-toggle"
+                        @click="showPassword = !showPassword"
+                        :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                      >
+                        <svg v-if="showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M2 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group with-icon password-group" :class="{
+                    'has-error': confirmPasswordError,
+                    'has-success': form.confirmPassword && !confirmPasswordError,
+                    'focused': isConfirmPasswordFocused
+                  }" style="margin-top: 12px;">
+                    <div class="icon-container">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <input
+                      v-model="form.confirmPassword"
+                      :type="showConfirmPassword ? 'text' : 'password'"
+                      placeholder="确认新密码"
+                      required
+                      autocomplete="new-password"
+                      class="icon-input password-input"
+                      maxlength="20"
+                      @input="validateConfirmPassword"
+                      @focus="() => { isConfirmPasswordFocused = true; }"
+                      @blur="() => { isConfirmPasswordFocused = false; }"
+                    />
+                    <div class="input-actions">
+                      <button
+                        v-if="form.confirmPassword"
+                        type="button"
+                        class="clear-button"
+                        @click="form.confirmPassword = ''; validateConfirmPassword()"
+                        title="清除"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        class="password-toggle"
+                        @click="showConfirmPassword = !showConfirmPassword"
+                        :aria-label="showConfirmPassword ? '隐藏密码' : '显示密码'"
+                      >
+                        <svg v-if="showConfirmPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M2 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -247,7 +249,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/authStore'
 import { getCopyright } from '../../Version'
@@ -388,6 +390,38 @@ const handleReset = async () => {
   }
 }
 
+const validateToken = async () => {
+  token.value = route.query.token as string || route.params.token as string || ''
+  
+  console.log('重置密码页面 - 获取到的token:', token.value, '路由参数:', route.query)
+  
+  if (!token.value) {
+    console.log('没有找到有效的token，跳转到登录页')
+    validationError.value = '无效的重置链接'
+    isValidating.value = false
+    // 不要自动跳转，让用户点击按钮跳转
+    return
+  }
+  
+  try {
+    console.log('开始验证token:', token.value)
+    const result = await authStore.validateResetToken(token.value)
+    console.log('验证结果:', result)
+    
+    if (result && result.valid && result.username) {
+      username.value = result.username
+      isValidating.value = false
+    } else {
+      validationError.value = result?.message || '重置链接已过期或无效'
+      isValidating.value = false
+    }
+  } catch (err: any) {
+    console.error('验证token时出错:', err)
+    validationError.value = '验证失败：' + (err.message || '未知错误')
+    isValidating.value = false
+  }
+}
+
 onMounted(async () => {
   // 检测系统主题
   const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -397,29 +431,20 @@ onMounted(async () => {
     systemTheme.value = e.matches ? 'dark' : 'light'
   })
   
-  token.value = route.query.token as string || ''
-  
-  if (!token.value) {
-    validationError.value = '无效的重置链接'
-    isValidating.value = false
-    return
-  }
-  
-  try {
-    const result = await authStore.validateResetToken(token.value)
-    
-    if (result.valid && result.username) {
-      username.value = result.username
-      isValidating.value = false
-    } else {
-      validationError.value = result.message || '重置链接已过期或无效'
-      isValidating.value = false
-    }
-  } catch (err: any) {
-    validationError.value = '验证失败：' + (err.message || '未知错误')
-    isValidating.value = false
-  }
+  // 验证token
+  await validateToken()
 })
+
+// 监听路由参数变化
+watch(
+  () => route.query,
+  async (newQuery) => {
+    console.log('路由参数发生变化:', newQuery)
+    if (newQuery.token) {
+      await validateToken()
+    }
+  }
+)
 
 onUnmounted(() => {
   if (countdownTimer.value) {
@@ -432,37 +457,49 @@ onUnmounted(() => {
 <style scoped>
 /* 重置密码页面特殊样式 */
 .form-content {
-  min-height: 240px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 12px;
 }
 
-/* 用户信息卡片 */
-.user-info {
+/* 用户信息容器 - 统一圆角框体 */
+.user-info-container {
+  background: var(--input-bg);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.user-info-container:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.user-info-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  background: var(--primary-light);
-  border-radius: var(--border-radius);
-  margin-bottom: var(--form-spacing);
-  border: 1px solid rgba(99, 102, 241, 0.1);
-  backdrop-filter: blur(8px);
 }
 
-.user-icon {
+.user-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: rgba(99, 102, 241, 0.1);
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   border-radius: 50%;
-  color: var(--primary-color);
+  color: white;
   flex-shrink: 0;
 }
 
-.user-icon svg {
-  width: 18px;
-  height: 18px;
+.user-avatar svg {
+  width: 20px;
+  height: 20px;
 }
 
 .user-details {
@@ -472,17 +509,25 @@ onUnmounted(() => {
 
 .username {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-primary);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .hint {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* 密码输入区域 */
+.password-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* 成功和错误状态页面 - 重新设计 */
@@ -613,30 +658,33 @@ onUnmounted(() => {
 /* 移动端适配 */
 @media (max-width: 480px) {
   .form-content {
-    min-height: 220px !important;
+    gap: 16px;
   }
   
-  .user-info {
-    padding: 10px;
-    gap: 10px;
+  .user-info-container {
+    padding: 14px;
   }
   
-  .user-icon {
-    width: 32px;
-    height: 32px;
+  .user-avatar {
+    width: 36px;
+    height: 36px;
   }
   
-  .user-icon svg {
-    width: 16px;
-    height: 16px;
+  .user-avatar svg {
+    width: 18px;
+    height: 18px;
   }
   
   .username {
-    font-size: 13px;
+    font-size: 15px;
   }
   
   .hint {
-    font-size: 11px;
+    font-size: 12px;
+  }
+  
+  .password-inputs {
+    gap: 10px;
   }
   
   .success-state,
@@ -708,13 +756,18 @@ onUnmounted(() => {
 }
 
 /* 深色模式优化 */
-.theme-dark .user-info {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: rgba(129, 140, 248, 0.1);
+.theme-dark .user-info-container {
+  background: var(--input-bg);
+  border-color: var(--border-primary);
 }
 
-.theme-dark .user-icon {
-  background: rgba(99, 102, 241, 0.15);
+.theme-dark .user-info-container:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.theme-dark .user-avatar {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
 }
 
 .theme-dark .loading-state .loading-spinner.large {
