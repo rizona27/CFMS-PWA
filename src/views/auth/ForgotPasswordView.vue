@@ -1,4 +1,3 @@
-[file name]: ForgotPasswordView.vue
 <template>
   <div class="auth-view" :class="themeClass">
     <div class="background-fx">
@@ -118,60 +117,50 @@
                 </div>
               </div>
               
-              <!-- 按钮区域 -->
+              <!-- 统一按钮区域 -->
               <div class="form-actions">
-                <div class="button-group two-buttons">
-                  <button
-                    type="button"
-                    class="auth-button back-button"
-                    @click="goToAuth"
-                  >
-                    <span class="button-text">返回</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="auth-button gradient-button"
-                    @click="handleSubmit"
-                    :disabled="isLoading || !isFormValid"
-                  >
-                    <span class="button-text">{{ isLoading ? '发送中...' : '发送重置链接' }}</span>
-                    <div v-if="isLoading" class="button-loading">
-                      <div class="loading-spinner"></div>
-                    </div>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  class="auth-button gradient-button single-button"
+                  @click="handleSubmit"
+                  :disabled="isLoading || !isFormValid"
+                >
+                  <span class="button-text">{{ isLoading ? '发送中...' : '发送重置链接' }}</span>
+                  <div v-if="isLoading" class="button-loading">
+                    <div class="loading-spinner"></div>
+                  </div>
+                </button>
+              </div>
+            </div>
+            
+            <!-- 返回登录链接 -->
+            <div class="hint-area">
+              <div class="mode-switch">
+                <p>
+                  <a href="#" @click.prevent="goToAuth">返回登录</a>
+                </p>
               </div>
             </div>
           </div>
           
           <div v-else class="success-state">
-            <div class="success-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
             <div class="success-text">
-              <h3>邮件已发送</h3>
-              <p>重置链接已发送到您的邮箱 <strong>{{ form.email }}</strong></p>
+              <div class="email-display">
+                <em>{{ form.email }}</em>
+              </div>
               <div class="tips">
                 <p>请检查您的收件箱（包括垃圾邮件文件夹）</p>
                 <p>链接有效期为24小时</p>
               </div>
             </div>
-            <div class="form-actions">
-              <button class="auth-button gradient-button" @click="goToAuth">
-                返回登录
-              </button>
-            </div>
-          </div>
-          
-          <div class="hint-area">
-            <div class="mode-switch">
-              <p>
-                记起密码了？
-                <a href="#" @click.prevent="goToAuth">返回登录</a>
-              </p>
+            
+            <!-- 成功状态下的返回登录链接 -->
+            <div class="hint-area">
+              <div class="mode-switch">
+                <p>
+                  <a href="#" @click.prevent="goToAuth">返回登录</a>
+                </p>
+              </div>
             </div>
           </div>
           
@@ -300,7 +289,7 @@ onMounted(() => {
 /* 复用 AuthView.vue 中的样式，这里只添加特定样式 */
 .success-state {
   text-align: center;
-  padding: 32px 20px;
+  padding: 32px 20px 24px;
   animation: fadeIn 0.3s ease;
 }
 
@@ -309,103 +298,90 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.success-icon {
-  margin-bottom: 20px;
-  color: var(--success-color);
-}
-
-.success-icon svg {
-  width: 48px;
-  height: 48px;
-  display: block;
-  margin: 0 auto;
-}
-
-.success-text h3 {
-  margin: 0 0 12px 0;
-  color: var(--success-color);
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.success-text p {
-  margin: 6px 0;
-  color: var(--text-secondary);
+.success-text {
   font-size: 14px;
-  line-height: 1.4;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
-.success-text strong {
-  color: var(--text-primary);
-  font-weight: 600;
+.email-display {
+  margin: 0 0 20px 0;
+}
+
+.email-display em {
+  font-style: italic;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--primary-color);
+  font-family: 'Georgia', 'Times New Roman', serif;
 }
 
 .success-text .tips {
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
   border-top: 1px solid var(--border-primary);
 }
 
 .success-text .tips p {
   font-size: 13px;
   color: var(--text-tertiary);
-  margin: 4px 0;
+  margin: 6px 0;
 }
 
-.button-group.two-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 12px;
-  width: 100%;
-  height: 44px;
+/* 链接区域 */
+.hint-area {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.mode-switch {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mode-switch a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.mode-switch a:hover {
+  color: var(--secondary-color);
 }
 
 /* 移动端适配 */
 @media (max-width: 480px) {
   .success-state {
-    padding: 24px 16px;
+    padding: 20px 16px 16px;
   }
   
-  .success-icon svg {
-    width: 40px;
-    height: 40px;
-  }
-  
-  .success-text h3 {
-    font-size: 16px;
-  }
-  
-  .success-text p {
+  .success-text {
     font-size: 13px;
   }
   
+  .email-display em {
+    font-size: 15px;
+  }
+  
   .success-text .tips {
-    margin-top: 14px;
-    padding-top: 10px;
+    margin-top: 16px;
+    padding-top: 12px;
   }
   
   .success-text .tips p {
     font-size: 12px;
   }
-  
-  .button-group.two-buttons {
-    grid-template-columns: 1fr 1.5fr;
-    gap: 10px;
-    height: 44px;
-  }
 }
 
 /* 深色模式优化 */
-.theme-dark .success-icon {
-  color: var(--success-color);
-}
-
-.theme-dark .success-text h3 {
-  color: var(--success-color);
-}
-
-.theme-dark .success-text p {
+.theme-dark .success-text {
   color: var(--text-secondary);
+}
+
+.theme-dark .email-display em {
+  color: var(--primary-color);
 }
 
 .theme-dark .success-text .tips {
@@ -414,6 +390,14 @@ onMounted(() => {
 
 .theme-dark .success-text .tips p {
   color: var(--text-tertiary);
+}
+
+.theme-dark .mode-switch a {
+  color: var(--primary-color);
+}
+
+.theme-dark .mode-switch a:hover {
+  color: var(--secondary-color);
 }
 </style>
 
@@ -490,7 +474,7 @@ onMounted(() => {
   position: absolute;
   width: 200%;
   height: 200%;
-  background-image: 
+  background-image:
     linear-gradient(var(--border-primary) 1px, transparent 1px),
     linear-gradient(90deg, var(--border-primary) 1px, transparent 1px);
   background-size: 40px 40px;
@@ -534,9 +518,9 @@ onMounted(() => {
   position: absolute;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, 
-    rgba(99, 102, 241, 0.05) 0%, 
-    rgba(139, 92, 246, 0.05) 50%, 
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.05) 0%,
+    rgba(139, 92, 246, 0.05) 50%,
     rgba(16, 185, 129, 0.05) 100%);
 }
 
@@ -607,6 +591,19 @@ onMounted(() => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* 动态表单区域 */
+.auth-form {
+  width: 100%;
+}
+
+.form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
 }
 
 /* 表单通用样式 */
@@ -745,15 +742,10 @@ onMounted(() => {
   transform: none !important;
 }
 
-.back-button {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-primary);
-}
-
-.back-button:hover:not(:disabled) {
-  background: var(--border-primary);
-  color: var(--text-primary);
+/* 单一按钮样式 */
+.auth-button.single-button {
+  width: 100%;
+  height: 48px;
 }
 
 .button-text {
@@ -785,6 +777,12 @@ onMounted(() => {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* 统一按钮区域 */
+.form-actions {
+  margin-top: 12px;
+  width: 100%;
 }
 
 /* 页脚 */
@@ -820,29 +818,6 @@ onMounted(() => {
   gap: 4px;
 }
 
-/* 链接区域 */
-.hint-area {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.mode-switch {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.mode-switch a {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.2s;
-  position: relative;
-}
-
-.mode-switch a:hover {
-  color: var(--secondary-color);
-}
-
 /* 移动端适配 */
 @media (max-width: 480px) {
   .auth-card {
@@ -857,7 +832,7 @@ onMounted(() => {
     height: 44px;
   }
   
-  .button-group.two-buttons {
+  .auth-button.single-button {
     height: 44px;
   }
 }
