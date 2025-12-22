@@ -71,6 +71,8 @@
                       </svg>
                     </div>
                     <input
+                      id="new-password"
+                      name="new-password"
                       v-model="form.password"
                       :type="showPassword ? 'text' : 'password'"
                       placeholder="新密码"
@@ -124,6 +126,8 @@
                       </svg>
                     </div>
                     <input
+                      id="confirm-new-password"
+                      name="confirm-new-password"
                       v-model="form.confirmPassword"
                       :type="showConfirmPassword ? 'text' : 'password'"
                       placeholder="确认新密码"
@@ -167,28 +171,19 @@
                 </div>
               </div>
               
-              <!-- 统一按钮区域 -->
+              <!-- 统一按钮区域 - 移除返回按钮，只有一个重置按钮 -->
               <div class="form-actions">
-                <div class="button-group two-buttons">
-                  <button
-                    type="button"
-                    class="auth-button back-button"
-                    @click="goToAuth"
-                  >
-                    <span class="button-text">返回</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="auth-button gradient-button"
-                    @click="handleReset"
-                    :disabled="isLoading || !isFormValid"
-                  >
-                    <span class="button-text">{{ isLoading ? '重置中...' : '重置密码' }}</span>
-                    <div v-if="isLoading" class="button-loading">
-                      <div class="loading-spinner"></div>
-                    </div>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  class="auth-button gradient-button single-button"
+                  @click="handleReset"
+                  :disabled="isLoading || !isFormValid"
+                >
+                  <span class="button-text">{{ isLoading ? '重置中...' : '重置密码' }}</span>
+                  <div v-if="isLoading" class="button-loading">
+                    <div class="loading-spinner"></div>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
@@ -249,7 +244,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/authStore'
 import { getCopyright } from '../../Version'
@@ -391,15 +386,32 @@ const handleReset = async () => {
 }
 
 const validateToken = async () => {
-  token.value = route.query.token as string || route.params.token as string || ''
+  // 首先尝试从 query 参数获取
+  token.value = route.query.token as string || ''
   
-  console.log('重置密码页面 - 获取到的token:', token.value, '路由参数:', route.query)
+  // 如果没有，尝试从 hash 中解析
+  if (!token.value && window.location.hash) {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    token.value = hashParams.get('token') || ''
+  }
+  
+  // 如果没有，尝试从 URL 搜索参数中获取
+  if (!token.value) {
+    const urlParams = new URLSearchParams(window.location.search)
+    token.value = urlParams.get('token') || ''
+  }
+  
+  console.log('重置密码页面 - 获取到的token:', token.value,
+    '完整URL:', window.location.href,
+    '路由查询参数:', route.query,
+    '窗口哈希:', window.location.hash,
+    '窗口搜索:', window.location.search
+  )
   
   if (!token.value) {
-    console.log('没有找到有效的token，跳转到登录页')
+    console.log('没有找到有效的token')
     validationError.value = '无效的重置链接'
     isValidating.value = false
-    // 不要自动跳转，让用户点击按钮跳转
     return
   }
   
@@ -423,6 +435,8 @@ const validateToken = async () => {
 }
 
 onMounted(async () => {
+  console.log('重置密码页面已挂载')
+  
   // 检测系统主题
   const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   systemTheme.value = darkModeMediaQuery.matches ? 'dark' : 'light'
@@ -430,6 +444,9 @@ onMounted(async () => {
   darkModeMediaQuery.addEventListener('change', (e) => {
     systemTheme.value = e.matches ? 'dark' : 'light'
   })
+  
+  // 等待路由完全就绪
+  await nextTick()
   
   // 验证token
   await validateToken()
@@ -443,7 +460,8 @@ watch(
     if (newQuery.token) {
       await validateToken()
     }
-  }
+  },
+  { immediate: true }
 )
 
 onUnmounted(() => {
@@ -643,7 +661,7 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
-/* 按钮组样式 */
+/* 按钮样式 */
 .button-group.two-buttons {
   display: flex;
   gap: 12px;
@@ -1140,17 +1158,6 @@ onUnmounted(() => {
 .auth-button.single-button {
   width: 100%;
   height: 48px;
-}
-
-.back-button {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-primary);
-}
-
-.back-button:hover:not(:disabled) {
-  background: var(--border-primary);
-  color: var(--text-primary);
 }
 
 .button-text {

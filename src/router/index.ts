@@ -7,8 +7,8 @@ const TopPerformersView = () => import('@/views/TopPerformersView.vue')
 const ConfigView = () => import('@/views/ConfigView.vue')
 const ActivationView = () => import('@/views/ActivationView.vue')
 const AuthView = () => import('@/views/auth/AuthView.vue')
-const ResetPasswordView = () => import('@/views/auth/ResetPasswordView.vue') 
-const ForgotPasswordView = () => import('@/views/auth/ForgotPasswordView.vue') 
+const ResetPasswordView = () => import('@/views/auth/ResetPasswordView.vue')
+const ForgotPasswordView = () => import('@/views/auth/ForgotPasswordView.vue')
 const AboutView = () => import('@/views/AboutView.vue')
 const APILogView = () => import('@/views/APILogView.vue')
 const CloudSyncView = () => import('@/views/CloudSyncView.vue')
@@ -251,6 +251,24 @@ router.beforeEach((to, from, next) => {
   const title = to.meta.title as string || 'CFMS · 基金管理系统'
   document.title = title
   
+  // 🔴 关键修复：优先处理密码重置页面
+  if (to.path === '/reset-password') {
+    console.log('✅ 直接访问密码重置页面，允许访问')
+    console.log('重置参数:', {
+      token: to.query.token,
+      username: to.query.username
+    })
+    next()
+    return
+  }
+  
+  // 🔴 同样处理忘记密码页面
+  if (to.path === '/forgot-password') {
+    console.log('✅ 直接访问忘记密码页面，允许访问')
+    next()
+    return
+  }
+  
   // 检查是否是密码重置页面
   const isPasswordReset = to.meta.isPasswordReset === true
   
@@ -279,13 +297,6 @@ router.beforeEach((to, from, next) => {
   if (requiresAuth && !hasValidToken) {
     console.log('需要认证但未登录，重定向到 /auth')
     next('/auth')
-    return
-  }
-  
-  // 特殊处理：忘记密码页面不需要认证
-  if (to.path === '/forgot-password') {
-    console.log('访问忘记密码页面，允许访问')
-    next()
     return
   }
   
