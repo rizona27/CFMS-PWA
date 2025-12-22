@@ -19,25 +19,6 @@
             <h1 class="auth-title">CFMS · {{ isRegisterMode ? '注册' : '登录' }}</h1>
           </div>
           
-          <!-- 统一状态提示区域 -->
-          <div class="form-error-area-simple">
-            <div v-if="globalError" class="error-text-simple">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span>{{ globalError }}</span>
-            </div>
-            <div v-if="globalSuccess" class="success-text-simple">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span>{{ globalSuccess }}</span>
-            </div>
-          </div>
-          
           <!-- 动态表单区域 -->
           <div class="auth-form">
             <div class="form-content">
@@ -184,7 +165,7 @@
               </div>
               
               <!-- 确认密码（仅在注册模式显示） -->
-              <div v-if="isRegisterMode" 
+              <div v-if="isRegisterMode"
                    class="form-group with-icon password-group" :class="{
                 'has-error': confirmPasswordError,
                 'has-success': form.confirmPassword && !confirmPasswordError,
@@ -287,12 +268,34 @@
               </div>
             </div>
             
-            <!-- 动态错误提示区域 -->
+            <!-- 统一的错误提示区域（在按钮上方） -->
             <div class="form-error-area-simple" :class="{
               'has-error': (attempts > 0 && hasValidAccountForAttempt) || (isRegisterMode && attempts > 0),
               'has-locked-error': attempts >= 5 && hasValidAccountForAttempt,
-              'has-user-missing': showUserMissingMessage && !hasValidAccountForAttempt
+              'has-user-missing': showUserMissingMessage && !hasValidAccountForAttempt,
+              'has-confirm-error': isRegisterMode && confirmPasswordError && form.confirmPassword && form.password !== form.confirmPassword,
+              'has-success': globalSuccess
             }">
+              <!-- 全局错误信息 -->
+              <div v-if="globalError" class="error-text-simple">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>{{ globalError }}</span>
+              </div>
+              
+              <!-- 全局成功信息 -->
+              <div v-if="globalSuccess" class="success-text-simple">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>{{ globalSuccess }}</span>
+              </div>
+              
+              <!-- 登录错误尝试信息 -->
               <div v-if="attempts > 0 && hasValidAccountForAttempt" class="error-text-simple">
                 <span v-if="attempts < 5">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -311,6 +314,8 @@
                   账户已锁定，请管理员解锁！
                 </span>
               </div>
+              
+              <!-- 用户不存在信息 -->
               <div v-if="showUserMissingMessage && !hasValidAccountForAttempt" class="error-text-simple">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -319,6 +324,8 @@
                 </svg>
                 用户不存在，请检查用户名或<a href="#" @click.prevent="switchToRegister">注册新账号</a>
               </div>
+              
+              <!-- 注册模式密码不一致信息 -->
               <div v-if="isRegisterMode && confirmPasswordError && form.confirmPassword && form.password !== form.confirmPassword" class="error-text-simple">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -327,6 +334,8 @@
                 </svg>
                 两次输入的密码不一致
               </div>
+              
+              <!-- 注册尝试次数信息 -->
               <div v-if="isRegisterMode && attempts > 0 && attempts < 3" class="error-text-simple">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -710,9 +719,10 @@ const handleSubmit = async () => {
           showUserMissingMessage.value = true
           hasValidAccountForAttempt.value = false
           attempts.value = 0
+          globalError.value = result.message || '用户不存在'
         } else if (result.reason === 'password_error') {
           hasValidAccountForAttempt.value = true
-          attempts.value++
+          attempts.value = result.attempts || attempts.value + 1
           
           if (attempts.value >= 3) {
             showCaptcha.value = true
@@ -721,14 +731,16 @@ const handleSubmit = async () => {
           
           if (attempts.value >= 5) {
             showCaptcha.value = true
-            globalError.value = '账户已锁定，请联系管理员解锁'
+            globalError.value = result.message || '账户已锁定，请联系管理员解锁'
           } else {
             globalError.value = result.message || '登录失败'
           }
-        } else if (result.reason === 'captcha_error') {
+        } else if (result.reason === 'captcha_error' || result.reason === 'captcha_required') {
           showCaptcha.value = true
+          hasValidAccountForAttempt.value = true
+          attempts.value = result.attempts || 3
           await refreshCaptcha()
-          globalError.value = result.message || '验证码错误'
+          globalError.value = result.message || '请完成验证码校验'
         } else {
           globalError.value = result.message || '登录失败'
         }
@@ -844,28 +856,40 @@ onMounted(() => {
   height: 14px;
 }
 
-/* 统一错误提示 */
+/* 统一错误提示区域（按钮上方） */
 .form-error-area-simple {
-  height: 20px;
-  margin: 4px 0 8px 0;
+  min-height: 20px;
+  max-height: 80px;
+  margin: 8px 0 12px 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   overflow: hidden;
+  gap: 4px;
 }
 
 .form-error-area-simple.has-error,
-.form-error-area-simple.has-user-missing {
-  height: 20px;
+.form-error-area-simple.has-user-missing,
+.form-error-area-simple.has-confirm-error {
+  min-height: 24px;
+  max-height: 60px;
 }
 
 .form-error-area-simple.has-locked-error {
-  height: 20px;
+  min-height: 24px;
+  max-height: 60px;
 }
 
-.error-text-simple {
+.form-error-area-simple.has-success {
+  min-height: 24px;
+  max-height: 60px;
+}
+
+.error-text-simple,
+.success-text-simple {
   font-size: 12px;
   font-weight: 500;
   line-height: 1.3;
@@ -876,6 +900,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 4px;
+  animation: fadeIn 0.3s ease;
 }
 
 .form-error-area-simple.has-error .error-text-simple {
@@ -890,6 +915,10 @@ onMounted(() => {
   color: var(--info-color);
 }
 
+.form-error-area-simple.has-confirm-error .error-text-simple {
+  color: var(--error-color);
+}
+
 .error-text-simple a {
   color: var(--primary-color);
   text-decoration: none;
@@ -901,13 +930,23 @@ onMounted(() => {
   text-decoration: underline;
 }
 
-.error-text-simple svg {
+.error-text-simple svg,
+.success-text-simple svg {
   flex-shrink: 0;
+}
+
+.success-text-simple {
+  color: var(--success-color);
+}
+
+.locked-message {
+  color: var(--error-color);
+  font-weight: 600;
 }
 
 /* 统一按钮区域 */
 .form-actions {
-  margin-top: 12px;
+  margin-top: 4px;
   width: 100%;
 }
 
@@ -962,28 +1001,39 @@ onMounted(() => {
     width: 100%;
   }
   
-  .error-text-simple {
+  .error-text-simple,
+  .success-text-simple {
     font-size: 11px;
   }
   
-  .error-text-simple svg {
+  .error-text-simple svg,
+  .success-text-simple svg {
     width: 10px;
     height: 10px;
     margin-right: 3px;
   }
   
   .form-error-area-simple {
-    height: 20px;
-    margin: 2px 0 6px 0;
+    min-height: 20px;
+    max-height: 60px;
+    margin: 4px 0 8px 0;
   }
   
   .form-error-area-simple.has-error,
-  .form-error-area-simple.has-user-missing {
-    height: 20px;
+  .form-error-area-simple.has-user-missing,
+  .form-error-area-simple.has-confirm-error {
+    min-height: 20px;
+    max-height: 50px;
   }
   
   .form-error-area-simple.has-locked-error {
-    height: 20px;
+    min-height: 20px;
+    max-height: 50px;
+  }
+  
+  .form-error-area-simple.has-success {
+    min-height: 20px;
+    max-height: 50px;
   }
   
   /* 修复移动端输入框光标位置 */
@@ -1106,7 +1156,7 @@ onMounted(() => {
   position: absolute;
   width: 200%;
   height: 200%;
-  background-image: 
+  background-image:
     linear-gradient(var(--border-primary) 1px, transparent 1px),
     linear-gradient(90deg, var(--border-primary) 1px, transparent 1px);
   background-size: 40px 40px;
@@ -1150,9 +1200,9 @@ onMounted(() => {
   position: absolute;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, 
-    rgba(99, 102, 241, 0.05) 0%, 
-    rgba(139, 92, 246, 0.05) 50%, 
+  background: linear-gradient(135deg,
+    rgba(99, 102, 241, 0.05) 0%,
+    rgba(139, 92, 246, 0.05) 50%,
     rgba(16, 185, 129, 0.05) 100%);
 }
 
@@ -1457,31 +1507,5 @@ onMounted(() => {
   font-size: 11px;
   color: var(--text-tertiary);
   margin: 0;
-}
-
-/* 成功/错误文本 */
-.success-text-simple {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--success-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.error-text-simple {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--error-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.locked-message {
-  color: var(--error-color);
-  font-weight: 600;
 }
 </style>
