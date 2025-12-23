@@ -67,7 +67,7 @@
                     >
                       {{ displayName }}
                     </h3>
-                    <p class="user-id" v-if="authStore.currentUser?.username">ID: {{ authStore.currentUser.username }}</p>
+                    <p class="user-id" v-if="authStore.currentUser?.email">{{ authStore.currentUser.email }}</p>
                   </div>
                 </div>
               </div>

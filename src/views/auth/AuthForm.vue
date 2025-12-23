@@ -144,7 +144,6 @@
       </div>
     </div>
     
-    <!-- 移动错误提示区域到按钮上方 -->
     <div class="form-error-area-simple" :class="{
       'has-error': attempts > 0 && hasValidAccountForAttempt,
       'has-locked-error': attempts >= 5 && hasValidAccountForAttempt,
@@ -157,7 +156,7 @@
             <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          密码错误{{ attempts }}次，还剩{{ 5 - attempts }}次锁定
+          用户名或密码错误，剩余尝试次数: {{ 5 - attempts }}
           <span v-if="attempts >= 3">，请输入验证码</span>
         </span>
         <span v-else class="locked-message">
@@ -174,11 +173,13 @@
           <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        用户不存在，请检查用户名或<a href="#" @click.prevent="switchToRegister">注册新账号</a>
+        用户名或密码错误，请检查用户名和密码
+        <span v-if="ipAttempts < 5">，剩余尝试次数: {{ 5 - ipAttempts }}</span>
+        <span v-if="ipAttempts >= 3">，请输入验证码</span>
+        <a href="#" @click.prevent="switchToRegister">或注册新账号</a>
       </div>
     </div>
     
-    <!-- 统一按钮区域 -->
     <div class="form-actions">
       <button type="button" class="auth-button gradient-button"
         @click="handleSubmit"
@@ -200,6 +201,7 @@ import { ref, computed, reactive, watch } from 'vue'
 interface Props {
   isLoading?: boolean
   attempts?: number
+  ipAttempts?: number
   showCaptcha?: boolean
   captchaImage?: string
   hasValidAccountForAttempt?: boolean
@@ -217,6 +219,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   isLoading: false,
   attempts: 0,
+  ipAttempts: 0,
   showCaptcha: false,
   captchaImage: '',
   hasValidAccountForAttempt: false,
@@ -321,12 +324,10 @@ watch(() => form.username, (newUsername) => {
 </script>
 
 <style scoped>
-/* 登录表单特殊样式 */
 .auth-form {
   width: 100%;
 }
 
-/* 验证码容器 */
 .captcha-image-container {
   flex-shrink: 0;
 }
@@ -365,7 +366,6 @@ watch(() => form.username, (newUsername) => {
   height: 14px;
 }
 
-/* 统一错误提示 */
 .form-error-area-simple {
   min-height: 20px;
   margin: 8px 0 12px 0;
@@ -397,7 +397,7 @@ watch(() => form.username, (newUsername) => {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  flex-wrap: wrap; /* 允许换行 */
+  flex-wrap: wrap;
   color: var(--error-color);
   background: var(--error-light);
   border-radius: 8px;
@@ -437,7 +437,6 @@ watch(() => form.username, (newUsername) => {
   flex-shrink: 0;
 }
 
-/* 统一按钮区域 */
 .form-actions {
   margin-top: 8px;
   width: 100%;
@@ -453,7 +452,6 @@ watch(() => form.username, (newUsername) => {
   font-weight: 600;
 }
 
-/* 移动端适配 */
 @media (max-width: 480px) {
   .captcha-image {
     width: 100%;
@@ -494,7 +492,6 @@ watch(() => form.username, (newUsername) => {
     min-height: 20px;
   }
   
-  /* 修复移动端输入框光标位置 */
   .icon-input {
     line-height: 1.2;
     height: 100%;
@@ -509,7 +506,6 @@ watch(() => form.username, (newUsername) => {
   }
 }
 
-/* 深色模式优化 */
 .theme-dark .captcha-image {
   border-color: var(--border-primary);
   background: var(--input-bg);

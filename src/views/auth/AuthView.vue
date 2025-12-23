@@ -70,8 +70,8 @@
               </div>
               
               <div v-if="isRegisterMode" class="form-group with-icon" :class="{
-                'has-error': emailError,
-                'has-success': form.email && !emailError,
+                'has-error': emailError || emailCheckStatus === 'taken',
+                'has-success': form.email && !emailError && emailCheckStatus === 'available',
                 'focused': isEmailFocused
               }">
                 <div class="icon-container">
@@ -92,11 +92,21 @@
                   @blur="() => { isEmailFocused = false; }"
                 />
                 <div class="input-actions">
+                  <div v-if="emailCheckStatus === 'available'" class="email-status-indicator available">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div v-else-if="emailCheckStatus === 'taken'" class="email-status-indicator taken">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
                   <button
                     v-if="form.email"
                     type="button"
                     class="clear-button"
-                    @click="form.email = ''; validateEmail();"
+                    @click="form.email = ''; validateEmail(); emailCheckStatus = ''"
                     title="清除"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -213,7 +223,7 @@
                 </div>
               </div>
               
-              <div v-if="showCaptcha && attempts >= 3" class="form-group captcha-group">
+              <div v-if="showCaptcha" class="form-group captcha-group">
                 <div class="captcha-row">
                   <div class="captcha-input-group">
                     <div class="icon-container">
@@ -288,7 +298,7 @@
                   <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <span v-if="attempts < 5">
-                  用户名不存在，剩余尝试次数: {{ 5 - attempts }}
+                  用户名或密码错误，剩余尝试次数: {{ 5 - attempts }}
                 </span>
                 <span v-else>
                   尝试次数过多，请10分钟后再试
@@ -388,12 +398,14 @@ const showUserMissingMessage = ref(false)
 const cooldownTimer = ref(0)
 const showCooldownMessage = ref(false)
 const cooldownInterval = ref<ReturnType<typeof setInterval> | null>(null)
+const ipAttempts = ref(0)
 
 const isUsernameFocused = ref(false)
 const isEmailFocused = ref(false)
 const isPasswordFocused = ref(false)
 const isConfirmPasswordFocused = ref(false)
 const usernameCheckStatus = ref('')
+const emailCheckStatus = ref('')
 const usernameError = ref(false)
 const emailError = ref(false)
 const passwordError = ref(false)
@@ -439,6 +451,7 @@ const isFormValid = computed(() => {
     return form.username.length >= 3 &&
            form.email && validateEmailFormat(form.email) &&
            usernameCheckStatus.value === 'available' &&
+           emailCheckStatus.value === 'available' &&
            form.password.length >= 6 &&
            form.confirmPassword === form.password &&
            (!showCaptcha.value || form.captcha_code.length >= 4)
@@ -485,10 +498,13 @@ const validateEmail = () => {
   const email = form.email
   if (!email) {
     emailError.value = false
+    emailCheckStatus.value = ''
   } else if (!validateEmailFormat(email)) {
     emailError.value = true
+    emailCheckStatus.value = ''
   } else {
     emailError.value = false
+    checkEmailAvailability()
   }
 }
 
@@ -539,6 +555,27 @@ const checkUsernameAvailability = async () => {
   } catch (error) {
     console.error('检查用户名失败:', error)
     usernameCheckStatus.value = ''
+  }
+}
+
+const checkEmailAvailability = async () => {
+  if (!isRegisterMode.value || !form.email || !validateEmailFormat(form.email)) return
+  
+  try {
+    const response = await fetch('https://cfms.crnas.uk/api/check_user_exists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: form.email }),
+      credentials: 'include'
+    })
+    
+    const data = await response.json()
+    if (data.success) {
+      emailCheckStatus.value = data.email_exists ? 'taken' : 'available'
+    }
+  } catch (error) {
+    console.error('检查邮箱失败:', error)
+    emailCheckStatus.value = ''
   }
 }
 
@@ -602,6 +639,7 @@ const switchToRegister = () => {
   isRegisterMode.value = true
   resetForm()
   attempts.value = 0
+  ipAttempts.value = 0
   showCaptcha.value = false
   globalError.value = ''
   globalSuccess.value = ''
@@ -612,6 +650,7 @@ const switchToLogin = () => {
   isRegisterMode.value = false
   resetForm()
   attempts.value = 0
+  ipAttempts.value = 0
   showCaptcha.value = false
   globalError.value = ''
   globalSuccess.value = ''
@@ -636,6 +675,7 @@ const resetForm = () => {
   confirmPasswordError.value = false
   
   usernameCheckStatus.value = ''
+  emailCheckStatus.value = ''
   hasValidAccountForAttempt.value = false
   showUserMissingMessage.value = false
   
@@ -664,6 +704,16 @@ const handleSubmit = async () => {
   if (isRegisterMode.value) {
     if (usernameCheckStatus.value !== 'available') {
       globalError.value = '请检查用户名是否可用'
+      return
+    }
+    
+    if (form.email && emailCheckStatus.value === 'taken') {
+      globalError.value = '邮箱已被注册，请使用其他邮箱'
+      return
+    }
+    
+    if (form.email && emailCheckStatus.value !== 'available') {
+      globalError.value = '请检查邮箱是否可用'
       return
     }
     
@@ -714,19 +764,28 @@ const handleSubmit = async () => {
           router.push('/')
         }, 1000)
       } else {
-        if (result.reason === 'user_missing') {
+        if (result.reason === 'captcha_error') {
+          showCaptcha.value = true
+          await refreshCaptcha()
+          globalError.value = result.message || '验证码错误'
+        } else if (result.reason === 'ip_cooldown') {
+          startCooldown()
+          attempts.value = 0
+          ipAttempts.value = 5
+          globalError.value = '尝试次数过多，请10分钟后再试'
+        } else if (result.reason === 'user_missing') {
           showUserMissingMessage.value = true
           hasValidAccountForAttempt.value = false
-          attempts.value++
+          ipAttempts.value++
           
-          if (attempts.value >= 5) {
-            startCooldown()
-            attempts.value = 0
-            globalError.value = '尝试次数过多，请10分钟后再试'
-          } else {
-            globalError.value = result.message || '登录失败'
+          if (ipAttempts.value >= 3) {
+            showCaptcha.value = true
+            await refreshCaptcha()
           }
-        } else if (result.reason === 'password_error') {
+          
+          globalError.value = result.message || '用户名或密码错误'
+          
+        } else if (result.reason === 'password_error' || result.reason === 'account_locked') {
           hasValidAccountForAttempt.value = true
           showUserMissingMessage.value = false
           attempts.value++
@@ -736,16 +795,12 @@ const handleSubmit = async () => {
             await refreshCaptcha()
           }
           
-          if (attempts.value >= 5) {
+          if (result.reason === 'account_locked' || result.is_locked) {
             showCaptcha.value = true
             globalError.value = '账户已锁定，请联系管理员解锁'
           } else {
-            globalError.value = result.message || '登录失败'
+            globalError.value = result.message || '用户名或密码错误'
           }
-        } else if (result.reason === 'captcha_error') {
-          showCaptcha.value = true
-          await refreshCaptcha()
-          globalError.value = result.message || '验证码错误'
         } else {
           globalError.value = result.message || '登录失败'
         }
@@ -761,7 +816,35 @@ const handleSubmit = async () => {
 
 watch(() => form.username, (newUsername) => {
   if (newUsername && newUsername.length >= 3 && isRegisterMode.value) {
-    checkUsernameAvailability()
+    const timer = setTimeout(() => {
+      checkUsernameAvailability()
+    }, 500)
+    return () => clearTimeout(timer)
+  }
+})
+
+watch(() => form.email, (newEmail) => {
+  if (newEmail && validateEmailFormat(newEmail) && isRegisterMode.value) {
+    const timer = setTimeout(() => {
+      checkEmailAvailability()
+    }, 500)
+    return () => clearTimeout(timer)
+  } else {
+    emailCheckStatus.value = ''
+  }
+})
+
+watch(attempts, (newAttempts) => {
+  if (!isRegisterMode.value && newAttempts >= 3) {
+    showCaptcha.value = true
+    refreshCaptcha()
+  }
+})
+
+watch(ipAttempts, (newIpAttempts) => {
+  if (!isRegisterMode.value && newIpAttempts >= 3) {
+    showCaptcha.value = true
+    refreshCaptcha()
   }
 })
 
@@ -1122,6 +1205,32 @@ onMounted(() => {
 }
 
 .username-status-indicator svg {
+  width: 10px;
+  height: 10px;
+}
+
+.email-status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  margin-right: 4px;
+  box-sizing: border-box;
+}
+
+.email-status-indicator.available {
+  background: var(--success-light);
+  color: var(--success-color);
+}
+
+.email-status-indicator.taken {
+  background: var(--error-light);
+  color: var(--error-color);
+}
+
+.email-status-indicator svg {
   width: 10px;
   height: 10px;
 }
