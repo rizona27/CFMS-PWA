@@ -268,65 +268,55 @@
               </div>
             </div>
             
-            <!-- 统一的错误提示区域（在按钮上方） -->
-            <div class="form-error-area-simple" :class="{
-              'has-error': (attempts > 0 && hasValidAccountForAttempt) || (isRegisterMode && attempts > 0),
+            <!-- 动态错误提示区域（原来黄色提示的位置） -->
+            <div class="form-error-area" :class="{
+              'has-error': (attempts > 0 && hasValidAccountForAttempt) || showUserMissingMessage || (isRegisterMode && attempts > 0),
               'has-locked-error': attempts >= 5 && hasValidAccountForAttempt,
-              'has-user-missing': showUserMissingMessage && !hasValidAccountForAttempt,
-              'has-confirm-error': isRegisterMode && confirmPasswordError && form.confirmPassword && form.password !== form.confirmPassword,
-              'has-success': globalSuccess
+              'has-cooldown': showCooldownMessage
             }">
-              <!-- 全局错误信息 -->
-              <div v-if="globalError" class="error-text-simple">
+              <!-- 用户名存在时的密码错误提示 -->
+              <div v-if="attempts > 0 && hasValidAccountForAttempt" class="error-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                   <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                   <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span>{{ globalError }}</span>
-              </div>
-              
-              <!-- 全局成功信息 -->
-              <div v-if="globalSuccess" class="success-text-simple">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>{{ globalSuccess }}</span>
-              </div>
-              
-              <!-- 登录错误尝试信息 -->
-              <div v-if="attempts > 0 && hasValidAccountForAttempt" class="error-text-simple">
                 <span v-if="attempts < 5">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  密码错误{{ attempts }}次，还剩{{ 5 - attempts }}次锁定
+                  用户名或密码错误，剩余尝试次数: {{ 5 - attempts }}
                   <span v-if="attempts >= 3">，请输入验证码</span>
                 </span>
                 <span v-else class="locked-message">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
                   账户已锁定，请管理员解锁！
                 </span>
               </div>
               
-              <!-- 用户不存在信息 -->
-              <div v-if="showUserMissingMessage && !hasValidAccountForAttempt" class="error-text-simple">
+              <!-- 用户名不存在时的提示 -->
+              <div v-if="showUserMissingMessage && !hasValidAccountForAttempt" class="error-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                   <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                   <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                用户不存在，请检查用户名或<a href="#" @click.prevent="switchToRegister">注册新账号</a>
+                <span v-if="attempts < 5">
+                  用户名不存在，剩余尝试次数: {{ 5 - attempts }}
+                </span>
+                <span v-else>
+                  尝试次数过多，请10分钟后再试
+                </span>
+                <a href="#" @click.prevent="switchToRegister" style="margin-left: 4px;">注册新账号</a>
               </div>
               
-              <!-- 注册模式密码不一致信息 -->
-              <div v-if="isRegisterMode && confirmPasswordError && form.confirmPassword && form.password !== form.confirmPassword" class="error-text-simple">
+              <!-- 冷却时间提示 -->
+              <div v-if="showCooldownMessage" class="error-text">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                尝试次数过多，请{{ remainingCooldownMinutes }}分钟{{ remainingCooldownSeconds }}秒后再试
+              </div>
+              
+              <!-- 注册确认密码错误提示 -->
+              <div v-if="isRegisterMode && confirmPasswordError && form.confirmPassword && form.password !== form.confirmPassword" class="error-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                   <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -335,8 +325,8 @@
                 两次输入的密码不一致
               </div>
               
-              <!-- 注册尝试次数信息 -->
-              <div v-if="isRegisterMode && attempts > 0 && attempts < 3" class="error-text-simple">
+              <!-- 注册失败提示 -->
+              <div v-if="isRegisterMode && attempts > 0 && attempts < 3" class="error-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                   <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -351,7 +341,7 @@
               <div class="button-group single-button">
                 <button type="button" class="auth-button gradient-button"
                   @click="handleSubmit"
-                  :disabled="isLoading || !isFormValid">
+                  :disabled="isLoading || !isFormValid || isCooldownActive">
                   <span class="button-text">
                     {{ isLoading ? (isRegisterMode ? '注册中...' : '登录中...') : (isRegisterMode ? '注册' : '登录') }}
                   </span>
@@ -389,7 +379,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/authStore'
 import { getCopyright } from '../../Version'
@@ -410,6 +400,9 @@ const captchaImage = ref('')
 const captchaId = ref('')
 const hasValidAccountForAttempt = ref(false)
 const showUserMissingMessage = ref(false)
+const cooldownTimer = ref(0)
+const showCooldownMessage = ref(false)
+const cooldownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 
 // 焦点状态
 const isUsernameFocused = ref(false)
@@ -436,7 +429,7 @@ const form = reactive({
   captcha_id: ''
 })
 
-// 主题相关
+// 计算属性
 const themeMode = ref('system')
 const systemTheme = ref('light')
 const themeClass = computed(() => {
@@ -451,6 +444,19 @@ const themeClass = computed(() => {
 
 const copyrightInfo = ref(getCopyright())
 
+// 冷却时间相关计算属性
+const isCooldownActive = computed(() => {
+  return cooldownTimer.value > 0
+})
+
+const remainingCooldownMinutes = computed(() => {
+  return Math.floor(cooldownTimer.value / 60)
+})
+
+const remainingCooldownSeconds = computed(() => {
+  return cooldownTimer.value % 60
+})
+
 // 表单验证
 const isFormValid = computed(() => {
   if (isRegisterMode.value) {
@@ -462,7 +468,7 @@ const isFormValid = computed(() => {
            form.confirmPassword === form.password &&
            (!showCaptcha.value || form.captcha_code.length >= 4)
   } else {
-    // 登录模式：只检查格式
+    // 登录模式：只检查格式，不考虑冷却状态
     return form.username.length >= 3 &&
            form.password.length >= 6 &&
            (!showCaptcha.value || form.captcha_code.length >= 4)
@@ -596,6 +602,35 @@ const refreshCaptcha = async () => {
   }
 }
 
+// 冷却时间处理
+const startCooldown = () => {
+  // 10分钟冷却时间
+  cooldownTimer.value = 600 // 600秒 = 10分钟
+  showCooldownMessage.value = true
+  
+  // 清除之前的计时器
+  if (cooldownInterval.value) {
+    clearInterval(cooldownInterval.value)
+  }
+  
+  // 启动新计时器
+  cooldownInterval.value = setInterval(() => {
+    cooldownTimer.value--
+    
+    if (cooldownTimer.value <= 0) {
+      stopCooldown()
+    }
+  }, 1000)
+}
+
+const stopCooldown = () => {
+  showCooldownMessage.value = false
+  if (cooldownInterval.value) {
+    clearInterval(cooldownInterval.value)
+    cooldownInterval.value = null
+  }
+}
+
 // 模式切换
 const switchToRegister = () => {
   isRegisterMode.value = true
@@ -604,6 +639,7 @@ const switchToRegister = () => {
   showCaptcha.value = false
   globalError.value = ''
   globalSuccess.value = ''
+  stopCooldown()
 }
 
 const switchToLogin = () => {
@@ -613,10 +649,10 @@ const switchToLogin = () => {
   showCaptcha.value = false
   globalError.value = ''
   globalSuccess.value = ''
+  stopCooldown()
 }
 
 const switchToForgotPassword = () => {
-  // 修复：确保路由跳转正确
   router.push('/forgot-password')
 }
 
@@ -644,6 +680,12 @@ const resetForm = () => {
 
 // 表单提交
 const handleSubmit = async () => {
+  // 检查冷却状态
+  if (isCooldownActive.value) {
+    globalError.value = `请${remainingCooldownMinutes.value}分钟${remainingCooldownSeconds.value}秒后再试`
+    return
+  }
+  
   // 验证表单
   validateUsername()
   validatePassword()
@@ -718,11 +760,20 @@ const handleSubmit = async () => {
         if (result.reason === 'user_missing') {
           showUserMissingMessage.value = true
           hasValidAccountForAttempt.value = false
-          attempts.value = 0
-          globalError.value = result.message || '用户不存在'
+          attempts.value++
+          
+          // 用户名不存在时，5次尝试后启动10分钟冷却
+          if (attempts.value >= 5) {
+            startCooldown()
+            attempts.value = 0
+            globalError.value = '尝试次数过多，请10分钟后再试'
+          } else {
+            globalError.value = result.message || '登录失败'
+          }
         } else if (result.reason === 'password_error') {
           hasValidAccountForAttempt.value = true
-          attempts.value = result.attempts || attempts.value + 1
+          showUserMissingMessage.value = false
+          attempts.value++
           
           if (attempts.value >= 3) {
             showCaptcha.value = true
@@ -731,16 +782,14 @@ const handleSubmit = async () => {
           
           if (attempts.value >= 5) {
             showCaptcha.value = true
-            globalError.value = result.message || '账户已锁定，请联系管理员解锁'
+            globalError.value = '账户已锁定，请联系管理员解锁'
           } else {
             globalError.value = result.message || '登录失败'
           }
-        } else if (result.reason === 'captcha_error' || result.reason === 'captcha_required') {
+        } else if (result.reason === 'captcha_error') {
           showCaptcha.value = true
-          hasValidAccountForAttempt.value = true
-          attempts.value = result.attempts || 3
           await refreshCaptcha()
-          globalError.value = result.message || '请完成验证码校验'
+          globalError.value = result.message || '验证码错误'
         } else {
           globalError.value = result.message || '登录失败'
         }
@@ -759,6 +808,11 @@ watch(() => form.username, (newUsername) => {
   if (newUsername && newUsername.length >= 3 && isRegisterMode.value) {
     checkUsernameAvailability()
   }
+})
+
+// 清理计时器
+onUnmounted(() => {
+  stopCooldown()
 })
 
 // 初始化
@@ -817,15 +871,16 @@ onMounted(() => {
   height: 10px;
 }
 
-/* 验证码容器 */
+/* 验证码容器 - 修复布局问题 */
 .captcha-image-container {
   flex-shrink: 0;
+  width: 120px; /* 固定宽度 */
 }
 
 .captcha-image {
-  width: 100px;
-  height: var(--input-height);
-  border-radius: var(--border-radius);
+  width: 120px; /* 固定宽度 */
+  height: 48px; /* 与输入框高度一致 */
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--border-primary);
@@ -835,6 +890,13 @@ onMounted(() => {
   justify-content: center;
   transition: all 0.2s ease;
   backdrop-filter: blur(8px);
+}
+
+.captcha-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 保持比例 */
+  object-position: center;
 }
 
 .captcha-image:hover {
@@ -856,87 +918,101 @@ onMounted(() => {
   height: 14px;
 }
 
-/* 统一错误提示区域（按钮上方） */
-.form-error-area-simple {
+/* 验证码输入组优化 */
+.captcha-input-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 0 12px;
+  backdrop-filter: blur(8px);
+  min-width: 0; /* 允许收缩 */
+}
+
+.captcha-input-group .icon-input {
+  flex: 1;
+  min-width: 0; /* 允许输入框收缩 */
+}
+
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 动态错误提示区域（原来黄色提示的位置） */
+.form-error-area {
   min-height: 20px;
-  max-height: 80px;
-  margin: 8px 0 12px 0;
+  margin: 8px 0 16px 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   overflow: hidden;
-  gap: 4px;
 }
 
-.form-error-area-simple.has-error,
-.form-error-area-simple.has-user-missing,
-.form-error-area-simple.has-confirm-error {
-  min-height: 24px;
-  max-height: 60px;
+.form-error-area.has-error,
+.form-error-area.has-cooldown {
+  min-height: 20px;
 }
 
-.form-error-area-simple.has-locked-error {
-  min-height: 24px;
-  max-height: 60px;
+.form-error-area.has-locked-error {
+  min-height: 20px;
 }
 
-.form-error-area-simple.has-success {
-  min-height: 24px;
-  max-height: 60px;
-}
-
-.error-text-simple,
-.success-text-simple {
-  font-size: 12px;
+.error-text {
+  font-size: 13px;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.4;
   text-align: center;
-  padding: 2px 0;
+  padding: 4px 8px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  animation: fadeIn 0.3s ease;
+  gap: 6px;
+  flex-wrap: wrap; /* 允许换行 */
+  color: var(--error-color); /* 红色提示 */
+  background: var(--error-light);
+  border-radius: 8px;
+  border-left: 3px solid var(--error-color);
 }
 
-.form-error-area-simple.has-error .error-text-simple {
-  color: var(--warning-color);
-}
-
-.form-error-area-simple.has-locked-error .error-text-simple {
+.form-error-area.has-error .error-text {
   color: var(--error-color);
+  background: var(--error-light);
+  border-left-color: var(--error-color);
 }
 
-.form-error-area-simple.has-user-missing .error-text-simple {
+.form-error-area.has-locked-error .error-text {
+  color: var(--error-color);
+  background: var(--error-light);
+  border-left-color: var(--error-color);
+}
+
+.form-error-area.has-cooldown .error-text {
   color: var(--info-color);
+  background: var(--primary-light);
+  border-left-color: var(--info-color);
 }
 
-.form-error-area-simple.has-confirm-error .error-text-simple {
-  color: var(--error-color);
-}
-
-.error-text-simple a {
+.error-text a {
   color: var(--primary-color);
   text-decoration: none;
   font-weight: 600;
   margin-left: 4px;
 }
 
-.error-text-simple a:hover {
+.error-text a:hover {
   text-decoration: underline;
 }
 
-.error-text-simple svg,
-.success-text-simple svg {
+.error-text svg {
   flex-shrink: 0;
-}
-
-.success-text-simple {
-  color: var(--success-color);
 }
 
 .locked-message {
@@ -946,7 +1022,7 @@ onMounted(() => {
 
 /* 统一按钮区域 */
 .form-actions {
-  margin-top: 4px;
+  margin-top: 16px;
   width: 100%;
 }
 
@@ -988,8 +1064,12 @@ onMounted(() => {
 /* 移动端适配 */
 @media (max-width: 480px) {
   .captcha-image {
-    width: 100%;
+    width: 100px;
     height: 44px;
+  }
+  
+  .captcha-image-container {
+    width: 100px;
   }
   
   .captcha-row {
@@ -1001,39 +1081,23 @@ onMounted(() => {
     width: 100%;
   }
   
+  .error-text,
   .error-text-simple,
   .success-text-simple {
-    font-size: 11px;
+    font-size: 12px;
+    padding: 6px;
   }
   
-  .error-text-simple svg,
-  .success-text-simple svg {
-    width: 10px;
-    height: 10px;
-    margin-right: 3px;
-  }
-  
+  .form-error-area,
   .form-error-area-simple {
     min-height: 20px;
-    max-height: 60px;
-    margin: 4px 0 8px 0;
+    margin: 6px 0 12px 0;
   }
   
-  .form-error-area-simple.has-error,
-  .form-error-area-simple.has-user-missing,
-  .form-error-area-simple.has-confirm-error {
-    min-height: 20px;
-    max-height: 50px;
-  }
-  
-  .form-error-area-simple.has-locked-error {
-    min-height: 20px;
-    max-height: 50px;
-  }
-  
-  .form-error-area-simple.has-success {
-    min-height: 20px;
-    max-height: 50px;
+  .form-error-area.has-error,
+  .form-error-area.has-cooldown,
+  .form-error-area.has-locked-error {
+    min-height: 40px; /* 移动端可能需要更多空间 */
   }
   
   /* 修复移动端输入框光标位置 */
@@ -1338,7 +1402,7 @@ onMounted(() => {
   font-weight: 500;
   outline: none;
   padding: 0;
-  min-width: 0;
+  min-width: 0; /* 允许收缩 */
 }
 
 .icon-input::placeholder {
@@ -1397,24 +1461,6 @@ onMounted(() => {
 /* 验证码样式 */
 .captcha-group {
   margin-top: 4px;
-}
-
-.captcha-row {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-
-.captcha-input-group {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  height: 48px;
-  background: var(--input-bg);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 0 12px;
-  backdrop-filter: blur(8px);
 }
 
 /* 按钮样式 */

@@ -142,39 +142,39 @@
           </div>
         </div>
       </div>
-      
-      <!-- 简化的错误提示区域 -->
-      <div class="form-error-area-simple" :class="{
-        'has-error': attempts > 0 && hasValidAccountForAttempt,
-        'has-locked-error': attempts >= 5 && hasValidAccountForAttempt,
-        'has-user-missing': showUserMissingMessage && !hasValidAccountForAttempt
-      }">
-        <div v-if="attempts > 0 && hasValidAccountForAttempt" class="error-text-simple">
-          <span v-if="attempts < 5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            密码错误{{ attempts }}次，还剩{{ 5 - attempts }}次锁定
-            <span v-if="attempts >= 3">，请输入验证码</span>
-          </span>
-          <span v-else class="locked-message">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            账户已锁定，请管理员解锁！
-          </span>
-        </div>
-        <div v-if="showUserMissingMessage && !hasValidAccountForAttempt" class="error-text-simple">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
+    </div>
+    
+    <!-- 移动错误提示区域到按钮上方 -->
+    <div class="form-error-area-simple" :class="{
+      'has-error': attempts > 0 && hasValidAccountForAttempt,
+      'has-locked-error': attempts >= 5 && hasValidAccountForAttempt,
+      'has-user-missing': showUserMissingMessage && !hasValidAccountForAttempt
+    }">
+      <div v-if="attempts > 0 && hasValidAccountForAttempt" class="error-text-simple">
+        <span v-if="attempts < 5">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          用户不存在，请检查用户名或<a href="#" @click.prevent="switchToRegister">注册新账号</a>
-        </div>
+          密码错误{{ attempts }}次，还剩{{ 5 - attempts }}次锁定
+          <span v-if="attempts >= 3">，请输入验证码</span>
+        </span>
+        <span v-else class="locked-message">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          账户已锁定，请管理员解锁！
+        </span>
+      </div>
+      <div v-if="showUserMissingMessage && !hasValidAccountForAttempt" class="error-text-simple">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        用户不存在，请检查用户名或<a href="#" @click.prevent="switchToRegister">注册新账号</a>
       </div>
     </div>
     
@@ -367,8 +367,8 @@ watch(() => form.username, (newUsername) => {
 
 /* 统一错误提示 */
 .form-error-area-simple {
-  height: 20px;
-  margin: 4px 0 8px 0;
+  min-height: 20px;
+  margin: 8px 0 12px 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -379,11 +379,11 @@ watch(() => form.username, (newUsername) => {
 
 .form-error-area-simple.has-error,
 .form-error-area-simple.has-user-missing {
-  height: 20px;
+  min-height: 20px;
 }
 
 .form-error-area-simple.has-locked-error {
-  height: 20px;
+  min-height: 20px;
 }
 
 .error-text-simple {
@@ -391,24 +391,35 @@ watch(() => form.username, (newUsername) => {
   font-weight: 500;
   line-height: 1.3;
   text-align: center;
-  padding: 2px 0;
+  padding: 4px 8px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
+  flex-wrap: wrap; /* 允许换行 */
+  color: var(--error-color);
+  background: var(--error-light);
+  border-radius: 8px;
+  border-left: 3px solid var(--error-color);
 }
 
 .form-error-area-simple.has-error .error-text-simple {
-  color: var(--warning-color);
+  color: var(--error-color);
+  background: var(--error-light);
+  border-left-color: var(--error-color);
 }
 
 .form-error-area-simple.has-locked-error .error-text-simple {
   color: var(--error-color);
+  background: var(--error-light);
+  border-left-color: var(--error-color);
 }
 
 .form-error-area-simple.has-user-missing .error-text-simple {
   color: var(--info-color);
+  background: var(--primary-light);
+  border-left-color: var(--info-color);
 }
 
 .error-text-simple a {
@@ -428,7 +439,7 @@ watch(() => form.username, (newUsername) => {
 
 /* 统一按钮区域 */
 .form-actions {
-  margin-top: 12px;
+  margin-top: 8px;
   width: 100%;
 }
 
@@ -460,6 +471,7 @@ watch(() => form.username, (newUsername) => {
   
   .error-text-simple {
     font-size: 11px;
+    padding: 6px;
   }
   
   .error-text-simple svg {
@@ -469,17 +481,17 @@ watch(() => form.username, (newUsername) => {
   }
   
   .form-error-area-simple {
-    height: 20px;
-    margin: 2px 0 6px 0;
+    min-height: 20px;
+    margin: 6px 0 10px 0;
   }
   
   .form-error-area-simple.has-error,
   .form-error-area-simple.has-user-missing {
-    height: 20px;
+    min-height: 40px;
   }
   
   .form-error-area-simple.has-locked-error {
-    height: 20px;
+    min-height: 20px;
   }
   
   /* 修复移动端输入框光标位置 */
