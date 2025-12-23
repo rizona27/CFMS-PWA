@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute, type RouteLocationNormalized } from 'vue-router'
+import { useRoute, useRouter, type RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from './stores/authStore'
 import { useDataStore } from './stores/dataStore'
 import CustomTabBar from './components/layout/CustomTabBar.vue'
@@ -60,6 +60,7 @@ import CustomTabBar from './components/layout/CustomTabBar.vue'
 const authStore = useAuthStore()
 const dataStore = useDataStore()
 const route = useRoute()
+const router = useRouter() // 添加这行
 
 const isLoading = ref(false)
 const isTabBarHidden = ref(false)
@@ -195,7 +196,8 @@ const handleThemeChanged = (event: any) => {
 // 检查登录状态
 const checkAuthState = () => {
   // 如果是重置密码页面，跳过登录状态检查
-  if (window.location.hash.includes('/reset-password')) {
+  const currentHash = window.location.hash
+  if (currentHash.includes('/reset-password')) {
     console.log('App.vue: 检测到重置密码页面，跳过登录状态检查')
     return
   }
@@ -233,7 +235,7 @@ onMounted(() => {
     // 特殊处理：重置密码页面跳过所有认证检查
     const currentPath = window.location.hash.replace('#', '') || '/'
     if (currentPath.includes('/reset-password')) {
-      console.log('App.vue: 检测到重置密码页面，跳过所有认证检查')
+      console.log('App.vue: 检测到重置密码页面，跳过所有认证检查和重定向')
       return
     }
     

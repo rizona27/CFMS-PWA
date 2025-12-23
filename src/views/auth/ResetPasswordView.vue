@@ -437,6 +437,14 @@ const validateToken = async () => {
 onMounted(async () => {
   console.log('重置密码页面已挂载')
   
+  // 重要：立即设置一个全局标志，防止其他组件干扰
+  ;(window as any).isOnResetPasswordPage = true
+  sessionStorage.setItem('isOnResetPasswordPage', 'true')
+  
+  console.log('当前URL:', window.location.href)
+  console.log('当前hash:', window.location.hash)
+  console.log('当前search:', window.location.search)
+  
   // 额外的安全措施：确保这个页面不会被路由守卫错误地重定向
   const currentHash = window.location.hash
   if (currentHash.includes('reset-password') && !currentHash.includes('token=')) {
@@ -455,8 +463,10 @@ onMounted(async () => {
   // 等待路由完全就绪
   await nextTick()
   
-  // 验证token
-  await validateToken()
+  // 延迟验证token，确保页面已经稳定显示
+  setTimeout(async () => {
+    await validateToken()
+  }, 100)
 })
 
 // 监听路由参数变化
@@ -472,6 +482,10 @@ watch(
 )
 
 onUnmounted(() => {
+  // 清理全局标志
+  delete (window as any).isOnResetPasswordPage
+  sessionStorage.removeItem('isOnResetPasswordPage')
+  
   if (countdownTimer.value) {
     clearInterval(countdownTimer.value)
     countdownTimer.value = null
@@ -659,6 +673,7 @@ onUnmounted(() => {
   margin: 0 auto 16px;
   border: 2px solid var(--border-primary);
   border-top-color: var(--primary-color);
+  border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
