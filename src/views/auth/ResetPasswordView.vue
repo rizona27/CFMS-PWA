@@ -16,10 +16,9 @@
       <div class="auth-container">
         <div class="auth-card fade-in-down">
           <div class="logo-header">
-            <h1 class="auth-title">CFMS · 重置密码</h1>
+            <h1 class="auth-title">CFMS · 一基暴富</h1>
           </div>
           
-          <!-- 统一状态提示区域 -->
           <div class="form-error-area-simple">
             <div v-if="globalError" class="error-text-simple">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -41,7 +40,6 @@
           <div v-if="!isValidating && !validationError && !success">
             <div class="auth-form">
               <div class="form-content">
-                <!-- 用户信息区域 - 使用统一圆角框体 -->
                 <div v-if="username" class="user-info-container">
                   <div class="user-info-header">
                     <div class="user-avatar">
@@ -57,7 +55,6 @@
                   </div>
                 </div>
                 
-                <!-- 密码输入区域 -->
                 <div class="password-inputs">
                   <div class="form-group with-icon password-group" :class="{
                     'has-error': passwordError,
@@ -171,7 +168,6 @@
                 </div>
               </div>
               
-              <!-- 统一按钮区域 - 移除返回按钮，只有一个重置按钮 -->
               <div class="form-actions">
                 <button
                   type="button"
@@ -386,16 +382,13 @@ const handleReset = async () => {
 }
 
 const validateToken = async () => {
-  // 首先尝试从 query 参数获取
   token.value = route.query.token as string || ''
   
-  // 如果没有，尝试从 hash 中解析
   if (!token.value && window.location.hash) {
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
     token.value = hashParams.get('token') || ''
   }
   
-  // 如果没有，尝试从 URL 搜索参数中获取
   if (!token.value) {
     const urlParams = new URLSearchParams(window.location.search)
     token.value = urlParams.get('token') || ''
@@ -437,7 +430,6 @@ const validateToken = async () => {
 onMounted(async () => {
   console.log('重置密码页面已挂载')
   
-  // 重要：立即设置一个全局标志，防止其他组件干扰
   ;(window as any).isOnResetPasswordPage = true
   sessionStorage.setItem('isOnResetPasswordPage', 'true')
   
@@ -445,14 +437,11 @@ onMounted(async () => {
   console.log('当前hash:', window.location.hash)
   console.log('当前search:', window.location.search)
   
-  // 额外的安全措施：确保这个页面不会被路由守卫错误地重定向
   const currentHash = window.location.hash
   if (currentHash.includes('reset-password') && !currentHash.includes('token=')) {
     console.log('重置密码页面缺少token参数，但仍然显示界面')
-    // 允许用户看到界面，即使验证会失败
   }
   
-  // 检测系统主题
   const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   systemTheme.value = darkModeMediaQuery.matches ? 'dark' : 'light'
   
@@ -460,16 +449,13 @@ onMounted(async () => {
     systemTheme.value = e.matches ? 'dark' : 'light'
   })
   
-  // 等待路由完全就绪
   await nextTick()
   
-  // 延迟验证token，确保页面已经稳定显示
   setTimeout(async () => {
     await validateToken()
   }, 100)
 })
 
-// 监听路由参数变化
 watch(
   () => route.query,
   async (newQuery) => {
@@ -482,7 +468,6 @@ watch(
 )
 
 onUnmounted(() => {
-  // 清理全局标志
   delete (window as any).isOnResetPasswordPage
   sessionStorage.removeItem('isOnResetPasswordPage')
   
@@ -494,341 +479,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 重置密码页面特殊样式 */
-.form-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-bottom: 12px;
-}
-
-/* 用户信息容器 - 统一圆角框体 */
-.user-info-container {
-  background: var(--input-bg);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 16px;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
-}
-
-.user-info-container:hover {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.user-info-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  border-radius: 50%;
-  color: white;
-  flex-shrink: 0;
-}
-
-.user-avatar svg {
-  width: 20px;
-  height: 20px;
-}
-
-.user-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.username {
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hint {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-/* 密码输入区域 */
-.password-inputs {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* 成功和错误状态页面 - 重新设计 */
-.success-state,
-.error-state,
-.loading-state {
-  text-align: center;
-  padding: 32px 20px 24px;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.success-text {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.success-icon {
-  margin-bottom: 16px;
-  color: var(--success-color);
-}
-
-.success-icon svg {
-  width: 48px;
-  height: 48px;
-  display: block;
-  margin: 0 auto;
-}
-
-.success-title {
-  margin: 0 0 8px 0;
-  color: var(--success-color);
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.success-message {
-  margin: 0 0 20px 0;
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.success-text .tips {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-primary);
-}
-
-.success-text .tips p {
-  font-size: 13px;
-  color: var(--text-tertiary);
-  margin: 6px 0;
-}
-
-.countdown-number {
-  font-weight: 600;
-  color: var(--primary-color);
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-/* 修改后的错误状态样式 - 增加红色图标 */
-.error-state {
-  text-align: center;
-  padding: 32px 20px 24px;
-  animation: fadeIn 0.3s ease;
-}
-
-.error-icon {
-  margin-bottom: 16px;
-  color: var(--error-color);
-}
-
-.error-icon svg {
-  width: 48px;
-  height: 48px;
-  display: block;
-  margin: 0 auto;
-}
-
-.error-state .error-text p {
-  margin: 0 0 24px 0;
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.5;
-  max-width: 320px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.loading-state .loading-spinner.large {
-  width: 40px;
-  height: 40px;
-  margin: 0 auto 16px;
-  border: 2px solid var(--border-primary);
-  border-top-color: var(--primary-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.loading-state p {
-  color: var(--text-secondary);
-  margin: 0;
-  font-size: 14px;
-}
-
-/* 按钮样式 */
-.button-group.two-buttons {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-
-.button-group.two-buttons .auth-button {
-  flex: 1;
-  height: 44px;
-}
-
-/* 移动端适配 */
-@media (max-width: 480px) {
-  .form-content {
-    gap: 16px;
-  }
-  
-  .user-info-container {
-    padding: 14px;
-  }
-  
-  .user-avatar {
-    width: 36px;
-    height: 36px;
-  }
-  
-  .user-avatar svg {
-    width: 18px;
-    height: 18px;
-  }
-  
-  .username {
-    font-size: 15px;
-  }
-  
-  .hint {
-    font-size: 12px;
-  }
-  
-  .password-inputs {
-    gap: 10px;
-  }
-  
-  .success-state,
-  .error-state,
-  .loading-state {
-    padding: 20px 16px 16px;
-  }
-  
-  .success-icon svg,
-  .error-icon svg {
-    width: 40px;
-    height: 40px;
-  }
-  
-  .success-title {
-    font-size: 16px;
-  }
-  
-  .success-message,
-  .error-state .error-text p {
-    font-size: 13px;
-  }
-  
-  .success-text .tips p {
-    font-size: 12px;
-  }
-  
-  .loading-state .loading-spinner.large {
-    width: 32px;
-    height: 32px;
-    margin-bottom: 14px;
-  }
-  
-  .loading-state p {
-    font-size: 13px;
-  }
-  
-  .button-group.two-buttons {
-    gap: 8px;
-  }
-  
-  .button-group.two-buttons .auth-button {
-    height: 44px;
-    font-size: 13px;
-  }
-  
-  /* 修复移动端输入框光标位置 */
-  .icon-input {
-    line-height: 1.2;
-    height: 100%;
-    padding-top: 0;
-    padding-bottom: 0;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  
-  .form-group.with-icon {
-    align-items: center;
-  }
-}
-
-/* 平板适配 */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .success-state,
-  .error-state,
-  .loading-state {
-    padding: 28px 24px 20px;
-  }
-}
-
-/* 深色模式优化 */
-.theme-dark .user-info-container {
-  background: var(--input-bg);
-  border-color: var(--border-primary);
-}
-
-.theme-dark .user-info-container:hover {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
-}
-
-.theme-dark .user-avatar {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-}
-
-.theme-dark .loading-state .loading-spinner.large {
-  border-color: var(--border-primary);
-}
-
-.theme-dark .success-text {
-  color: var(--text-secondary);
-}
-
-.theme-dark .success-text .tips {
-  border-top-color: var(--border-primary);
-}
-
-.theme-dark .success-text .tips p {
-  color: var(--text-tertiary);
-}
-</style>
-
-<style scoped>
-/* 添加基础主题样式 */
 .auth-view {
   position: relative;
   min-height: 100vh;
@@ -838,7 +488,6 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* 主题颜色定义 */
 .theme-light {
   --primary-color: #6366f1;
   --primary-light: rgba(99, 102, 241, 0.1);
@@ -885,7 +534,6 @@ onUnmounted(() => {
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
-/* 背景效果 */
 .background-fx {
   position: fixed;
   top: 0;
@@ -1019,7 +667,78 @@ onUnmounted(() => {
   background-clip: text;
 }
 
-/* 表单通用样式 */
+.form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+
+.user-info-container {
+  background: var(--input-bg);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.user-info-container:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.user-info-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  border-radius: 50%;
+  color: white;
+  flex-shrink: 0;
+}
+
+.user-avatar svg {
+  width: 20px;
+  height: 20px;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.username {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.password-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .form-group {
   position: relative;
   width: 100%;
@@ -1138,7 +857,6 @@ onUnmounted(() => {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* 按钮样式 */
 .auth-button {
   display: flex;
   align-items: center;
@@ -1176,7 +894,6 @@ onUnmounted(() => {
   transform: none !important;
 }
 
-/* 单一按钮样式 */
 .auth-button.single-button {
   width: 100%;
   height: 48px;
@@ -1213,13 +930,11 @@ onUnmounted(() => {
   to { transform: rotate(360deg); }
 }
 
-/* 表单操作区域 */
 .form-actions {
   margin-top: 12px;
   width: 100%;
 }
 
-/* 页脚 */
 .auth-footer {
   margin-top: 24px;
   text-align: center;
@@ -1231,7 +946,6 @@ onUnmounted(() => {
   margin: 0;
 }
 
-/* 成功/错误文本 */
 .success-text-simple {
   font-size: 12px;
   font-weight: 500;
@@ -1250,5 +964,277 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 4px;
+}
+
+.success-state,
+.error-state,
+.loading-state {
+  text-align: center;
+  padding: 32px 20px 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.success-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.success-icon {
+  margin-bottom: 16px;
+  color: var(--success-color);
+}
+
+.success-icon svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+  margin: 0 auto;
+}
+
+.success-title {
+  margin: 0 0 8px 0;
+  color: var(--success-color);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.success-message {
+  margin: 0 0 20px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.success-text .tips {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-primary);
+}
+
+.success-text .tips p {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 6px 0;
+}
+
+.countdown-number {
+  font-weight: 600;
+  color: var(--primary-color);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.error-state {
+  text-align: center;
+  padding: 32px 20px 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+.error-icon {
+  margin-bottom: 16px;
+  color: var(--error-color);
+}
+
+.error-icon svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+  margin: 0 auto;
+}
+
+.error-state .error-text p {
+  margin: 0 0 24px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.loading-state .loading-spinner.large {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 16px;
+  border: 2px solid var(--border-primary);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-state p {
+  color: var(--text-secondary);
+  margin: 0;
+  font-size: 14px;
+}
+
+.button-group.two-buttons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.button-group.two-buttons .auth-button {
+  flex: 1;
+  height: 44px;
+}
+
+@media (max-width: 480px) {
+  .auth-scroll-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    min-height: calc(100vh - 32px);
+  }
+  
+  .auth-card {
+    margin: 0;
+    width: 100%;
+    padding: 24px 20px;
+    transform: translateY(0);
+  }
+  
+  .auth-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+  }
+  
+  .form-content {
+    gap: 16px;
+  }
+  
+  .user-info-container {
+    padding: 14px;
+  }
+  
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .user-avatar svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .username {
+    font-size: 15px;
+  }
+  
+  .hint {
+    font-size: 12px;
+  }
+  
+  .password-inputs {
+    gap: 10px;
+  }
+  
+  .success-state,
+  .error-state,
+  .loading-state {
+    padding: 20px 16px 16px;
+  }
+  
+  .success-icon svg,
+  .error-icon svg {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .success-title {
+    font-size: 16px;
+  }
+  
+  .success-message,
+  .error-state .error-text p {
+    font-size: 13px;
+  }
+  
+  .success-text .tips p {
+    font-size: 12px;
+  }
+  
+  .loading-state .loading-spinner.large {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 14px;
+  }
+  
+  .loading-state p {
+    font-size: 13px;
+  }
+  
+  .button-group.two-buttons {
+    gap: 8px;
+  }
+  
+  .button-group.two-buttons .auth-button {
+    height: 44px;
+    font-size: 13px;
+  }
+  
+  .icon-input {
+    line-height: 1.2;
+    height: 100%;
+    padding-top: 0;
+    padding-bottom: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  .form-group.with-icon {
+    align-items: center;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .success-state,
+  .error-state,
+  .loading-state {
+    padding: 28px 24px 20px;
+  }
+}
+
+.theme-dark .user-info-container {
+  background: var(--input-bg);
+  border-color: var(--border-primary);
+}
+
+.theme-dark .user-info-container:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.theme-dark .user-avatar {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.theme-dark .loading-state .loading-spinner.large {
+  border-color: var(--border-primary);
+}
+
+.theme-dark .success-text {
+  color: var(--text-secondary);
+}
+
+.theme-dark .success-text .tips {
+  border-top-color: var(--border-primary);
+}
+
+.theme-dark .success-text .tips p {
+  color: var(--text-tertiary);
 }
 </style>

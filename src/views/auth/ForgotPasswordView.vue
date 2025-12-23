@@ -16,10 +16,9 @@
       <div class="auth-container">
         <div class="auth-card fade-in-down">
           <div class="logo-header">
-            <h1 class="auth-title">CFMS · 找回密码</h1>
+            <h1 class="auth-title">CFMS · 一基暴富</h1>
           </div>
           
-          <!-- 状态提示区域 -->
           <div class="form-error-area-simple">
             <div v-if="globalError" class="error-text-simple">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -117,7 +116,6 @@
                 </div>
               </div>
               
-              <!-- 统一按钮区域 -->
               <div class="form-actions">
                 <button
                   type="button"
@@ -133,7 +131,6 @@
               </div>
             </div>
             
-            <!-- 返回登录链接 -->
             <div class="hint-area">
               <div class="mode-switch">
                 <p>
@@ -154,7 +151,6 @@
               </div>
             </div>
             
-            <!-- 成功状态下的返回登录链接 -->
             <div class="hint-area">
               <div class="mode-switch">
                 <p>
@@ -286,123 +282,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 复用 AuthView.vue 中的样式，这里只添加特定样式 */
-.success-state {
-  text-align: center;
-  padding: 32px 20px 24px;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.success-text {
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.email-display {
-  margin: 0 0 20px 0;
-}
-
-.email-display em {
-  font-style: italic;
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--primary-color);
-  font-family: 'Georgia', 'Times New Roman', serif;
-}
-
-.success-text .tips {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-primary);
-}
-
-.success-text .tips p {
-  font-size: 13px;
-  color: var(--text-tertiary);
-  margin: 6px 0;
-}
-
-/* 链接区域 */
-.hint-area {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.mode-switch {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.mode-switch a {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.2s;
-  position: relative;
-}
-
-.mode-switch a:hover {
-  color: var(--secondary-color);
-}
-
-/* 移动端适配 */
-@media (max-width: 480px) {
-  .success-state {
-    padding: 20px 16px 16px;
-  }
-  
-  .success-text {
-    font-size: 13px;
-  }
-  
-  .email-display em {
-    font-size: 15px;
-  }
-  
-  .success-text .tips {
-    margin-top: 16px;
-    padding-top: 12px;
-  }
-  
-  .success-text .tips p {
-    font-size: 12px;
-  }
-}
-
-/* 深色模式优化 */
-.theme-dark .success-text {
-  color: var(--text-secondary);
-}
-
-.theme-dark .email-display em {
-  color: var(--primary-color);
-}
-
-.theme-dark .success-text .tips {
-  border-top-color: var(--border-primary);
-}
-
-.theme-dark .success-text .tips p {
-  color: var(--text-tertiary);
-}
-
-.theme-dark .mode-switch a {
-  color: var(--primary-color);
-}
-
-.theme-dark .mode-switch a:hover {
-  color: var(--secondary-color);
-}
-</style>
-
-<style scoped>
-/* 复用 AuthView 中的基础样式 */
 .auth-view {
   position: relative;
   min-height: 100vh;
@@ -412,7 +291,6 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 主题颜色定义 */
 .theme-light {
   --primary-color: #6366f1;
   --primary-light: rgba(99, 102, 241, 0.1);
@@ -459,7 +337,6 @@ onMounted(() => {
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
-/* 背景效果 */
 .background-fx {
   position: fixed;
   top: 0;
@@ -593,7 +470,6 @@ onMounted(() => {
   background-clip: text;
 }
 
-/* 动态表单区域 */
 .auth-form {
   width: 100%;
 }
@@ -606,7 +482,6 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-/* 表单通用样式 */
 .form-group {
   position: relative;
   width: 100%;
@@ -704,7 +579,6 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* 按钮样式 */
 .auth-button {
   display: flex;
   align-items: center;
@@ -742,7 +616,6 @@ onMounted(() => {
   transform: none !important;
 }
 
-/* 单一按钮样式 */
 .auth-button.single-button {
   width: 100%;
   height: 48px;
@@ -779,13 +652,11 @@ onMounted(() => {
   to { transform: rotate(360deg); }
 }
 
-/* 统一按钮区域 */
 .form-actions {
   margin-top: 12px;
   width: 100%;
 }
 
-/* 页脚 */
 .auth-footer {
   margin-top: 24px;
   text-align: center;
@@ -797,7 +668,6 @@ onMounted(() => {
   margin: 0;
 }
 
-/* 成功/错误文本 */
 .success-text-simple {
   font-size: 12px;
   font-weight: 500;
@@ -818,22 +688,135 @@ onMounted(() => {
   gap: 4px;
 }
 
-/* 移动端适配 */
+.success-state {
+  text-align: center;
+  padding: 32px 20px 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.success-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.email-display {
+  margin: 0 0 20px 0;
+}
+
+.email-display em {
+  font-style: italic;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--primary-color);
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+
+.success-text .tips {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-primary);
+}
+
+.success-text .tips p {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 6px 0;
+}
+
+.hint-area {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.mode-switch {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mode-switch a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.mode-switch a:hover {
+  color: var(--secondary-color);
+}
+
 @media (max-width: 480px) {
+  .auth-scroll-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    min-height: calc(100vh - 32px);
+  }
+  
   .auth-card {
-    padding: 24px;
+    margin: 0;
+    width: 100%;
+    padding: 24px 20px;
+    transform: translateY(0);
   }
   
-  .form-group.with-icon {
-    height: 44px;
+  .auth-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
   }
   
-  .auth-button {
-    height: 44px;
+  .success-state {
+    padding: 20px 16px 16px;
   }
   
-  .auth-button.single-button {
-    height: 44px;
+  .success-text {
+    font-size: 13px;
   }
+  
+  .email-display em {
+    font-size: 15px;
+  }
+  
+  .success-text .tips {
+    margin-top: 16px;
+    padding-top: 12px;
+  }
+  
+  .success-text .tips p {
+    font-size: 12px;
+  }
+}
+
+.theme-dark .success-text {
+  color: var(--text-secondary);
+}
+
+.theme-dark .email-display em {
+  color: var(--primary-color);
+}
+
+.theme-dark .success-text .tips {
+  border-top-color: var(--border-primary);
+}
+
+.theme-dark .success-text .tips p {
+  color: var(--text-tertiary);
+}
+
+.theme-dark .mode-switch a {
+  color: var(--primary-color);
+}
+
+.theme-dark .mode-switch a:hover {
+  color: var(--secondary-color);
 }
 </style>

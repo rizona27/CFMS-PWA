@@ -16,13 +16,11 @@
       <div class="auth-container">
         <div class="auth-card fade-in-down">
           <div class="logo-header">
-            <h1 class="auth-title">CFMS · {{ isRegisterMode ? '注册' : '登录' }}</h1>
+            <h1 class="auth-title">CFMS · 一基暴富</h1>
           </div>
           
-          <!-- 动态表单区域 -->
           <div class="auth-form">
             <div class="form-content">
-              <!-- 用户名输入 -->
               <div class="form-group with-icon" :class="{
                 'has-error': usernameError,
                 'has-success': form.username && !usernameError,
@@ -47,7 +45,6 @@
                   @blur="() => { isUsernameFocused = false; handleUsernameBlur() }"
                 />
                 <div class="input-actions">
-                  <!-- 只在注册模式显示用户名状态指示器 -->
                   <div v-if="isRegisterMode && usernameCheckStatus === 'available'" class="username-status-indicator available">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -72,7 +69,6 @@
                 </div>
               </div>
               
-              <!-- 邮箱输入（仅在注册模式显示） -->
               <div v-if="isRegisterMode" class="form-group with-icon" :class="{
                 'has-error': emailError,
                 'has-success': form.email && !emailError,
@@ -110,7 +106,6 @@
                 </div>
               </div>
               
-              <!-- 密码输入 -->
               <div class="form-group with-icon password-group" :class="{
                 'has-error': passwordError,
                 'has-success': form.password && !passwordError,
@@ -164,7 +159,6 @@
                 </div>
               </div>
               
-              <!-- 确认密码（仅在注册模式显示） -->
               <div v-if="isRegisterMode"
                    class="form-group with-icon password-group" :class="{
                 'has-error': confirmPasswordError,
@@ -219,7 +213,6 @@
                 </div>
               </div>
               
-              <!-- 验证码（登录错误3次或注册尝试3次后显示） -->
               <div v-if="showCaptcha && attempts >= 3" class="form-group captcha-group">
                 <div class="captcha-row">
                   <div class="captcha-input-group">
@@ -268,13 +261,11 @@
               </div>
             </div>
             
-            <!-- 动态错误提示区域（原来黄色提示的位置） -->
             <div class="form-error-area" :class="{
               'has-error': (attempts > 0 && hasValidAccountForAttempt) || showUserMissingMessage || (isRegisterMode && attempts > 0),
               'has-locked-error': attempts >= 5 && hasValidAccountForAttempt,
               'has-cooldown': showCooldownMessage
             }">
-              <!-- 用户名存在时的密码错误提示 -->
               <div v-if="attempts > 0 && hasValidAccountForAttempt" class="error-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -290,7 +281,6 @@
                 </span>
               </div>
               
-              <!-- 用户名不存在时的提示 -->
               <div v-if="showUserMissingMessage && !hasValidAccountForAttempt" class="error-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -306,7 +296,6 @@
                 <a href="#" @click.prevent="switchToRegister" style="margin-left: 4px;">注册新账号</a>
               </div>
               
-              <!-- 冷却时间提示 -->
               <div v-if="showCooldownMessage" class="error-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -315,7 +304,6 @@
                 尝试次数过多，请{{ remainingCooldownMinutes }}分钟{{ remainingCooldownSeconds }}秒后再试
               </div>
               
-              <!-- 注册确认密码错误提示 -->
               <div v-if="isRegisterMode && confirmPasswordError && form.confirmPassword && form.password !== form.confirmPassword" class="error-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -325,7 +313,6 @@
                 两次输入的密码不一致
               </div>
               
-              <!-- 注册失败提示 -->
               <div v-if="isRegisterMode && attempts > 0 && attempts < 3" class="error-text">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -336,24 +323,23 @@
               </div>
             </div>
             
-            <!-- 统一按钮区域 -->
             <div class="form-actions">
-              <div class="button-group single-button">
-                <button type="button" class="auth-button gradient-button"
-                  @click="handleSubmit"
-                  :disabled="isLoading || !isFormValid || isCooldownActive">
-                  <span class="button-text">
-                    {{ isLoading ? (isRegisterMode ? '注册中...' : '登录中...') : (isRegisterMode ? '注册' : '登录') }}
-                  </span>
-                  <div v-if="isLoading" class="button-loading">
-                    <div class="loading-spinner"></div>
-                  </div>
-                </button>
-              </div>
+              <button
+                type="button"
+                class="auth-button gradient-button single-button"
+                @click="handleSubmit"
+                :disabled="isLoading || !isFormValid || isCooldownActive"
+              >
+                <span class="button-text">
+                  {{ isLoading ? (isRegisterMode ? '注册中...' : '登录中...') : (isRegisterMode ? '注册' : '登录') }}
+                </span>
+                <div v-if="isLoading" class="button-loading">
+                  <div class="loading-spinner"></div>
+                </div>
+              </button>
             </div>
           </div>
           
-          <!-- 底部链接区域 -->
           <div class="hint-area">
             <div class="mode-switch">
               <p v-if="!isRegisterMode">
@@ -387,7 +373,6 @@ import { getCopyright } from '../../Version'
 const router = useRouter()
 const authStore = useAuthStore()
 
-// 状态变量
 const isRegisterMode = ref(false)
 const isLoading = ref(false)
 const globalError = ref('')
@@ -404,22 +389,16 @@ const cooldownTimer = ref(0)
 const showCooldownMessage = ref(false)
 const cooldownInterval = ref<ReturnType<typeof setInterval> | null>(null)
 
-// 焦点状态
 const isUsernameFocused = ref(false)
 const isEmailFocused = ref(false)
 const isPasswordFocused = ref(false)
 const isConfirmPasswordFocused = ref(false)
-
-// 检查状态（只在注册模式下使用）
 const usernameCheckStatus = ref('')
-
-// 错误状态
 const usernameError = ref(false)
 const emailError = ref(false)
 const passwordError = ref(false)
 const confirmPasswordError = ref(false)
 
-// 表单数据
 const form = reactive({
   username: '',
   email: '',
@@ -429,7 +408,6 @@ const form = reactive({
   captcha_id: ''
 })
 
-// 计算属性
 const themeMode = ref('system')
 const systemTheme = ref('light')
 const themeClass = computed(() => {
@@ -444,7 +422,6 @@ const themeClass = computed(() => {
 
 const copyrightInfo = ref(getCopyright())
 
-// 冷却时间相关计算属性
 const isCooldownActive = computed(() => {
   return cooldownTimer.value > 0
 })
@@ -457,10 +434,8 @@ const remainingCooldownSeconds = computed(() => {
   return cooldownTimer.value % 60
 })
 
-// 表单验证
 const isFormValid = computed(() => {
   if (isRegisterMode.value) {
-    // 注册模式：检查用户名是否可用
     return form.username.length >= 3 &&
            form.email && validateEmailFormat(form.email) &&
            usernameCheckStatus.value === 'available' &&
@@ -468,7 +443,6 @@ const isFormValid = computed(() => {
            form.confirmPassword === form.password &&
            (!showCaptcha.value || form.captcha_code.length >= 4)
   } else {
-    // 登录模式：只检查格式，不考虑冷却状态
     return form.username.length >= 3 &&
            form.password.length >= 6 &&
            (!showCaptcha.value || form.captcha_code.length >= 4)
@@ -541,7 +515,6 @@ const validateConfirmPassword = () => {
   }
 }
 
-// 检查用户名可用性（只在注册模式下）
 const checkUsernameAvailability = async () => {
   if (!isRegisterMode.value || form.username.length < 3) return
   
@@ -558,7 +531,6 @@ const checkUsernameAvailability = async () => {
       usernameCheckStatus.value = data.exists ? 'taken' : 'available'
       hasValidAccountForAttempt.value = data.exists
       
-      // 如果用户存在且被锁定
       if (data.exists && data.is_locked) {
         attempts.value = 5
         showCaptcha.value = true
@@ -576,7 +548,6 @@ const handleUsernameBlur = () => {
   }
 }
 
-// 验证码处理
 const handleCaptchaInput = () => {
   if (form.captcha_code.length > 4) {
     form.captcha_code = form.captcha_code.slice(0, 4)
@@ -602,18 +573,14 @@ const refreshCaptcha = async () => {
   }
 }
 
-// 冷却时间处理
 const startCooldown = () => {
-  // 10分钟冷却时间
-  cooldownTimer.value = 600 // 600秒 = 10分钟
+  cooldownTimer.value = 600
   showCooldownMessage.value = true
   
-  // 清除之前的计时器
   if (cooldownInterval.value) {
     clearInterval(cooldownInterval.value)
   }
   
-  // 启动新计时器
   cooldownInterval.value = setInterval(() => {
     cooldownTimer.value--
     
@@ -631,7 +598,6 @@ const stopCooldown = () => {
   }
 }
 
-// 模式切换
 const switchToRegister = () => {
   isRegisterMode.value = true
   resetForm()
@@ -656,7 +622,6 @@ const switchToForgotPassword = () => {
   router.push('/forgot-password')
 }
 
-// 重置表单
 const resetForm = () => {
   form.username = ''
   form.email = ''
@@ -678,15 +643,12 @@ const resetForm = () => {
   showConfirmPassword.value = false
 }
 
-// 表单提交
 const handleSubmit = async () => {
-  // 检查冷却状态
   if (isCooldownActive.value) {
     globalError.value = `请${remainingCooldownMinutes.value}分钟${remainingCooldownSeconds.value}秒后再试`
     return
   }
   
-  // 验证表单
   validateUsername()
   validatePassword()
   if (isRegisterMode.value) {
@@ -694,13 +656,11 @@ const handleSubmit = async () => {
     validateConfirmPassword()
   }
   
-  // 检查验证码
   if (showCaptcha.value && (!form.captcha_code || form.captcha_code.length < 4)) {
     globalError.value = '请输入验证码'
     return
   }
   
-  // 注册额外检查
   if (isRegisterMode.value) {
     if (usernameCheckStatus.value !== 'available') {
       globalError.value = '请检查用户名是否可用'
@@ -719,7 +679,6 @@ const handleSubmit = async () => {
   
   try {
     if (isRegisterMode.value) {
-      // 注册逻辑
       const success = await authStore.register({
         username: form.username,
         password: form.password,
@@ -742,7 +701,6 @@ const handleSubmit = async () => {
         globalError.value = authStore.error || '注册失败'
       }
     } else {
-      // 登录逻辑
       const result = await authStore.login(
         form.username,
         form.password,
@@ -756,13 +714,11 @@ const handleSubmit = async () => {
           router.push('/')
         }, 1000)
       } else {
-        // 根据错误类型处理
         if (result.reason === 'user_missing') {
           showUserMissingMessage.value = true
           hasValidAccountForAttempt.value = false
           attempts.value++
           
-          // 用户名不存在时，5次尝试后启动10分钟冷却
           if (attempts.value >= 5) {
             startCooldown()
             attempts.value = 0
@@ -803,21 +759,17 @@ const handleSubmit = async () => {
   }
 }
 
-// 监听用户名变化（只在注册模式下）
 watch(() => form.username, (newUsername) => {
   if (newUsername && newUsername.length >= 3 && isRegisterMode.value) {
     checkUsernameAvailability()
   }
 })
 
-// 清理计时器
 onUnmounted(() => {
   stopCooldown()
 })
 
-// 初始化
 onMounted(() => {
-  // 检测系统主题
   const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   systemTheme.value = darkModeMediaQuery.matches ? 'dark' : 'light'
   
@@ -825,330 +777,11 @@ onMounted(() => {
     systemTheme.value = e.matches ? 'dark' : 'light'
   })
   
-  // 初始化验证码
   refreshCaptcha()
 })
 </script>
 
 <style scoped>
-/* 动态表单区域 */
-.auth-form {
-  width: 100%;
-}
-
-.form-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 12px;
-  transition: all 0.3s ease;
-}
-
-/* 状态指示器 */
-.username-status-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  margin-right: 4px;
-  box-sizing: border-box;
-}
-
-.username-status-indicator.available {
-  background: var(--success-light);
-  color: var(--success-color);
-}
-
-.username-status-indicator.taken {
-  background: var(--error-light);
-  color: var(--error-color);
-}
-
-.username-status-indicator svg {
-  width: 10px;
-  height: 10px;
-}
-
-/* 验证码容器 - 修复布局问题 */
-.captcha-image-container {
-  flex-shrink: 0;
-  width: 120px; /* 固定宽度 */
-}
-
-.captcha-image {
-  width: 120px; /* 固定宽度 */
-  height: 48px; /* 与输入框高度一致 */
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  border: 1px solid var(--border-primary);
-  background: var(--input-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(8px);
-}
-
-.captcha-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* 保持比例 */
-  object-position: center;
-}
-
-.captcha-image:hover {
-  border-color: var(--border-focus);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.captcha-placeholder {
-  color: var(--text-tertiary);
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.captcha-placeholder svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* 验证码输入组优化 */
-.captcha-input-group {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  height: 48px;
-  background: var(--input-bg);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 0 12px;
-  backdrop-filter: blur(8px);
-  min-width: 0; /* 允许收缩 */
-}
-
-.captcha-input-group .icon-input {
-  flex: 1;
-  min-width: 0; /* 允许输入框收缩 */
-}
-
-.captcha-row {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-
-/* 动态错误提示区域（原来黄色提示的位置） */
-.form-error-area {
-  min-height: 20px;
-  margin: 8px 0 16px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  transition: all 0.2s ease;
-  overflow: hidden;
-}
-
-.form-error-area.has-error,
-.form-error-area.has-cooldown {
-  min-height: 20px;
-}
-
-.form-error-area.has-locked-error {
-  min-height: 20px;
-}
-
-.error-text {
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.4;
-  text-align: center;
-  padding: 4px 8px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap; /* 允许换行 */
-  color: var(--error-color); /* 红色提示 */
-  background: var(--error-light);
-  border-radius: 8px;
-  border-left: 3px solid var(--error-color);
-}
-
-.form-error-area.has-error .error-text {
-  color: var(--error-color);
-  background: var(--error-light);
-  border-left-color: var(--error-color);
-}
-
-.form-error-area.has-locked-error .error-text {
-  color: var(--error-color);
-  background: var(--error-light);
-  border-left-color: var(--error-color);
-}
-
-.form-error-area.has-cooldown .error-text {
-  color: var(--info-color);
-  background: var(--primary-light);
-  border-left-color: var(--info-color);
-}
-
-.error-text a {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 600;
-  margin-left: 4px;
-}
-
-.error-text a:hover {
-  text-decoration: underline;
-}
-
-.error-text svg {
-  flex-shrink: 0;
-}
-
-.locked-message {
-  color: var(--error-color);
-  font-weight: 600;
-}
-
-/* 统一按钮区域 */
-.form-actions {
-  margin-top: 16px;
-  width: 100%;
-}
-
-.button-group.single-button {
-  height: 44px;
-  width: 100%;
-}
-
-.auth-button.gradient-button {
-  height: 44px;
-  width: 100%;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-}
-
-/* 链接区域 */
-.hint-area {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.mode-switch {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.mode-switch a {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.2s;
-  position: relative;
-}
-
-.mode-switch a:hover {
-  color: var(--secondary-color);
-}
-
-/* 移动端适配 */
-@media (max-width: 480px) {
-  .captcha-image {
-    width: 100px;
-    height: 44px;
-  }
-  
-  .captcha-image-container {
-    width: 100px;
-  }
-  
-  .captcha-row {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .captcha-input-group {
-    width: 100%;
-  }
-  
-  .error-text,
-  .error-text-simple,
-  .success-text-simple {
-    font-size: 12px;
-    padding: 6px;
-  }
-  
-  .form-error-area,
-  .form-error-area-simple {
-    min-height: 20px;
-    margin: 6px 0 12px 0;
-  }
-  
-  .form-error-area.has-error,
-  .form-error-area.has-cooldown,
-  .form-error-area.has-locked-error {
-    min-height: 40px; /* 移动端可能需要更多空间 */
-  }
-  
-  /* 修复移动端输入框光标位置 */
-  .icon-input {
-    line-height: 1.2;
-    height: 100%;
-    padding-top: 0;
-    padding-bottom: 0;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  
-  .form-group.with-icon {
-    align-items: center;
-  }
-  
-  .button-group.single-button {
-    height: 44px;
-  }
-  
-  .auth-form .form-content {
-    min-height: 180px;
-  }
-  
-  .mode-switch {
-    font-size: 12px;
-  }
-}
-
-/* 深色模式优化 */
-.theme-dark .captcha-image {
-  border-color: var(--border-primary);
-  background: var(--input-bg);
-}
-
-.theme-dark .captcha-placeholder {
-  color: var(--text-tertiary);
-}
-
-/* 动画效果 */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideDown {
-  from { max-height: 0; opacity: 0; }
-  to { max-height: 60px; opacity: 1; }
-}
-
-/* 添加基础主题样式 */
 .auth-view {
   position: relative;
   min-height: 100vh;
@@ -1158,7 +791,6 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 主题颜色定义 */
 .theme-light {
   --primary-color: #6366f1;
   --primary-light: rgba(99, 102, 241, 0.1);
@@ -1205,7 +837,6 @@ onMounted(() => {
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
-/* 背景效果 */
 .background-fx {
   position: fixed;
   top: 0;
@@ -1339,7 +970,18 @@ onMounted(() => {
   background-clip: text;
 }
 
-/* 表单通用样式 */
+.auth-form {
+  width: 100%;
+}
+
+.form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
 .form-group {
   position: relative;
   width: 100%;
@@ -1402,7 +1044,7 @@ onMounted(() => {
   font-weight: 500;
   outline: none;
   padding: 0;
-  min-width: 0; /* 允许收缩 */
+  min-width: 0;
 }
 
 .icon-input::placeholder {
@@ -1458,12 +1100,187 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* 验证码样式 */
+.username-status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  margin-right: 4px;
+  box-sizing: border-box;
+}
+
+.username-status-indicator.available {
+  background: var(--success-light);
+  color: var(--success-color);
+}
+
+.username-status-indicator.taken {
+  background: var(--error-light);
+  color: var(--error-color);
+}
+
+.username-status-indicator svg {
+  width: 10px;
+  height: 10px;
+}
+
+.captcha-image-container {
+  flex-shrink: 0;
+  width: 120px;
+}
+
+.captcha-image {
+  width: 120px;
+  height: 48px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border-primary);
+  background: var(--input-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.captcha-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.captcha-image:hover {
+  border-color: var(--border-focus);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.captcha-placeholder {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.captcha-placeholder svg {
+  width: 14px;
+  height: 14px;
+}
+
+.captcha-input-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 0 12px;
+  backdrop-filter: blur(8px);
+  min-width: 0;
+}
+
+.captcha-input-group .icon-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
 .captcha-group {
   margin-top: 4px;
 }
 
-/* 按钮样式 */
+.form-error-area {
+  min-height: 20px;
+  margin: 8px 0 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.form-error-area.has-error,
+.form-error-area.has-cooldown {
+  min-height: 20px;
+}
+
+.form-error-area.has-locked-error {
+  min-height: 20px;
+}
+
+.error-text {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  padding: 4px 8px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--error-color);
+  background: var(--error-light);
+  border-radius: 8px;
+  border-left: 3px solid var(--error-color);
+}
+
+.form-error-area.has-error .error-text {
+  color: var(--error-color);
+  background: var(--error-light);
+  border-left-color: var(--error-color);
+}
+
+.form-error-area.has-locked-error .error-text {
+  color: var(--error-color);
+  background: var(--error-light);
+  border-left-color: var(--error-color);
+}
+
+.form-error-area.has-cooldown .error-text {
+  color: var(--info-color);
+  background: var(--primary-light);
+  border-left-color: var(--info-color);
+}
+
+.error-text a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.error-text a:hover {
+  text-decoration: underline;
+}
+
+.error-text svg {
+  flex-shrink: 0;
+}
+
+.locked-message {
+  color: var(--error-color);
+  font-weight: 600;
+}
+
+.form-actions {
+  margin-top: 16px;
+  width: 100%;
+}
+
 .auth-button {
   display: flex;
   align-items: center;
@@ -1501,15 +1318,9 @@ onMounted(() => {
   transform: none !important;
 }
 
-.back-button {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-primary);
-}
-
-.back-button:hover:not(:disabled) {
-  background: var(--border-primary);
-  color: var(--text-primary);
+.auth-button.single-button {
+  width: 100%;
+  height: 48px;
 }
 
 .button-text {
@@ -1543,7 +1354,28 @@ onMounted(() => {
   to { transform: rotate(360deg); }
 }
 
-/* 页脚 */
+.hint-area {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.mode-switch {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mode-switch a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.mode-switch a:hover {
+  color: var(--secondary-color);
+}
+
 .auth-footer {
   margin-top: 24px;
   text-align: center;
@@ -1553,5 +1385,107 @@ onMounted(() => {
   font-size: 11px;
   color: var(--text-tertiary);
   margin: 0;
+}
+
+@media (max-width: 480px) {
+  .auth-scroll-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    min-height: calc(100vh - 32px);
+  }
+  
+  .auth-card {
+    margin: 0;
+    width: 100%;
+    padding: 24px 20px;
+    transform: translateY(0);
+  }
+  
+  .auth-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+  }
+  
+  .captcha-image {
+    width: 100px;
+    height: 44px;
+  }
+  
+  .captcha-image-container {
+    width: 100px;
+  }
+  
+  .captcha-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .captcha-input-group {
+    width: 100%;
+  }
+  
+  .error-text {
+    font-size: 12px;
+    padding: 6px;
+  }
+  
+  .form-error-area {
+    min-height: 20px;
+    margin: 6px 0 12px 0;
+  }
+  
+  .form-error-area.has-error,
+  .form-error-area.has-cooldown,
+  .form-error-area.has-locked-error {
+    min-height: 40px;
+  }
+  
+  .icon-input {
+    line-height: 1.2;
+    height: 100%;
+    padding-top: 0;
+    padding-bottom: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  .form-group.with-icon {
+    align-items: center;
+  }
+  
+  .auth-form .form-content {
+    min-height: 180px;
+  }
+  
+  .mode-switch {
+    font-size: 12px;
+  }
+  
+  .auth-button.single-button {
+    height: 44px;
+  }
+}
+
+.theme-dark .captcha-image {
+  border-color: var(--border-primary);
+  background: var(--input-bg);
+}
+
+.theme-dark .captcha-placeholder {
+  color: var(--text-tertiary);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { max-height: 0; opacity: 0; }
+  to { max-height: 60px; opacity: 1; }
 }
 </style>
