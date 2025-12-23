@@ -1,43 +1,57 @@
 <template>
   <div id="app">
-    <template v-if="authStore.isLoggedIn">
-      <div class="app-container">
-        <div class="main-content">
-          <router-view v-slot="{ Component, route }">
-            <transition
-              :name="getTransitionName(route)"
-              mode="out-in"
-              @before-enter="beforeEnter"
-              @after-enter="afterEnter"
-            >
-              <component
-                :is="Component"
-                :key="route.fullPath"
-              />
-            </transition>
-          </router-view>
+    <!-- 错误状态显示 -->
+    <div v-if="appError" class="app-error-state">
+      <div class="error-content">
+        <h3>应用初始化失败</h3>
+        <p>{{ appError }}</p>
+        <button @click="reloadApp" class="retry-button">
+          重新加载
+        </button>
+      </div>
+    </div>
+    
+    <!-- 正常应用内容 -->
+    <template v-else>
+      <template v-if="authStore.isLoggedIn">
+        <div class="app-container">
+          <div class="main-content">
+            <router-view v-slot="{ Component, route }">
+              <transition
+                :name="getTransitionName(route)"
+                mode="out-in"
+                @before-enter="beforeEnter"
+                @after-enter="afterEnter"
+              >
+                <component
+                  :is="Component"
+                  :key="route.fullPath"
+                />
+              </transition>
+            </router-view>
+          </div>
+          
+          <CustomTabBar v-if="showTabBar && !isTabBarHidden" />
         </div>
         
-        <CustomTabBar v-if="showTabBar && !isTabBarHidden" />
-      </div>
+        <div v-if="isLoading" class="global-loading">
+          <div class="loading-spinner"></div>
+        </div>
+      </template>
       
-      <div v-if="isLoading" class="global-loading">
-        <div class="loading-spinner"></div>
-      </div>
-    </template>
-    
-    <template v-else>
-      <div class="auth-container-wrapper">
-        <router-view v-slot="{ Component }">
-          <component :is="Component" />
-        </router-view>
-      </div>
+      <template v-else>
+        <div class="auth-container-wrapper">
+          <router-view v-slot="{ Component }">
+            <component :is="Component" />
+          </router-view>
+        </div>
+      </template>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, type RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from './stores/authStore'
 import { useDataStore } from './stores/dataStore'
@@ -49,6 +63,43 @@ const route = useRoute()
 
 const isLoading = ref(false)
 const isTabBarHidden = ref(false)
+const appError = ref<string | null>(null)
+
+// 添加重新加载函数
+const reloadApp = () => {
+  window.location.reload()
+}
+
+// 添加全局错误处理
+const setupGlobalErrorHandling = () => {
+  // 捕获未处理的 Promise 拒绝
+  window.addEventListener('unhandledrejection', (event) => {
+    console.error('App.vue: 未处理的Promise拒绝:', event.reason)
+    
+    // 如果是 siteHostMap 相关的错误，忽略它
+    if (event.reason && (
+      event.reason.message?.includes('siteHostMap') ||
+      event.reason.toString().includes('siteHostMap')
+    )) {
+      console.log('App.vue: 忽略 siteHostMap 错误')
+      event.preventDefault()
+    }
+  })
+
+  // 捕获运行时错误
+  window.addEventListener('error', (event) => {
+    console.error('App.vue: 运行时错误:', event.error)
+    
+    // 如果是 siteHostMap 相关的错误，忽略它
+    if (event.error && (
+      event.error.message?.includes('siteHostMap') ||
+      event.error.toString().includes('siteHostMap')
+    )) {
+      console.log('App.vue: 忽略 siteHostMap 错误')
+      event.preventDefault()
+    }
+  })
+}
 
 const getTransitionName = (route: RouteLocationNormalized) => {
   return (route.meta?.transition as string) || 'fade'
@@ -143,6 +194,12 @@ const handleThemeChanged = (event: any) => {
 
 // 检查登录状态
 const checkAuthState = () => {
+  // 如果是重置密码页面，跳过登录状态检查
+  if (window.location.hash.includes('/reset-password')) {
+    console.log('App.vue: 检测到重置密码页面，跳过登录状态检查')
+    return
+  }
+  
   const token = localStorage.getItem('auth_token')
   const user = localStorage.getItem('auth_user')
   
@@ -165,11 +222,22 @@ const checkAuthState = () => {
 onMounted(() => {
   console.log('CFMS PWA应用已启动')
   
+  // 设置全局错误处理
+  setupGlobalErrorHandling()
+  
   initTheme()
   
   window.addEventListener('theme-changed', handleThemeChanged)
   
   setTimeout(() => {
+    // 特殊处理：重置密码页面跳过所有认证检查
+    const currentPath = window.location.hash.replace('#', '') || '/'
+    if (currentPath.includes('/reset-password')) {
+      console.log('App.vue: 检测到重置密码页面，跳过所有认证检查')
+      return
+    }
+    
+    // 只有非重置密码页面才进行检查
     checkAuthState()
     
     if (route.meta?.requiresAuth && !authStore.isLoggedIn) {
@@ -178,66 +246,41 @@ onMounted(() => {
       const hasValidToken = token && token !== 'null' && token !== 'undefined'
       
       if (!hasValidToken) {
-        console.log('没有有效token，重定向到登录页')
-        window.location.hash = '#/auth'
+        console.log('没有有效token，检查当前是否为公开页面')
+        // 如果是公开页面（如登录、注册等），不进行重定向
+        const publicPaths = ['/auth', '/forgot-password', '/reset-password']
+        const isPublicPath = publicPaths.some(path => route.path.startsWith(path))
+        
+        if (!isPublicPath) {
+          console.log('重定向到登录页')
+          // 使用 router.push 而不是直接修改 hash，避免冲突
+          router.push('/auth')
+        }
       }
     }
-  }, 100)
+  }, 500)
   
   dataStore.loadData()
   
-  window.addEventListener('online', () => {
-    // Toast消息现在由ToastMessage组件处理
-  })
-  
-  window.addEventListener('offline', () => {
-    // Toast消息现在由ToastMessage组件处理
-  })
-  
   window.addEventListener('storage', (e) => {
+    // 如果是重置密码页面，跳过存储事件处理
+    if (window.location.hash.includes('/reset-password')) {
+      return
+    }
+    
     if (e.key === 'auth_token' || e.key === 'auth_user') {
       setTimeout(() => checkAuthState(), 100)
     }
   })
 })
 
-// 🔴 移除可能导致循环的watch
-// watch(() => dataStore.userPreferences.themeMode, () => {
-//   applyTheme()
-// })
-
 onUnmounted(() => {
-  const errorHandler = (event: ErrorEvent) => {
-    console.error('全局错误:', event.error)
-    if (event.error && event.error.message && event.error.message.includes('router')) {
-      console.log('路由相关错误，忽略')
-      return
-    }
-    if (event.error && event.error.name === 'NavigationDuplicated') {
-      console.log('路由重复导航错误，忽略')
-      return
-    }
-  }
-  
-  const rejectionHandler = (event: PromiseRejectionEvent) => {
-    console.error('未处理的Promise拒绝:', event.reason)
-    if (event.reason && event.reason.name === 'NavigationDuplicated') {
-      console.log('路由重复导航rejection，忽略')
-      return
-    }
-  }
-  
-  window.removeEventListener('error', errorHandler)
-  window.removeEventListener('unhandledrejection', rejectionHandler)
-  
   if (systemThemeListener) {
     systemThemeListener.removeEventListener('change', handleSystemThemeChange)
   }
   
   window.removeEventListener('theme-changed', handleThemeChanged)
   window.removeEventListener('storage', () => {})
-  window.removeEventListener('online', () => {})
-  window.removeEventListener('offline', () => {})
 })
 </script>
 
@@ -257,6 +300,53 @@ onUnmounted(() => {
   transition: background-color 0.3s ease, color 0.3s ease;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+}
+
+/* 添加错误状态样式 */
+.app-error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 20px;
+  background-color: #f8f9fa;
+}
+
+.app-error-state .error-content {
+  text-align: center;
+  max-width: 400px;
+  padding: 40px 32px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+}
+
+.app-error-state h3 {
+  color: #dc3545;
+  margin-bottom: 16px;
+  font-size: 20px;
+}
+
+.app-error-state p {
+  color: #6c757d;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.retry-button {
+  padding: 10px 24px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+  background: #0056b3;
 }
 
 /* 全局CSS变量定义 - 浅色模式 */

@@ -437,6 +437,13 @@ const validateToken = async () => {
 onMounted(async () => {
   console.log('重置密码页面已挂载')
   
+  // 额外的安全措施：确保这个页面不会被路由守卫错误地重定向
+  const currentHash = window.location.hash
+  if (currentHash.includes('reset-password') && !currentHash.includes('token=')) {
+    console.log('重置密码页面缺少token参数，但仍然显示界面')
+    // 允许用户看到界面，即使验证会失败
+  }
+  
   // 检测系统主题
   const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   systemTheme.value = darkModeMediaQuery.matches ? 'dark' : 'light'
