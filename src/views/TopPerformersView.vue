@@ -170,7 +170,7 @@
                     {{ item.profit.absoluteReturn.toFixed(2) }}
                   </div>
                   <div class="row-cell client">
-                    {{ getClientNameOnly(item.holding.clientName) }}
+                    <span class="client-name-text">{{ getClientNameOnly(item.holding.clientName) }}</span>
                   </div>
                 </div>
               </div>
@@ -187,7 +187,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDataStore } from '@/stores/dataStore'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -582,6 +582,8 @@ onUnmounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* 添加底部内边距来避免内容被导航栏遮挡 */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
 .fixed-header {
@@ -908,8 +910,11 @@ onUnmounted(() => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
   border: 1px solid var(--border-color);
-  max-height: calc(100vh - 200px);
+  /* 使用 calc 计算高度，留出导航栏空间 */
+  height: calc(100vh - var(--header-height, 120px) - var(--tabbar-height, 80px));
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 :root.dark .performers-table-container {
@@ -918,7 +923,7 @@ onUnmounted(() => {
 
 .table-header {
   display: grid;
-  grid-template-columns: 0.5fr 1.4fr 0.8fr 1.1fr 0.6fr 1.1fr 1fr;
+  grid-template-columns: 0.4fr 1.2fr 0.8fr 0.9fr 0.6fr 0.9fr 0.9fr;
   background: var(--bg-hover);
   border-bottom: 1px solid var(--border-color);
   font-size: 11px;
@@ -928,10 +933,11 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 5;
+  flex-shrink: 0;
 }
 
 .header-cell {
-  padding: 10px 4px;
+  padding: 10px 3px;
   text-align: center;
   display: flex;
   align-items: center;
@@ -956,13 +962,16 @@ onUnmounted(() => {
 }
 
 .table-body {
-  max-height: 400px;
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
+  /* 确保表格内容不会被遮挡 */
+  padding-bottom: 4px;
 }
 
 .table-row {
   display: grid;
-  grid-template-columns: 0.5fr 1.4fr 0.8fr 1.1fr 0.6fr 1.1fr 1fr;
+  grid-template-columns: 0.4fr 1.2fr 0.8fr 0.9fr 0.6fr 0.9fr 0.9fr;
   border-bottom: 1px solid var(--bg-hover);
   transition: background 0.2s ease;
   align-items: center;
@@ -978,7 +987,7 @@ onUnmounted(() => {
 }
 
 .row-cell {
-  padding: 8px 4px;
+  padding: 8px 3px;
   font-size: 11px;
   display: flex;
   align-items: center;
@@ -1002,7 +1011,7 @@ onUnmounted(() => {
   align-items: flex-start;
   justify-content: center;
   gap: 2px;
-  padding-left: 4px;
+  padding-left: 3px;
   overflow: hidden;
 }
 
@@ -1056,11 +1065,24 @@ onUnmounted(() => {
   font-size: 11px;
   line-height: 1.3;
   color: var(--text-primary);
-  padding-left: 4px;
+  padding-left: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.client-name-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  font-size: clamp(9px, 2.5vw, 11px);
+  line-height: 1.2;
 }
 
 .no-results {
@@ -1071,6 +1093,10 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .top-performers-view {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+  
   .header-section {
     padding: 6px 12px 6px;
   }
@@ -1141,18 +1167,22 @@ onUnmounted(() => {
     padding: 6px 3px;
   }
   
+  .performers-table-container {
+    height: calc(100vh - var(--header-height, 100px) - var(--tabbar-height, 70px));
+  }
+  
   .table-header {
-    grid-template-columns: 0.5fr 1.3fr 0.7fr 1fr 0.5fr 1fr 0.8fr;
+    grid-template-columns: 0.4fr 1.1fr 0.7fr 0.8fr 0.5fr 0.8fr 0.8fr;
     font-size: 10px;
   }
   
   .table-row {
-    grid-template-columns: 0.5fr 1.3fr 0.7fr 1fr 0.5fr 1fr 0.8fr;
+    grid-template-columns: 0.4fr 1.1fr 0.7fr 0.8fr 0.5fr 0.8fr 0.8fr;
   }
   
   .row-cell {
     font-size: 10px;
-    padding: 6px 3px;
+    padding: 6px 2px;
     min-height: 34px;
   }
   
@@ -1166,15 +1196,23 @@ onUnmounted(() => {
   
   .row-cell.client {
     font-size: 10px;
-    padding-left: 3px;
+    padding-left: 2px;
   }
   
   .header-cell {
-    padding: 8px 3px;
+    padding: 8px 2px;
+  }
+  
+  .client-name-text {
+    font-size: clamp(8px, 2.2vw, 10px);
   }
 }
 
 @media (max-width: 480px) {
+  .top-performers-view {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+  
   .header-section {
     padding: 6px 10px 6px;
   }
@@ -1219,20 +1257,21 @@ onUnmounted(() => {
   
   .performers-table-container {
     border-radius: 8px;
+    height: calc(100vh - var(--header-height, 90px) - var(--tabbar-height, 60px));
   }
   
   .table-header {
     font-size: 9px;
-    grid-template-columns: 0.5fr 1.2fr 0.6fr 0.9fr 0.4fr 0.9fr 0.7fr;
+    grid-template-columns: 0.4fr 1fr 0.6fr 0.7fr 0.4fr 0.7fr 0.7fr;
   }
   
   .table-row {
-    grid-template-columns: 0.5fr 1.2fr 0.6fr 0.9fr 0.4fr 0.9fr 0.7fr;
+    grid-template-columns: 0.4fr 1fr 0.6fr 0.7fr 0.4fr 0.7fr 0.7fr;
   }
   
   .row-cell {
     font-size: 9px;
-    padding: 6px 2px;
+    padding: 6px 1px;
     min-height: 32px;
   }
   
@@ -1246,11 +1285,15 @@ onUnmounted(() => {
   
   .row-cell.client {
     font-size: 9px;
-    padding-left: 2px;
+    padding-left: 1px;
   }
   
   .header-cell {
-    padding: 8px 2px;
+    padding: 8px 1px;
+  }
+  
+  .client-name-text {
+    font-size: clamp(7px, 2vw, 9px);
   }
 }
 
@@ -1266,7 +1309,7 @@ onUnmounted(() => {
 
 .global-toast {
   position: fixed;
-  bottom: 80px;
+  bottom: 120px; /* 提高位置，避免被导航栏遮挡 */
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg-card);
@@ -1300,6 +1343,10 @@ onUnmounted(() => {
     backdrop-filter: saturate(180%) blur(20px);
     background: var(--bg-primary);
   }
+  
+  .global-toast {
+    bottom: 100px; /* 在小屏幕上适当调整 */
+  }
 }
 
 :root.dark .sort-btn,
@@ -1323,9 +1370,57 @@ onUnmounted(() => {
 
 :root {
   --bg-primary-rgb: 248, 250, 252;
+  --header-height: 80px;
+  --tabbar-height: 80px;
 }
 
 :root.dark {
   --bg-primary-rgb: 15, 23, 42;
+}
+
+/* 动态计算 header 和 tabbar 高度 */
+@media (max-width: 768px) {
+  :root {
+    --header-height: 70px;
+    --tabbar-height: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --header-height: 60px;
+    --tabbar-height: 60px;
+  }
+}
+
+/* 确保表格在屏幕旋转时也能正确适应 */
+@media (orientation: landscape) {
+  .performers-table-container {
+    height: calc(100vh - var(--header-height, 60px) - var(--tabbar-height, 60px));
+  }
+}
+
+/* 确保在小屏幕上表格内容不会溢出 */
+.row-cell.client {
+  min-width: 0;
+}
+
+/* 针对有底部安全区域的设备做额外调整 */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .top-performers-view {
+    padding-bottom: calc(var(--tabbar-height, 80px) + env(safe-area-inset-bottom));
+  }
+  
+  @media (max-width: 768px) {
+    .top-performers-view {
+      padding-bottom: calc(var(--tabbar-height, 70px) + env(safe-area-inset-bottom));
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .top-performers-view {
+      padding-bottom: calc(var(--tabbar-height, 60px) + env(safe-area-inset-bottom));
+    }
+  }
 }
 </style>
